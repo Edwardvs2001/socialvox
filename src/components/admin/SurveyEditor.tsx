@@ -7,14 +7,17 @@ import * as z from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { useSurveyStore, Survey, SurveyQuestion } from '@/store/surveyStore';
 import { useAuthStore } from '@/store/authStore';
+import { useUserStore } from '@/store/userStore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Loader2, Plus, Save, Trash, AlertTriangle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Plus, Save, Trash, AlertTriangle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 const formSchema = z.object({
@@ -34,13 +37,17 @@ interface SurveyEditorProps {
 export function SurveyEditor({ surveyId }: SurveyEditorProps) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { getSurveyById, createSurvey, updateSurvey, isLoading } = useSurveyStore();
+  const { getSurveyById, createSurvey, updateSurvey, assignSurvey, isLoading } = useSurveyStore();
+  const { users } = useUserStore();
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [showDeleteQuestionDialog, setShowDeleteQuestionDialog] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedSurveyors, setSelectedSurveyors] = useState<string[]>([]);
   
   const existingSurvey = surveyId ? getSurveyById(surveyId) : null;
+  const surveyors = users.filter(user => user.role === 'surveyor' && user.active);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,6 +62,7 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
   useEffect(() => {
     if (existingSurvey) {
       setQuestions(existingSurvey.questions);
+      setSelectedSurveyors(existingSurvey.assignedTo);
     }
   }, [existingSurvey]);
   
@@ -116,6 +124,31 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
       setShowDeleteQuestionDialog(false);
       setQuestionToDelete(null);
     }
+  };
+  
+  const openAssignDialog = () => {
+    setShowAssignDialog(true);
+  };
+  
+  const handleAssignSurvey = async () => {
+    if (!existingSurvey) return;
+    
+    try {
+      await assignSurvey(existingSurvey.id, selectedSurveyors);
+      toast.success("Encuesta asignada correctamente a los encuestadores seleccionados");
+      setShowAssignDialog(false);
+    } catch (error) {
+      console.error("Error assigning survey:", error);
+      toast.error("Error al asignar la encuesta");
+    }
+  };
+  
+  const toggleSurveyor = (surveyorId: string) => {
+    setSelectedSurveyors(prevSelected => 
+      prevSelected.includes(surveyorId)
+        ? prevSelected.filter(id => id !== surveyorId)
+        : [...prevSelected, surveyorId]
+    );
   };
   
   const validateQuestions = (): boolean => {
@@ -194,9 +227,22 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Información General</CardTitle>
-              <CardDescription>Detalles básicos de la encuesta</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Información General</CardTitle>
+                <CardDescription>Detalles básicos de la encuesta</CardDescription>
+              </div>
+              {existingSurvey && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="btn-admin"
+                  onClick={openAssignDialog}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Asignar Encuestadores
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField
@@ -407,6 +453,69 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Assign Surveyors Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Asignar Encuestadores</DialogTitle>
+            <DialogDescription>
+              Selecciona los encuestadores que pueden realizar esta encuesta
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {surveyors.length > 0 ? (
+              <div className="max-h-[300px] overflow-y-auto pr-2">
+                {surveyors.map(surveyor => (
+                  <div key={surveyor.id} className="flex items-center space-x-2 py-2 border-b">
+                    <Checkbox
+                      id={`surveyor-${surveyor.id}`}
+                      checked={selectedSurveyors.includes(surveyor.id)}
+                      onCheckedChange={() => toggleSurveyor(surveyor.id)}
+                    />
+                    <label
+                      htmlFor={`surveyor-${surveyor.id}`}
+                      className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      <div>{surveyor.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{surveyor.email}</div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>No hay encuestadores disponibles.</p>
+                <p className="text-sm mt-1">Crea usuarios con rol de encuestador primero.</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setShowAssignDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="btn-admin"
+              onClick={handleAssignSurvey}
+              disabled={!existingSurvey || isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Asignando...
+                </>
+              ) : (
+                "Guardar Asignaciones"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

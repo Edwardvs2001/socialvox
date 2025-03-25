@@ -1,6 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useUserStore } from './userStore';
 
 export type UserRole = 'admin' | 'surveyor' | 'admin-manager';
 
@@ -22,13 +23,6 @@ interface AuthState {
   clearError: () => void;
 }
 
-// Mock users for development
-const mockUsers = [
-  { id: '1', username: 'admin', name: 'Admin User', role: 'admin' as UserRole, password: 'admin123' },
-  { id: '2', username: 'surveyor', name: 'Surveyor User', role: 'surveyor' as UserRole, password: 'surveyor123' },
-  { id: '3', username: 'manager', name: 'Manager Admin', role: 'admin-manager' as UserRole, password: 'manager123' },
-];
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -42,15 +36,19 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call with mock data
+          // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 800));
           
-          const user = mockUsers.find(
-            u => u.username === username && u.password === password
+          // Get the users from the userStore
+          const { users } = useUserStore.getState();
+          
+          // Find the user with matching username and password
+          const user = users.find(
+            u => u.username === username && u.password === password && u.active
           );
           
           if (!user) {
-            throw new Error('Credenciales inválidas');
+            throw new Error('Credenciales inválidas o usuario inactivo');
           }
           
           const { password: _, ...userWithoutPassword } = user;

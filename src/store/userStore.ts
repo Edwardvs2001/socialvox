@@ -12,6 +12,7 @@ export interface User {
   role: UserRole;
   active: boolean;
   createdAt: string;
+  password?: string; // Added password field, optional in interface for security
 }
 
 interface UserState {
@@ -37,6 +38,7 @@ const mockUsers: User[] = [
     role: 'admin-manager',
     active: true,
     createdAt: '2023-01-10T08:00:00Z',
+    password: 'admin123',
   },
   {
     id: '2',
@@ -46,6 +48,7 @@ const mockUsers: User[] = [
     role: 'surveyor',
     active: true,
     createdAt: '2023-01-15T10:30:00Z',
+    password: 'surveyor123',
   },
   {
     id: '3',
@@ -55,6 +58,7 @@ const mockUsers: User[] = [
     role: 'admin',
     active: true,
     createdAt: '2023-02-05T14:45:00Z',
+    password: 'manager123',
   },
   {
     id: '4',
@@ -64,6 +68,7 @@ const mockUsers: User[] = [
     role: 'surveyor',
     active: true,
     createdAt: '2023-03-20T09:15:00Z',
+    password: 'surveyor123',
   }
 ];
 

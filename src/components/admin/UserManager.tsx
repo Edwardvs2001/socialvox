@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { formatDate } from '@/utils/api';
-import { Edit, Loader2, Plus, Search, Trash, UserPlus } from 'lucide-react';
+import { Edit, Loader2, Plus, Search, Trash, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const userFormSchema = z.object({
@@ -27,6 +27,9 @@ const userFormSchema = z.object({
   }),
   email: z.string().email({
     message: "Debe ingresar un email válido",
+  }),
+  password: z.string().min(6, {
+    message: "La contraseña debe tener al menos 6 caracteres",
   }),
   role: z.enum(['admin', 'surveyor', 'admin-manager'], {
     message: "Debe seleccionar un rol válido",
@@ -41,6 +44,7 @@ export function UserManager() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   // Initialize the form
   const form = useForm<z.infer<typeof userFormSchema>>({
@@ -49,6 +53,7 @@ export function UserManager() {
       username: "",
       name: "",
       email: "",
+      password: "",
       role: 'surveyor' as UserRole,
       active: true,
     },
@@ -72,11 +77,13 @@ export function UserManager() {
       username: "",
       name: "",
       email: "",
+      password: "",
       role: 'surveyor',
       active: true,
     });
     setSelectedUser(null);
     setIsUserDialogOpen(true);
+    setShowPassword(false);
   };
   
   // Open dialog to edit existing user
@@ -85,11 +92,13 @@ export function UserManager() {
       username: user.username,
       name: user.name,
       email: user.email,
+      password: "", // Don't populate password for security
       role: user.role,
       active: user.active,
     });
     setSelectedUser(user);
     setIsUserDialogOpen(true);
+    setShowPassword(false);
   };
   
   // Open dialog to confirm user deletion
@@ -109,6 +118,7 @@ export function UserManager() {
           username: values.username,
           name: values.name,
           email: values.email,
+          password: values.password || undefined, // Only update if provided
           role: values.role,
           active: values.active
         });
@@ -119,6 +129,7 @@ export function UserManager() {
           username: values.username,
           name: values.name,
           email: values.email,
+          password: values.password,
           role: values.role,
           active: values.active
         });
@@ -322,6 +333,38 @@ export function UserManager() {
                     <FormControl>
                       <Input placeholder="ejemplo@correo.com" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{selectedUser ? "Nueva Contraseña" : "Contraseña"}</FormLabel>
+                    <div className="flex relative">
+                      <FormControl>
+                        <Input 
+                          type={showPassword ? "text" : "password"} 
+                          placeholder={selectedUser ? "Dejar en blanco para mantener actual" : "Contraseña"} 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <FormDescription>
+                      {selectedUser ? "Dejar en blanco para no cambiar la contraseña actual" : "Mínimo 6 caracteres"}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
