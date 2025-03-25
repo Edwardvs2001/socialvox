@@ -42,9 +42,9 @@ export const useAuthStore = create<AuthState>()(
           // Get the users from the userStore
           const { users } = useUserStore.getState();
           
-          // Find the user with matching username and password
+          // Find the user with matching username and password (case insensitive for username)
           const user = users.find(
-            u => u.username === username && u.password === password && u.active
+            u => u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.active
           );
           
           if (!user) {
