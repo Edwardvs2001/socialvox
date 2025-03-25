@@ -36,16 +36,35 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
+          // For debugging
+          console.info('Attempting login with:', username, 'password length:', password.length);
+          console.info('Login attempt:', {
+            username,
+            passwordLength: password.length
+          });
+          
           // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 800));
           
           // Get the users from the userStore
           const { users } = useUserStore.getState();
           
+          // Log available users for debugging
+          console.info('Available users:', users.map(u => ({
+            id: u.id,
+            username: u.username,
+            password: u.password,
+            role: u.role,
+            active: u.active
+          })));
+          
           // Find the user with matching username and password
           const user = users.find(
             u => u.username === username && u.password === password && u.active
           );
+          
+          // Log whether user was found
+          console.info('User found?', user ? 'Yes' : 'No');
           
           if (!user) {
             throw new Error('Credenciales inválidas o usuario inactivo');
@@ -60,10 +79,12 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error) {
+          console.error('Authentication error:', error);
           set({
             error: error instanceof Error ? error.message : 'Error desconocido',
             isLoading: false,
           });
+          throw error;
         }
       },
       

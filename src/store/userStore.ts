@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,17 +27,17 @@ interface UserState {
   clearError: () => void;
 }
 
-// Mock data
+// Mock data with new amazonas2020 admin user
 const mockUsers: User[] = [
   {
     id: '1',
-    username: 'admin',
-    name: 'Admin Principal',
-    email: 'admin@encuestasva.com',
+    username: 'amazonas2020',
+    name: 'Administrador Amazonas',
+    email: 'admin@amazonas.com',
     role: 'admin-manager',
     active: true,
     createdAt: '2023-01-10T08:00:00Z',
-    password: 'admin123',
+    password: 'amazonas123',
   },
   {
     id: '2',
@@ -48,26 +47,6 @@ const mockUsers: User[] = [
     role: 'surveyor',
     active: true,
     createdAt: '2023-01-15T10:30:00Z',
-    password: 'surveyor123',
-  },
-  {
-    id: '3',
-    username: 'manager',
-    name: 'María Gómez',
-    email: 'maria@encuestasva.com',
-    role: 'admin',
-    active: true,
-    createdAt: '2023-02-05T14:45:00Z',
-    password: 'manager123',
-  },
-  {
-    id: '4',
-    username: 'surveyor2',
-    name: 'Carlos Rodríguez',
-    email: 'carlos@encuestasva.com',
-    role: 'surveyor',
-    active: true,
-    createdAt: '2023-03-20T09:15:00Z',
     password: 'surveyor123',
   }
 ];
