@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { AudioRecorder } from './AudioRecorder';
 import { blobToBase64 } from '@/utils/api';
 import { toast } from 'sonner';
-import { Check, ChevronLeft, ChevronRight, Loader2, Lock, Mic, Microphone } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Lock, Mic } from 'lucide-react';
 
 interface SurveyFormProps {
   survey: Survey;
@@ -146,7 +146,7 @@ export function SurveyForm({ survey }: SurveyFormProps) {
       <Card className="border-surveyor/20 bg-surveyor/5">
         <CardHeader className="pb-2">
           <CardTitle className="text-md flex items-center">
-            <Microphone className="w-4 h-4 mr-2 text-surveyor" />
+            <Mic className="w-4 h-4 mr-2 text-surveyor" />
             Grabación de Audio
           </CardTitle>
           <CardDescription>
