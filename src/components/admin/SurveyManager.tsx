@@ -150,9 +150,9 @@ export function SurveyManager() {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to={`/admin/surveys/assign/${survey.id}`}>
-                            <Users className="mr-2 h-4 w-4" />
-                            Asignar
+                          <Link to={`/admin/results/${survey.id}`}>
+                            <ClipboardList className="mr-2 h-4 w-4" />
+                            Ver Resultados
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
