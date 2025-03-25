@@ -1,12 +1,19 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, mockUsers } from './mockData/usersMockData';
-import { 
-  validateNewUser, 
-  validateUserUpdate, 
-  createUserHelper 
-} from './utils/userStoreUtils';
+import { v4 as uuidv4 } from 'uuid';
+import { UserRole } from './authStore';
+
+export interface User {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  active: boolean;
+  createdAt: string;
+  password?: string; // Added password field, optional in interface for security
+}
 
 interface UserState {
   users: User[];
@@ -21,7 +28,49 @@ interface UserState {
   clearError: () => void;
 }
 
-export type { User };
+// Mock data
+const mockUsers: User[] = [
+  {
+    id: '1',
+    username: 'admin',
+    name: 'Admin Principal',
+    email: 'admin@encuestasva.com',
+    role: 'admin-manager',
+    active: true,
+    createdAt: '2023-01-10T08:00:00Z',
+    password: 'admin123',
+  },
+  {
+    id: '2',
+    username: 'surveyor',
+    name: 'Juan Pérez',
+    email: 'juan@encuestasva.com',
+    role: 'surveyor',
+    active: true,
+    createdAt: '2023-01-15T10:30:00Z',
+    password: 'surveyor123',
+  },
+  {
+    id: '3',
+    username: 'manager',
+    name: 'María Gómez',
+    email: 'maria@encuestasva.com',
+    role: 'admin',
+    active: true,
+    createdAt: '2023-02-05T14:45:00Z',
+    password: 'manager123',
+  },
+  {
+    id: '4',
+    username: 'surveyor2',
+    name: 'Carlos Rodríguez',
+    email: 'carlos@encuestasva.com',
+    role: 'surveyor',
+    active: true,
+    createdAt: '2023-03-20T09:15:00Z',
+    password: 'surveyor123',
+  }
+];
 
 export const useUserStore = create<UserState>()(
   persist(
@@ -55,17 +104,24 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Validate the new user data
-          const validationError = validateNewUser(get().users, userData);
-          if (validationError) {
-            throw new Error(validationError);
+          // Check if username already exists
+          if (get().users.some(user => user.username === userData.username)) {
+            throw new Error('El nombre de usuario ya existe');
+          }
+          
+          // Check if email already exists
+          if (get().users.some(user => user.email === userData.email)) {
+            throw new Error('El correo electrónico ya está registrado');
           }
           
           // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 800));
           
-          // Create the new user
-          const newUser = createUserHelper(get().users, userData);
+          const newUser: User = {
+            ...userData,
+            id: uuidv4(),
+            createdAt: new Date().toISOString(),
+          };
           
           set(state => ({
             users: [...state.users, newUser],
@@ -86,10 +142,26 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Validate the updates
-          const validationError = validateUserUpdate(get().users, id, updates);
-          if (validationError) {
-            throw new Error(validationError);
+          // If username is being updated, check it doesn't conflict
+          if (updates.username) {
+            const existingUser = get().users.find(
+              user => user.username === updates.username && user.id !== id
+            );
+            
+            if (existingUser) {
+              throw new Error('El nombre de usuario ya existe');
+            }
+          }
+          
+          // If email is being updated, check it doesn't conflict
+          if (updates.email) {
+            const existingUser = get().users.find(
+              user => user.email === updates.email && user.id !== id
+            );
+            
+            if (existingUser) {
+              throw new Error('El correo electrónico ya está registrado');
+            }
           }
           
           // Simulate API call

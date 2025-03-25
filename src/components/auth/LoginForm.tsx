@@ -7,21 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, LogIn } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 export function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { login, isLoading, error, clearError } = useAuthStore();
   const navigate = useNavigate();
-  const { toast } = useToast();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     
     try {
-      console.log('Attempting login with:', username, 'password length:', password.length);
       await login(username, password);
       
       // Get user role and redirect accordingly
@@ -103,7 +100,7 @@ export function LoginForm() {
       <CardFooter className="flex flex-col">
         <p className="text-xs text-center text-muted-foreground mt-4">
           Credenciales de prueba: <br />
-          <span className="font-medium">Administrador:</span> admin / admin123, victoria2026 / victoria2026, amazonas2020 / ed1212<br />
+          <span className="font-medium">Administrador:</span> admin / admin123<br />
           <span className="font-medium">Encuestador:</span> surveyor / surveyor123
         </p>
       </CardFooter>
