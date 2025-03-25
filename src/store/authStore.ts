@@ -42,9 +42,15 @@ export const useAuthStore = create<AuthState>()(
           // Get the users from the userStore
           const { users } = useUserStore.getState();
           
-          // Find the user with matching username and password (case insensitive for username)
+          // Log for debugging
+          console.log('Attempting login with:', username);
+          console.log('Available users:', users.map(u => ({ username: u.username, role: u.role, active: u.active })));
+          
+          // Find the user with matching username and password
           const user = users.find(
-            u => u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.active
+            u => u.username.toLowerCase() === username.toLowerCase() && 
+                 u.password === password && 
+                 u.active
           );
           
           if (!user) {
@@ -53,6 +59,9 @@ export const useAuthStore = create<AuthState>()(
           
           const { password: _, ...userWithoutPassword } = user;
           
+          // Log the authenticated user
+          console.log('Successfully authenticated:', userWithoutPassword);
+          
           set({
             user: userWithoutPassword,
             token: 'mock-jwt-token',
@@ -60,6 +69,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error) {
+          console.error('Authentication error:', error);
           set({
             error: error instanceof Error ? error.message : 'Error desconocido',
             isLoading: false,
