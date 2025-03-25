@@ -104,12 +104,24 @@ export function UserManager() {
     
     try {
       if (selectedUser) {
-        // Update existing user
-        await updateUser(selectedUser.id, values);
+        // Update existing user - ensure all required properties are passed
+        await updateUser(selectedUser.id, {
+          username: values.username,
+          name: values.name,
+          email: values.email,
+          role: values.role,
+          active: values.active
+        });
         toast.success("Usuario actualizado correctamente");
       } else {
         // Create new user
-        await createUser(values);
+        await createUser({
+          username: values.username,
+          name: values.name,
+          email: values.email,
+          role: values.role,
+          active: values.active
+        });
         toast.success("Usuario creado correctamente");
       }
       
