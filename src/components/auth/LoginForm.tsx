@@ -21,7 +21,7 @@ export function LoginForm() {
     clearError();
     
     try {
-      console.log('Attempting login with:', username);
+      console.log('Attempting login with:', username, 'password length:', password.length);
       await login(username, password);
       
       // Get user role and redirect accordingly

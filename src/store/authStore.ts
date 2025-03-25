@@ -42,18 +42,39 @@ export const useAuthStore = create<AuthState>()(
           // Get the users from the userStore
           const { users } = useUserStore.getState();
           
-          // Log for debugging
-          console.log('Attempting login with:', username);
-          console.log('Available users:', users.map(u => ({ username: u.username, role: u.role, active: u.active })));
+          // More detailed logging for debugging
+          console.log('Login attempt:', { username, passwordLength: password.length });
+          console.log('Available users:', users.map(u => ({ 
+            id: u.id, 
+            username: u.username, 
+            password: u.password,
+            role: u.role, 
+            active: u.active 
+          })));
           
-          // Find the user with matching username and password
+          // First find the user by username (case insensitive)
           const user = users.find(
-            u => u.username.toLowerCase() === username.toLowerCase() && 
-                 u.password === password && 
-                 u.active
+            u => u.username.toLowerCase() === username.toLowerCase()
           );
           
+          // Log user found
+          console.log('User found?', user ? 'Yes' : 'No');
+          
           if (!user) {
+            throw new Error('Credenciales inválidas o usuario inactivo');
+          }
+          
+          // Now check password and active status
+          if (user.password !== password) {
+            console.log('Password mismatch:', { 
+              expected: user.password, 
+              provided: password 
+            });
+            throw new Error('Credenciales inválidas o usuario inactivo');
+          }
+          
+          if (!user.active) {
+            console.log('User is inactive');
             throw new Error('Credenciales inválidas o usuario inactivo');
           }
           
@@ -74,6 +95,7 @@ export const useAuthStore = create<AuthState>()(
             error: error instanceof Error ? error.message : 'Error desconocido',
             isLoading: false,
           });
+          throw error;
         }
       },
       
