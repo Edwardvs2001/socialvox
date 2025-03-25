@@ -100,7 +100,7 @@ export function LoginForm() {
       <CardFooter className="flex flex-col">
         <p className="text-xs text-center text-muted-foreground mt-4">
           Credenciales de prueba: <br />
-          <span className="font-medium">Administrador:</span> admin / admin123<br />
+          <span className="font-medium">Administrador:</span> admin / admin123 o victoria2026 / victoria2026<br />
           <span className="font-medium">Encuestador:</span> surveyor / surveyor123
         </p>
       </CardFooter>

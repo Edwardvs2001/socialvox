@@ -69,6 +69,16 @@ const mockUsers: User[] = [
     active: true,
     createdAt: '2023-03-20T09:15:00Z',
     password: 'surveyor123',
+  },
+  {
+    id: '5',
+    username: 'victoria2026',
+    name: 'Victoria Administradora',
+    email: 'victoria@encuestasva.com',
+    role: 'admin',
+    active: true,
+    createdAt: '2023-06-15T11:30:00Z',
+    password: 'victoria2026',
   }
 ];
 
