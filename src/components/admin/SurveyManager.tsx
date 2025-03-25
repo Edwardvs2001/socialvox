@@ -20,31 +20,48 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { formatDate } from '@/utils/api';
 import { ClipboardList, Edit, Loader2, MoreHorizontal, Plus, Search, Trash, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useUserStore } from '@/store/userStore';
 import { toast } from 'sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function SurveyManager() {
-  const { surveys, fetchSurveys, deleteSurvey, isLoading } = useSurveyStore();
-  const { users } = useUserStore();
+  const { surveys, fetchSurveys, deleteSurvey, assignSurvey, isLoading } = useSurveyStore();
+  const { users, fetchUsers } = useUserStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedSurveyors, setSelectedSurveyors] = useState<string[]>([]);
+  const [isAssigning, setIsAssigning] = useState(false);
   
-  // Fetch surveys
+  // Fetch surveys and users
   useEffect(() => {
     fetchSurveys();
-  }, [fetchSurveys]);
+    fetchUsers();
+  }, [fetchSurveys, fetchUsers]);
   
   // Filter surveys based on search query
   const filteredSurveys = surveys.filter(survey => 
     survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     survey.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  // Filter only surveyors from users
+  const surveyors = users.filter(user => user.role === 'surveyor' && user.active);
   
   // Get user names for assigned surveyors
   const getSurveyorNames = (surveyorIds: string[]) => {
@@ -70,6 +87,42 @@ export function SurveyManager() {
       setIsDeleting(false);
       setShowDeleteDialog(false);
       setSelectedSurvey(null);
+    }
+  };
+  
+  // Open assign dialog
+  const handleOpenAssignDialog = (survey: Survey) => {
+    setSelectedSurvey(survey);
+    setSelectedSurveyors(survey.assignedTo);
+    setShowAssignDialog(true);
+  };
+  
+  // Handle surveyor selection
+  const handleSurveyorSelection = (surveyorId: string) => {
+    setSelectedSurveyors(prev => {
+      if (prev.includes(surveyorId)) {
+        return prev.filter(id => id !== surveyorId);
+      } else {
+        return [...prev, surveyorId];
+      }
+    });
+  };
+  
+  // Save assignments
+  const handleSaveAssignments = async () => {
+    if (!selectedSurvey) return;
+    
+    setIsAssigning(true);
+    
+    try {
+      await assignSurvey(selectedSurvey.id, selectedSurveyors);
+      toast.success('Encuestadores asignados correctamente');
+      setShowAssignDialog(false);
+    } catch (error) {
+      console.error('Error assigning surveyors:', error);
+      toast.error('Error al asignar encuestadores');
+    } finally {
+      setIsAssigning(false);
     }
   };
   
@@ -156,6 +209,12 @@ export function SurveyManager() {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          onClick={() => handleOpenAssignDialog(survey)}
+                        >
+                          <Users className="mr-2 h-4 w-4" />
+                          Asignar Encuestadores
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => {
                             setSelectedSurvey(survey);
@@ -197,18 +256,30 @@ export function SurveyManager() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="pt-4 pb-4 border-t justify-end">
-                  <Button asChild variant="outline" size="sm" className="mr-2">
-                    <Link to={`/admin/results/${survey.id}`}>
-                      Ver resultados
-                    </Link>
+                <CardFooter className="pt-4 pb-4 border-t justify-between">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleOpenAssignDialog(survey)}
+                    className="gap-1"
+                  >
+                    <Users className="h-4 w-4" />
+                    Asignar
                   </Button>
-                  <Button asChild className="btn-admin" size="sm">
-                    <Link to={`/admin/surveys/edit/${survey.id}`}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar
-                    </Link>
-                  </Button>
+                  
+                  <div className="flex gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/admin/results/${survey.id}`}>
+                        Ver resultados
+                      </Link>
+                    </Button>
+                    <Button asChild className="btn-admin" size="sm">
+                      <Link to={`/admin/surveys/edit/${survey.id}`}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar
+                      </Link>
+                    </Button>
+                  </div>
                 </CardFooter>
               </Card>
             );
@@ -248,6 +319,67 @@ export function SurveyManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Assign surveyors dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Asignar Encuestadores</DialogTitle>
+            <DialogDescription>
+              Selecciona los encuestadores que realizarán esta encuesta
+            </DialogDescription>
+          </DialogHeader>
+          
+          {surveyors.length === 0 ? (
+            <div className="py-6 text-center">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                No hay encuestadores disponibles. Crea nuevos usuarios con rol de encuestador.
+              </p>
+            </div>
+          ) : (
+            <ScrollArea className="max-h-[400px]">
+              <div className="space-y-4">
+                {surveyors.map(surveyor => (
+                  <div key={surveyor.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`surveyor-${surveyor.id}`}
+                      checked={selectedSurveyors.includes(surveyor.id)}
+                      onCheckedChange={() => handleSurveyorSelection(surveyor.id)}
+                    />
+                    <label
+                      htmlFor={`surveyor-${surveyor.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {surveyor.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveAssignments} 
+              className="btn-admin" 
+              disabled={isAssigning || surveyors.length === 0}
+            >
+              {isAssigning ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>Guardar</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
