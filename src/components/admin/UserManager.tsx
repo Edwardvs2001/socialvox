@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { formatDate } from '@/utils/api';
 import { Edit, Loader2, Plus, Search, Trash, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const userFormSchema = z.object({
   username: z.string().min(3, {
@@ -46,7 +46,6 @@ export function UserManager() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  // Initialize the form
   const form = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -59,19 +58,16 @@ export function UserManager() {
     },
   });
   
-  // Fetch users on component mount
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
   
-  // Filter users based on search query
   const filteredUsers = users.filter(user => 
     user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  // Open dialog to add new user
   const openAddUserDialog = () => {
     form.reset({
       username: "",
@@ -86,13 +82,12 @@ export function UserManager() {
     setShowPassword(false);
   };
   
-  // Open dialog to edit existing user
   const openEditUserDialog = (user: User) => {
     form.reset({
       username: user.username,
       name: user.name,
       email: user.email,
-      password: "", // Don't populate password for security
+      password: "",
       role: user.role,
       active: user.active,
     });
@@ -101,30 +96,26 @@ export function UserManager() {
     setShowPassword(false);
   };
   
-  // Open dialog to confirm user deletion
   const openDeleteDialog = (user: User) => {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
   };
   
-  // Handle user form submission (create or update)
   const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
     setIsSubmitting(true);
     
     try {
       if (selectedUser) {
-        // Update existing user - ensure all required properties are passed
         await updateUser(selectedUser.id, {
           username: values.username,
           name: values.name,
           email: values.email,
-          password: values.password || undefined, // Only update if provided
+          password: values.password || undefined,
           role: values.role,
           active: values.active
         });
         toast.success("Usuario actualizado correctamente");
       } else {
-        // Create new user
         await createUser({
           username: values.username,
           name: values.name,
@@ -145,7 +136,6 @@ export function UserManager() {
     }
   };
   
-  // Handle user deletion
   const confirmDeleteUser = async () => {
     if (!selectedUser) return;
     
@@ -163,7 +153,6 @@ export function UserManager() {
     }
   };
   
-  // Display role badge with appropriate color
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
       case 'admin-manager':
@@ -274,9 +263,8 @@ export function UserManager() {
         </div>
       )}
       
-      {/* Create/Edit User Dialog */}
       <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {selectedUser ? "Editar Usuario" : "Crear Nuevo Usuario"}
@@ -288,170 +276,171 @@ export function UserManager() {
             </DialogDescription>
           </DialogHeader>
           
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre de Usuario</FormLabel>
-                    <FormControl>
-                      <Input placeholder="username" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Nombre de usuario para iniciar sesión
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre Completo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nombre Apellido" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Nombre que se mostrará en la aplicación
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Correo Electrónico</FormLabel>
-                    <FormControl>
-                      <Input placeholder="ejemplo@correo.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{selectedUser ? "Nueva Contraseña" : "Contraseña"}</FormLabel>
-                    <div className="flex relative">
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre de Usuario</FormLabel>
                       <FormControl>
-                        <Input 
-                          type={showPassword ? "text" : "password"} 
-                          placeholder={selectedUser ? "Dejar en blanco para mantener actual" : "Contraseña"} 
-                          {...field} 
+                        <Input placeholder="username" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Nombre de usuario para iniciar sesión
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre Completo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nombre Apellido" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Nombre que se mostrará en la aplicación
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Correo Electrónico</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ejemplo@correo.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{selectedUser ? "Nueva Contraseña" : "Contraseña"}</FormLabel>
+                      <div className="flex relative">
+                        <FormControl>
+                          <Input 
+                            type={showPassword ? "text" : "password"} 
+                            placeholder={selectedUser ? "Dejar en blanco para mantener actual" : "Contraseña"} 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <FormDescription>
+                        {selectedUser ? "Dejar en blanco para no cambiar la contraseña actual" : "Mínimo 6 caracteres"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rol</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un rol" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="surveyor">Encuestador</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                          <SelectItem value="admin-manager">Administrador Principal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Determina los permisos del usuario
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="active"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Usuario Activo</FormLabel>
+                        <FormDescription>
+                          Los usuarios inactivos no pueden iniciar sesión
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
                         />
                       </FormControl>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                    <FormDescription>
-                      {selectedUser ? "Dejar en blanco para no cambiar la contraseña actual" : "Mínimo 6 caracteres"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Rol</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un rol" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="surveyor">Encuestador</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="admin-manager">Administrador Principal</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Determina los permisos del usuario
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="active"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel>Usuario Activo</FormLabel>
-                      <FormDescription>
-                        Los usuarios inactivos no pueden iniciar sesión
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter className="sm:justify-end">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setIsUserDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="btn-admin"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {selectedUser ? "Actualizando..." : "Creando..."}
-                    </>
-                  ) : (
-                    <>
-                      {selectedUser ? "Guardar Cambios" : "Crear Usuario"}
-                    </>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+                />
+                
+                <DialogFooter className="mt-6 sm:justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setIsUserDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="btn-admin"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {selectedUser ? "Actualizando..." : "Creando..."}
+                      </>
+                    ) : (
+                      <>
+                        {selectedUser ? "Guardar Cambios" : "Crear Usuario"}
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
       
-      {/* Delete User Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
