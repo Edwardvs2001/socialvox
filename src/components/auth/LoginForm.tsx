@@ -157,7 +157,7 @@ export function LoginForm() {
       <CardContent className="relative z-10">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2 bg-gray-50">
-            <Label htmlFor="username" className="text-white font-medium rounded-sm bg-gray-900">Usuario</Label>
+            <Label htmlFor="username" className="text-black font-medium rounded-sm bg-gray-50">Usuario</Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <User className="h-4 w-4" />
