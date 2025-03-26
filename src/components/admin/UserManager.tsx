@@ -31,7 +31,7 @@ const userFormSchema = z.object({
   password: z.string().min(6, {
     message: "La contraseña debe tener al menos 6 caracteres",
   }),
-  role: z.enum(['admin', 'surveyor', 'admin-manager'], {
+  role: z.enum(['admin', 'surveyor'], {
     message: "Debe seleccionar un rol válido",
   }),
   active: z.boolean().default(true),
@@ -377,7 +377,6 @@ export function UserManager() {
                         <SelectContent>
                           <SelectItem value="surveyor">Encuestador</SelectItem>
                           <SelectItem value="admin">Administrador</SelectItem>
-                          <SelectItem value="admin-manager">Administrador Principal</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
