@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,8 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save, Globe, Bell, Shield, Database, Clock, Key } from 'lucide-react';
+import { Loader2, Save, Globe, Bell, Shield, Database, Clock, Key, Upload, X } from 'lucide-react';
 import { PasswordSettings } from './PasswordSettings';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const generalFormSchema = z.object({
   appName: z.string().min(2, {
@@ -100,6 +101,8 @@ const initialConfig = {
 export function ConfigurationManager() {
   const [activeTab, setActiveTab] = useState("general");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [logoPreview, setLogoPreview] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const generalForm = useForm<z.infer<typeof generalFormSchema>>({
     resolver: zodResolver(generalFormSchema),
@@ -164,6 +167,41 @@ export function ConfigurationManager() {
     }
   };
   
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("El archivo es demasiado grande. El tamaño máximo permitido es 2MB.");
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        toast.error("El archivo debe ser una imagen (JPG, PNG, SVG, etc).");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setLogoPreview(result);
+        generalForm.setValue('logoUrl', result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoPreview("");
+    generalForm.setValue('logoUrl', "");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+  
   return (
     <div className="space-y-6">
       <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -223,13 +261,63 @@ export function ConfigurationManager() {
                     name="logoUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>URL del Logo</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://example.com/logo.png" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          URL del logo que se mostrará en la aplicación (opcional).
-                        </FormDescription>
+                        <FormLabel>Logo de la Aplicación</FormLabel>
+                        <div className="space-y-4">
+                          {logoPreview || field.value ? (
+                            <div className="flex items-center gap-4">
+                              <Avatar className="h-16 w-16 rounded-md">
+                                <AvatarImage 
+                                  src={logoPreview || field.value} 
+                                  alt="Logo" 
+                                  className="object-contain"
+                                />
+                                <AvatarFallback className="rounded-md">LOGO</AvatarFallback>
+                              </Avatar>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleRemoveLogo}
+                              >
+                                <X className="h-4 w-4 mr-2" />
+                                Quitar Logo
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+                              <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                              <p className="text-sm text-muted-foreground mb-2">
+                                Sube el logo de tu empresa
+                              </p>
+                              <Button 
+                                type="button" 
+                                variant="secondary" 
+                                size="sm" 
+                                onClick={triggerFileInput}
+                              >
+                                Seleccionar Archivo
+                              </Button>
+                            </div>
+                          )}
+                          <input 
+                            type="file" 
+                            ref={fileInputRef}
+                            className="hidden" 
+                            accept="image/*"
+                            onChange={handleLogoChange}
+                          />
+                          <FormControl>
+                            <Input 
+                              type="text" 
+                              placeholder="URL del logo (opcional)" 
+                              {...field} 
+                              className={logoPreview ? "hidden" : ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Sube un archivo de imagen o ingresa la URL del logo (formato recomendado: SVG, PNG con fondo transparente).
+                          </FormDescription>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
