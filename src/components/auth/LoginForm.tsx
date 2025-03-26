@@ -95,6 +95,9 @@ export function LoginForm() {
       // Always use 'admin' username for admin login
       setUsername('admin');
       console.log('Attempting admin login with password:', password.length, 'characters');
+      // Log comparison for debugging
+      console.log('Default admin password:', adminPassword === 'Admin@2024!' ? 'is default' : 'is changed');
+      
       await login('admin', password);
       const user = useAuthStore.getState().user;
       if (user?.role === 'admin' || user?.role === 'admin-manager') {
@@ -110,7 +113,8 @@ export function LoginForm() {
   
   const handleRecoveryMode = () => {
     setRecoveryMode(true);
-    setPassword(adminPassword);
+    // Use default admin password for recovery
+    setPassword('Admin@2024!');
     toast.info('Contraseña de administrador por defecto cargada. Intente acceder ahora.');
   };
   

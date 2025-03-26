@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -50,16 +51,15 @@ export const useAuthStore = create<AuthState>()(
       sessionExpiration: null,
       
       checkSession: () => {
-        const { sessionExpiration, isAuthenticated, logout } = get();
+        const { sessionExpiration, isAuthenticated } = get();
         
         // If not authenticated, no need to check
         if (!isAuthenticated) return false;
         
-        // If session has expired, log out and return false
+        // If session has expired, return false
         if (sessionExpiration && Date.now() > sessionExpiration) {
           console.info('Sesión expirada, cerrando sesión automáticamente');
           // Don't call logout directly here to avoid state updates during render
-          // Instead, return false and let the component handle it
           return false;
         }
         
@@ -106,14 +106,16 @@ export const useAuthStore = create<AuthState>()(
           // Para depuración
           console.info('Intentando iniciar sesión con:', username, 'longitud de contraseña:', password.length);
           
-          // Handle admin login with case-insensitive comparison
+          // Special admin check - case insensitive username comparison
           if (username.toLowerCase() === 'admin') {
             console.info('Verificando credenciales de administrador');
             
-            // Case-insensitive comparison for admin login
-            // Validate admin password against the current stored admin password
+            // Log password length for debugging
+            console.info('Admin password length:', adminPassword.length, 'Entered password length:', password.length);
+            
+            // Direct comparison for admin login
             if (password !== adminPassword) {
-              console.error('Contraseña de administrador incorrecta:', password);
+              console.error('Contraseña de administrador incorrecta');
               
               // Increment failed login attempts for admin account
               set((state) => ({ 
@@ -127,14 +129,14 @@ export const useAuthStore = create<AuthState>()(
             
             console.info('Autenticación de administrador correcta');
             
-            // Obtener los usuarios del userStore
+            // Get users from userStore
             const { users, createUser } = useUserStore.getState();
             
-            // Buscar el usuario administrador (case-insensitive)
+            // Find admin user (case-insensitive)
             const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
             
             if (!adminUser) {
-              console.error('Usuario administrador no encontrado');
+              console.info('Usuario administrador no encontrado, creando uno nuevo');
               
               // Create admin user if not found
               const newAdminUser = await createUser({
@@ -165,13 +167,13 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
             
-            // Asegurar que el usuario administrador esté activo antes del intento de inicio de sesión
+            // Ensure admin user is active before login attempt
             if (!adminUser.active) {
               console.info('Activando usuario administrador');
               await useUserStore.getState().updateUser(adminUser.id, { active: true });
             }
             
-            // Establecer el usuario administrador en el estado de autenticación
+            // Set admin user in auth state
             set({
               user: {
                 id: adminUser.id,
@@ -182,22 +184,22 @@ export const useAuthStore = create<AuthState>()(
               token: 'mock-jwt-token',
               isAuthenticated: true,
               isLoading: false,
-              failedLoginAttempts: 0, // Reset counter on successful login
-              sessionExpiration: currentTime + SESSION_TIMEOUT, // Set session expiration
+              failedLoginAttempts: 0,
+              sessionExpiration: currentTime + SESSION_TIMEOUT,
             });
             
             console.info('Inicio de sesión de administrador exitoso');
             return;
           }
           
-          // Flujo de inicio de sesión estándar para usuarios no administradores
-          // Simular llamada a API
+          // Standard login flow for non-admin users
+          // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 800));
           
-          // Obtener los usuarios del userStore
+          // Get users from userStore
           const { users } = useUserStore.getState();
           
-          // Encontrar el usuario con nombre de usuario y contraseña coincidentes y que esté activo
+          // Find user with matching username, password and active status
           // Case-insensitive username comparison for better user experience
           const user = users.find(
             u => u.username.toLowerCase() === username.toLowerCase() && 
@@ -205,7 +207,7 @@ export const useAuthStore = create<AuthState>()(
                  u.active
           );
           
-          // Registrar si se encontró el usuario
+          // Log if user was found
           console.info('¿Usuario encontrado?', user ? 'Sí' : 'No');
           
           if (!user) {
@@ -219,7 +221,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Credenciales inválidas o usuario inactivo');
           }
           
-          // Eliminar la contraseña del objeto de usuario antes de almacenarlo en el estado
+          // Remove password from user object before storing in state
           const userWithoutPassword = {
             id: user.id,
             username: user.username,
