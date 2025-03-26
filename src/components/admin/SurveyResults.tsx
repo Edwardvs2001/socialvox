@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export function SurveyResults({ surveyId }: { surveyId: string }) {
   const { surveys, getSurveyById, getSurveyResponses } = useSurveyStore();
@@ -208,6 +209,7 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Vista General</TabsTrigger>
+          <TabsTrigger value="questions">Preguntas y Respuestas</TabsTrigger>
           <TabsTrigger value="detailed">Detallado</TabsTrigger>
           {responses.some(r => r.audioRecording) && (
             <TabsTrigger value="audio">Grabaciones</TabsTrigger>
@@ -307,6 +309,80 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
             }
             return null;
           })}
+        </TabsContent>
+        
+        {/* New tab for Questions and Answers */}
+        <TabsContent value="questions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Preguntas y Respuestas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                {survey.questions.map((question, questionIndex) => (
+                  <AccordionItem key={question.id} value={question.id}>
+                    <AccordionTrigger className="text-base font-medium">
+                      Pregunta {questionIndex + 1}: {question.text}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="px-4 py-2 space-y-4">
+                        {question.type === 'multiple-choice' && (
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">Opciones:</h4>
+                            <ul className="list-disc pl-6 mb-4">
+                              {question.options.map((option, idx) => (
+                                <li key={idx}>{option}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      
+                        <h4 className="text-sm font-medium mb-2">Respuestas: ({responses.length})</h4>
+                        {responses.length > 0 ? (
+                          <div className="border rounded-md overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-1/6">Encuestado</TableHead>
+                                  <TableHead className="w-1/6">Fecha</TableHead>
+                                  <TableHead>Respuesta</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {responses.map((response) => {
+                                  const answer = response.answers.find(a => a.questionId === question.id);
+                                  const displayValue = 
+                                    question.type === 'multiple-choice' 
+                                      ? answer?.selectedOption || '-'
+                                      : answer?.textAnswer || '-';
+                                      
+                                  return (
+                                    <TableRow key={response.id}>
+                                      <TableCell className="font-medium">
+                                        {response.respondentId}
+                                      </TableCell>
+                                      <TableCell>
+                                        {new Date(response.completedAt).toLocaleDateString()}
+                                      </TableCell>
+                                      <TableCell>{displayValue}</TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-center py-4">
+                            No hay respuestas para esta pregunta.
+                          </p>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="detailed">
