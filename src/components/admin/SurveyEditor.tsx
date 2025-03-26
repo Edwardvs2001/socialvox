@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -16,9 +17,11 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Plus, Save, Trash, AlertTriangle, Users, ListChecks, MessageSquare } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Plus, Save, Trash, AlertTriangle, Users, ListChecks, MessageSquare, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const formSchema = z.object({
   title: z.string().min(3, {
@@ -37,7 +40,7 @@ interface SurveyEditorProps {
 export function SurveyEditor({ surveyId }: SurveyEditorProps) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { getSurveyById, createSurvey, updateSurvey, assignSurvey, isLoading } = useSurveyStore();
+  const { getSurveyById, createSurvey, updateSurvey, assignSurvey, assignSurveyToFolder, folders, isLoading } = useSurveyStore();
   const { users } = useUserStore();
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [showDeleteQuestionDialog, setShowDeleteQuestionDialog] = useState(false);
@@ -45,6 +48,8 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedSurveyors, setSelectedSurveyors] = useState<string[]>([]);
+  const [showFolderDialog, setShowFolderDialog] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   
   const existingSurvey = surveyId ? getSurveyById(surveyId) : null;
@@ -67,6 +72,7 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
       }));
       setQuestions(updatedQuestions);
       setSelectedSurveyors(existingSurvey.assignedTo);
+      setSelectedFolderId(existingSurvey.folderId);
     }
   }, [existingSurvey]);
   
@@ -135,12 +141,20 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
     setShowAssignDialog(true);
   };
   
-  const handleAssignSurvey = async () => {
-    if (!existingSurvey) return;
+  const openFolderDialog = () => {
+    setShowFolderDialog(true);
+  };
+  
+  const handleAssignSurvey = async (createdSurveyId?: string) => {
+    const surveyIdToUse = createdSurveyId || (existingSurvey ? existingSurvey.id : null);
+    
+    if (!surveyIdToUse) return;
     
     try {
-      await assignSurvey(existingSurvey.id, selectedSurveyors);
-      toast.success("Encuesta asignada correctamente a los encuestadores seleccionados");
+      await assignSurvey(surveyIdToUse, selectedSurveyors);
+      if (!createdSurveyId) { // Solo mostrar toast si no es parte de la creación
+        toast.success("Encuesta asignada correctamente a los encuestadores seleccionados");
+      }
       setShowAssignDialog(false);
     } catch (error) {
       console.error("Error assigning survey:", error);
@@ -148,12 +162,31 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
     }
   };
   
+  const handleSaveFolderAssignment = async (createdSurveyId?: string) => {
+    const surveyIdToUse = createdSurveyId || (existingSurvey ? existingSurvey.id : null);
+    
+    if (!surveyIdToUse) return;
+    
+    try {
+      await assignSurveyToFolder(surveyIdToUse, selectedFolderId);
+      if (!createdSurveyId) { // Solo mostrar toast si no es parte de la creación
+        toast.success("Encuesta asignada a carpeta correctamente");
+      }
+      setShowFolderDialog(false);
+    } catch (error) {
+      console.error("Error assigning survey to folder:", error);
+      toast.error("Error al asignar encuesta a carpeta");
+    }
+  };
+  
   const toggleSurveyor = (surveyorId: string) => {
-    setSelectedSurveyors(prevSelected => 
-      prevSelected.includes(surveyorId)
-        ? prevSelected.filter(id => id !== surveyorId)
-        : [...prevSelected, surveyorId]
-    );
+    setSelectedSurveyors(prevSelected => {
+      if (prevSelected.includes(surveyorId)) {
+        return prevSelected.filter(id => id !== surveyorId);
+      } else {
+        return [...prevSelected, surveyorId];
+      }
+    });
   };
   
   const validateQuestions = (): boolean => {
@@ -197,6 +230,16 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
           ...values,
           questions,
         });
+        
+        // Manejar asignaciones si fueron modificadas
+        if (selectedFolderId !== existingSurvey.folderId) {
+          await handleSaveFolderAssignment();
+        }
+        
+        if (JSON.stringify(selectedSurveyors) !== JSON.stringify(existingSurvey.assignedTo)) {
+          await handleAssignSurvey();
+        }
+        
         toast.success("Encuesta actualizada correctamente");
       } else {
         if (!user) {
@@ -204,7 +247,7 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
           return;
         }
         
-        await createSurvey({
+        const newSurvey = await createSurvey({
           title: values.title,
           description: values.description,
           isActive: values.isActive,
@@ -213,6 +256,20 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
           assignedTo: [],
           folderId: null,
         });
+        
+        // Aplicar asignaciones si fueron seleccionadas
+        const assignmentPromises = [];
+        
+        if (selectedFolderId) {
+          assignmentPromises.push(handleSaveFolderAssignment(newSurvey.id));
+        }
+        
+        if (selectedSurveyors.length > 0) {
+          assignmentPromises.push(handleAssignSurvey(newSurvey.id));
+        }
+        
+        await Promise.all(assignmentPromises);
+        
         toast.success("Encuesta creada correctamente");
       }
       
@@ -225,6 +282,25 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
     }
   };
   
+  const getFolderPath = (folderId: string | null): string => {
+    if (!folderId) return 'Sin carpeta';
+    
+    const breadcrumb: string[] = [];
+    let currentId = folderId;
+    
+    while (currentId) {
+      const folder = folders.find(f => f.id === currentId);
+      if (folder) {
+        breadcrumb.unshift(folder.name);
+        currentId = folder.parentId;
+      } else {
+        break;
+      }
+    }
+    
+    return breadcrumb.join(' > ');
+  };
+  
   return (
     <div className="space-y-6">
       <Form {...form}>
@@ -235,17 +311,28 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
                 <CardTitle>Información General</CardTitle>
                 <CardDescription>Detalles básicos de la encuesta</CardDescription>
               </div>
-              {existingSurvey && (
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="btn-admin"
+                  onClick={openFolderDialog}
+                  size={isMobile ? "sm" : "default"}
+                >
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  {selectedFolderId ? "Cambiar Carpeta" : "Asignar Carpeta"}
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
                   className="btn-admin"
                   onClick={openAssignDialog}
+                  size={isMobile ? "sm" : "default"}
                 >
                   <Users className="mr-2 h-4 w-4" />
-                  Asignar Encuestadores
+                  {selectedSurveyors.length > 0 ? "Cambiar Encuestadores" : "Asignar Encuestadores"}
                 </Button>
-              )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField
@@ -307,6 +394,32 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
                   </FormItem>
                 )}
               />
+              
+              {selectedFolderId && (
+                <div className="p-4 rounded-lg border">
+                  <FormLabel className="text-base pb-2 block">Carpeta Asignada</FormLabel>
+                  <div className="flex items-center gap-1 text-admin">
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    <span className="font-medium">{getFolderPath(selectedFolderId)}</span>
+                  </div>
+                </div>
+              )}
+              
+              {selectedSurveyors.length > 0 && (
+                <div className="p-4 rounded-lg border">
+                  <FormLabel className="text-base pb-2 block">Encuestadores Asignados</FormLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSurveyors.map(surveyorId => {
+                      const surveyor = users.find(u => u.id === surveyorId);
+                      return (
+                        <div key={surveyorId} className="bg-muted text-xs px-2 py-1 rounded-full">
+                          {surveyor?.name || "Desconocido"}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
           
@@ -529,8 +642,8 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
             </Button>
             <Button
               className="btn-admin"
-              onClick={handleAssignSurvey}
-              disabled={!existingSurvey || isSubmitting}
+              onClick={() => handleAssignSurvey()}
+              disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <>
@@ -544,7 +657,56 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <Dialog open={showFolderDialog} onOpenChange={setShowFolderDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Asignar a Carpeta</DialogTitle>
+            <DialogDescription>
+              Selecciona la carpeta donde deseas guardar esta encuesta
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Select 
+              value={selectedFolderId || "null"}
+              onValueChange={(value) => setSelectedFolderId(value === "null" ? null : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una carpeta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="null">Sin carpeta</SelectItem>
+                {folders.map(folder => (
+                  <SelectItem key={folder.id} value={folder.id}>
+                    {getFolderPath(folder.id)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFolderDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => handleSaveFolderAssignment()} 
+              className="btn-admin" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>Guardar</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
