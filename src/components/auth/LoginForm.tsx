@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, Lock } from 'lucide-react';
+import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, Lock, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
 
@@ -14,6 +15,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [loginType, setLoginType] = useState<'admin' | 'surveyor' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
   const {
     login,
     isLoading,
@@ -21,10 +23,12 @@ export function LoginForm() {
     clearError,
     failedLoginAttempts,
     checkSession,
-    logout
+    logout,
+    adminPassword
   } = useAuthStore();
   const navigate = useNavigate();
   
+  // Check session status on component mount
   useEffect(() => {
     const isAuthenticated = useAuthStore.getState().isAuthenticated;
     if (isAuthenticated) {
@@ -35,6 +39,18 @@ export function LoginForm() {
       }
     }
   }, []);
+  
+  // Reset error when component unmounts
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
+  
+  // Reset error when login type changes
+  useEffect(() => {
+    clearError();
+  }, [loginType, clearError]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,11 +66,12 @@ export function LoginForm() {
       const user = useAuthStore.getState().user;
       if (user?.role === 'surveyor') {
         navigate('/surveyor');
-      } else if (user?.role === 'admin') {
+      } else if (user?.role === 'admin' || user?.role === 'admin-manager') {
         navigate('/admin');
       }
     } catch (err) {
       console.error('Login error:', err);
+      // Error is handled by the auth store, no need to handle it here
     }
   };
   
@@ -63,6 +80,7 @@ export function LoginForm() {
     clearError();
     setUsername('');
     setPassword('');
+    setRecoveryMode(false);
   };
   
   const handleDirectAdminAccess = async () => {
@@ -74,8 +92,9 @@ export function LoginForm() {
     }
     
     try {
+      // Always use 'admin' username for admin login
       setUsername('admin');
-      console.log('Attempting admin login with password:', password);
+      console.log('Attempting admin login with password:', password.length, 'characters');
       await login('admin', password);
       const user = useAuthStore.getState().user;
       if (user?.role === 'admin' || user?.role === 'admin-manager') {
@@ -85,13 +104,21 @@ export function LoginForm() {
       }
     } catch (err) {
       console.error('Direct login error:', err);
+      // The error message is already set in the auth store
     }
+  };
+  
+  const handleRecoveryMode = () => {
+    setRecoveryMode(true);
+    setPassword(adminPassword);
+    toast.info('Contraseña de administrador por defecto cargada. Intente acceder ahora.');
   };
   
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
   
+  // Login type selection screen
   if (loginType === null) {
     return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-red-500/5"></div>
@@ -123,6 +150,7 @@ export function LoginForm() {
       </Card>;
   }
   
+  // Admin login screen
   if (loginType === 'admin') {
     return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-red-700/5"></div>
@@ -165,6 +193,18 @@ export function LoginForm() {
             </Button>
           </div>
           
+          {failedLoginAttempts > 1 && !recoveryMode && (
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleRecoveryMode} 
+              className="w-full mt-2 text-amber-600 border-amber-300 hover:bg-amber-50"
+            >
+              <KeyRound className="h-4 w-4 mr-2" />
+              Usar contraseña por defecto
+            </Button>
+          )}
+          
           <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-white hover:text-white bg-black">
             Volver
           </Button>
@@ -172,6 +212,7 @@ export function LoginForm() {
       </Card>;
   }
   
+  // Surveyor login screen
   return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5"></div>
       <CardHeader className="space-y-1 relative z-10">

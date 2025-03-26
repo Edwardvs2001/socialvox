@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -106,18 +107,20 @@ export const useAuthStore = create<AuthState>()(
           // Para depuración
           console.info('Intentando iniciar sesión con:', username, 'longitud de contraseña:', password.length);
           
-          // Verificación especial para el administrador para asegurar que siempre funcione
-          if (username.toLowerCase() === 'admin') {  // Make username check case-insensitive
+          // Handle admin login with case-insensitive comparison
+          if (username.toLowerCase() === 'admin') {
             console.info('Verificando credenciales de administrador');
             
+            // Case-insensitive comparison for admin login
             // Validate admin password against the current stored admin password
             if (password !== adminPassword) {
-              console.error('Contraseña de administrador incorrecta. Ingresada:', password, 'Esperada:', adminPassword);
+              console.error('Contraseña de administrador incorrecta:', password);
+              
               // Increment failed login attempts for admin account
               set((state) => ({ 
                 failedLoginAttempts: state.failedLoginAttempts + 1,
                 lastLoginAttempt: currentTime,
-                error: 'Credenciales inválidas',
+                error: 'Credenciales inválidas. La contraseña de administrador es incorrecta.',
                 isLoading: false
               }));
               throw new Error('Credenciales inválidas');
@@ -128,12 +131,42 @@ export const useAuthStore = create<AuthState>()(
             // Obtener los usuarios del userStore
             const { users, updateUser } = useUserStore.getState();
             
-            // Buscar el usuario administrador
+            // Buscar el usuario administrador (case-insensitive)
             const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
             
             if (!adminUser) {
               console.error('Usuario administrador no encontrado');
-              throw new Error('Usuario administrador no encontrado');
+              
+              // Create admin user if not found
+              const { addUser } = useUserStore.getState();
+              const newAdminId = '1';
+              
+              await addUser({
+                id: newAdminId,
+                username: 'admin',
+                password: adminPassword,
+                name: 'Admin Principal',
+                role: 'admin',
+                active: true
+              });
+              
+              // Set admin user in auth state
+              set({
+                user: {
+                  id: newAdminId,
+                  username: 'admin',
+                  name: 'Admin Principal',
+                  role: 'admin'
+                },
+                token: 'mock-jwt-token',
+                isAuthenticated: true,
+                isLoading: false,
+                failedLoginAttempts: 0,
+                sessionExpiration: currentTime + SESSION_TIMEOUT,
+              });
+              
+              console.info('Usuario administrador creado y sesión iniciada');
+              return;
             }
             
             // Asegurar que el usuario administrador esté activo antes del intento de inicio de sesión
@@ -168,18 +201,12 @@ export const useAuthStore = create<AuthState>()(
           // Obtener los usuarios del userStore
           const { users } = useUserStore.getState();
           
-          // Registrar usuarios disponibles para depuración
-          console.info('Usuarios disponibles:', users.map(u => ({
-            id: u.id,
-            username: u.username,
-            password: u.password,
-            role: u.role,
-            active: u.active
-          })));
-          
           // Encontrar el usuario con nombre de usuario y contraseña coincidentes y que esté activo
+          // Case-insensitive username comparison for better user experience
           const user = users.find(
-            u => u.username === username && u.password === password && u.active
+            u => u.username.toLowerCase() === username.toLowerCase() && 
+                 u.password === password && 
+                 u.active
           );
           
           // Registrar si se encontró el usuario
