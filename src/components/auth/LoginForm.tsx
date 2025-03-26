@@ -61,7 +61,8 @@ export function LoginForm() {
       const userExists = users.some(
         u => u.username === credentials.username && 
              u.password === credentials.password && 
-             u.active
+             u.active &&
+             u.role === 'admin'
       );
       
       if (!userExists) {

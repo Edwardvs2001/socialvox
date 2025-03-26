@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -26,15 +25,14 @@ export function Navbar() {
     navigate('/');
   };
   
-  const isAdmin = user?.role === 'admin' || user?.role === 'admin-manager';
-  const isAdminManager = user?.role === 'admin-manager';
+  const isAdmin = user?.role === 'admin';
   
   const navLinks = isAdmin 
     ? [
         { to: '/admin', label: 'Dashboard', icon: BarChart },
         { to: '/admin/surveys', label: 'Encuestas', icon: ClipboardList },
         { to: '/admin/results', label: 'Resultados', icon: BarChart },
-        ...(isAdminManager ? [{ to: '/admin/users', label: 'Usuarios', icon: User }] : []),
+        { to: '/admin/users', label: 'Usuarios', icon: User },
       ]
     : [
         { to: '/surveyor', label: 'Mis Encuestas', icon: ClipboardList },
@@ -52,7 +50,6 @@ export function Navbar() {
             <span>Encuestas VA</span>
           </Link>
           
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6 ml-6">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.to;
@@ -76,7 +73,6 @@ export function Navbar() {
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Connection status indicator */}
           {user?.role === 'surveyor' && (
             <div className="hidden md:flex items-center mr-2">
               {isOnline ? (
@@ -99,7 +95,6 @@ export function Navbar() {
             </div>
           )}
           
-          {/* User dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
@@ -112,9 +107,7 @@ export function Navbar() {
               <DropdownMenuItem disabled className="flex flex-col items-start">
                 <p className="font-medium">{user?.name}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {user?.role === 'admin' ? 'Administrador' : 
-                   user?.role === 'admin-manager' ? 'Admin. Principal' : 
-                   'Encuestador'}
+                  {user?.role === 'admin' ? 'Administrador' : 'Encuestador'}
                 </p>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -125,7 +118,6 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
           
-          {/* Mobile menu button */}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -141,7 +133,6 @@ export function Navbar() {
         </div>
       </div>
       
-      {/* Mobile Navigation Menu */}
       {isMenuOpen && (
         <div className="md:hidden">
           <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" />

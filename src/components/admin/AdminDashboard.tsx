@@ -28,8 +28,6 @@ export function AdminDashboard() {
   // Count active surveys and surveyors
   const activeSurveys = surveys.filter(s => s.isActive).length;
   const surveyors = users.filter(u => u.role === 'surveyor' && u.active).length;
-  
-  const isAdminManager = user?.role === 'admin-manager';
 
   return (
     <div className="space-y-8">
@@ -75,27 +73,25 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {isAdminManager && (
-          <Card className="hover:shadow-md transition-all duration-300 bg-white border-admin/20 hover:border-admin/40">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center text-lg">
-                <Users className="mr-2 h-5 w-5 text-admin" />
-                Usuarios
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Administra los usuarios, asigna roles y gestiona los permisos de acceso al sistema.
-              </p>
-              <div className="flex justify-between items-center">
-                <span className="text-2xl font-bold">{users.length}</span>
-                <Button onClick={() => navigate('/admin/users')} className="bg-admin hover:bg-admin/90">
-                  Gestionar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="hover:shadow-md transition-all duration-300 bg-white border-admin/20 hover:border-admin/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center text-lg">
+              <Users className="mr-2 h-5 w-5 text-admin" />
+              Usuarios
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Administra los usuarios, asigna roles y gestiona los permisos de acceso al sistema.
+            </p>
+            <div className="flex justify-between items-center">
+              <span className="text-2xl font-bold">{users.length}</span>
+              <Button onClick={() => navigate('/admin/users')} className="bg-admin hover:bg-admin/90">
+                Gestionar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Statistics */}
