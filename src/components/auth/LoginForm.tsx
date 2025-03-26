@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -7,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, LogIn, User, Users } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function LoginForm() {
   const [username, setUsername] = useState('');
@@ -44,6 +44,22 @@ export function LoginForm() {
     setUsername('');
     setPassword('');
   };
+
+  // Handle direct admin access
+  const handleDirectAdminAccess = async (adminType: 'main' | 'secondary') => {
+    clearError();
+    try {
+      if (adminType === 'main') {
+        await login('amazonas2020', 'amazonas123');
+      } else {
+        await login('admin', 'admin123');
+      }
+      navigate('/admin');
+    } catch (err) {
+      toast.error('Error al iniciar sesión automáticamente');
+      console.error('Direct login error:', err);
+    }
+  };
   
   // Show login type selection if no type is selected yet
   if (loginType === null) {
@@ -79,13 +95,74 @@ export function LoginForm() {
       </Card>
     );
   }
+
+  // Admin Direct Access
+  if (loginType === 'admin') {
+    return (
+      <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in survey-card">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Encuestas VA</CardTitle>
+          <CardDescription className="text-center">
+            Acceso de administrador
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 gap-4">
+            <Button 
+              onClick={() => handleDirectAdminAccess('main')}
+              variant="default"
+              className="p-6 h-auto flex flex-col gap-3 hover:bg-primary/90"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-8 w-8 animate-spin" />
+              ) : (
+                <Users className="h-8 w-8" />
+              )}
+              <span className="font-medium">Administrador Principal</span>
+            </Button>
+            
+            <Button 
+              onClick={() => handleDirectAdminAccess('secondary')}
+              variant="secondary"
+              className="p-6 h-auto flex flex-col gap-3 hover:bg-secondary/90"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-8 w-8 animate-spin" />
+              ) : (
+                <User className="h-8 w-8" />
+              )}
+              <span className="font-medium">Administrador Regular</span>
+            </Button>
+          </div>
+          
+          {error && (
+            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+              {error}
+            </div>
+          )}
+          
+          <Button 
+            type="button" 
+            variant="ghost" 
+            className="w-full mt-2"
+            onClick={() => setLoginType(null)}
+          >
+            Volver
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
   
+  // Surveyor login (keep original form)
   return (
     <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in survey-card">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold text-center">Encuestas VA</CardTitle>
         <CardDescription className="text-center">
-          {loginType === 'admin' ? 'Acceso de administrador' : 'Acceso de encuestador'}
+          Acceso de encuestador
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -152,13 +229,6 @@ export function LoginForm() {
         </form>
       </CardContent>
       <CardFooter className="flex flex-col">
-        {loginType === 'admin' && (
-          <p className="text-xs text-center text-muted-foreground mt-4">
-            Credenciales de administrador: <br />
-            <span className="font-medium">Administrador 1:</span> amazonas2020 / amazonas123<br />
-            <span className="font-medium">Administrador 2:</span> admin / admin123
-          </p>
-        )}
         {loginType === 'surveyor' && (
           <p className="text-xs text-center text-muted-foreground mt-4">
             Credenciales de encuestador: <br />
