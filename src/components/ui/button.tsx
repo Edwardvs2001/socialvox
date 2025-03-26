@@ -47,7 +47,8 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
-    const [isDisabled, setIsDisabled] = React.useState(false);
+    // Remove the local disabled state - it causes too many re-renders
+    // We'll use the props.disabled directly instead
     
     // Use a ref to track if the component is mounted to prevent state updates after unmount
     const isMounted = React.useRef(true);
@@ -60,30 +61,17 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     
     const handleClick = React.useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
-        if (isDisabled) {
+        if (props.disabled) {
           e.preventDefault();
           e.stopPropagation();
           return;
         }
         
-        setIsDisabled(true);
-        
         if (onClick) {
           onClick(e);
         }
-        
-        // Re-enable the button after a short delay
-        const timer = setTimeout(() => {
-          if (isMounted.current) {
-            setIsDisabled(false);
-          }
-        }, 350); // Slightly longer delay to prevent rapid clicks
-        
-        return () => {
-          clearTimeout(timer);
-        };
       },
-      [onClick, isDisabled]
+      [onClick, props.disabled]
     );
     
     return (
@@ -91,7 +79,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         onClick={handleClick}
-        disabled={props.disabled || isDisabled}
         {...props}
       />
     )

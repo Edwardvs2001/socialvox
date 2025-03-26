@@ -9,10 +9,12 @@ export default function AdminSurveys() {
   const [isLoaded, setIsLoaded] = useState(false);
   const { fetchSurveys, clearError } = useSurveyStore();
   const loadingRef = useRef(false);
+  const isMounted = useRef(true);
   
   // Ensure surveys are loaded before mounting the component
   useEffect(() => {
-    let isMounted = true;
+    // Set mounted flag
+    isMounted.current = true;
     
     // Prevent duplicate loading
     if (loadingRef.current) return;
@@ -25,12 +27,9 @@ export default function AdminSurveys() {
         await fetchSurveys();
         clearError(); // Clear any previous errors
       } finally {
-        if (isMounted) {
+        if (isMounted.current) {
           setIsLoaded(true);
-          // Small delay to prevent state update conflicts
-          setTimeout(() => {
-            loadingRef.current = false;
-          }, 50);
+          loadingRef.current = false;
         }
       }
     };
@@ -39,7 +38,7 @@ export default function AdminSurveys() {
     
     // Make sure to clean up by clearing any errors when unmounting
     return () => {
-      isMounted = false;
+      isMounted.current = false;
       clearError();
     };
   }, [fetchSurveys, clearError]);

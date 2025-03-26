@@ -57,6 +57,8 @@ export function useOfflineSync() {
   
   // Auto-sync when coming back online - using useCallback to memoize the function
   const attemptSync = useCallback(async () => {
+    // Don't try to sync if we're offline, there's nothing to sync, we're not authenticated,
+    // the session is invalid, or we're already syncing
     if (!isOnline || pendingCount === 0 || !isAuthenticated || !checkSession() || syncInProgressRef.current) {
       return;
     }
@@ -78,7 +80,7 @@ export function useOfflineSync() {
         if (isMountedRef.current) {
           attemptSync();
         }
-      }, 300);
+      }, 800); // Increased timeout to reduce chances of racing
     }
     
     return () => {
@@ -138,10 +140,11 @@ export function useOfflineSync() {
         clearTimeout(syncTimeoutRef.current);
       }
       
+      // Reset the sync flag after a delay to prevent rapid consecutive syncs
       syncTimeoutRef.current = setTimeout(() => {
         syncInProgressRef.current = false;
         syncTimeoutRef.current = null;
-      }, 350);
+      }, 500);
     }
   }, [isOnline, pendingCount, isAuthenticated, checkSession, syncResponses]);
   
