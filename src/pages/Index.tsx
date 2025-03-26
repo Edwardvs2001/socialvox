@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -8,32 +8,35 @@ const Index = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
   
-  useEffect(() => {
-    const handleRedirect = () => {
-      if (isAuthenticated && user) {
-        console.log('Usuario autenticado:', user);
-        
-        switch (user.role) {
-          case 'admin':
-            console.log('Redirigiendo a panel de administrador');
-            navigate('/admin');
-            break;
-          case 'surveyor':
-            console.log('Redirigiendo a panel de encuestador');
-            navigate('/surveyor');
-            break;
-          default:
-            console.error('Rol no reconocido:', user.role);
-            toast.error('Error: Rol de usuario no reconocido');
-        }
-      } else {
-        console.log('Usuario no autenticado, redirigiendo a login');
-        navigate('/');
+  // Using useCallback to prevent unnecessary re-renders
+  const handleRedirect = useCallback(() => {
+    if (isAuthenticated && user) {
+      console.log('Usuario autenticado:', user);
+      
+      switch (user.role) {
+        case 'admin':
+          console.log('Redirigiendo a panel de administrador');
+          navigate('/admin');
+          break;
+        case 'surveyor':
+          console.log('Redirigiendo a panel de encuestador');
+          navigate('/surveyor');
+          break;
+        default:
+          console.error('Rol no reconocido:', user.role);
+          toast.error('Error: Rol de usuario no reconocido');
       }
-    };
-
-    handleRedirect();
+    } else {
+      console.log('Usuario no autenticado, redirigiendo a login');
+      navigate('/');
+    }
   }, [navigate, isAuthenticated, user]);
+
+  useEffect(() => {
+    // Only run once when component mounts or when dependencies change
+    handleRedirect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleRedirect]);
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
