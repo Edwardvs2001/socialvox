@@ -20,21 +20,12 @@ export interface Survey {
   assignedTo: string[];
 }
 
-export interface GeoLocation {
-  latitude: number | null;
-  longitude: number | null;
-  accuracy: number | null;
-  timestamp: string | null;
-  error?: string;
-}
-
 export interface SurveyResponse {
   id: string;
   surveyId: string;
   respondentId: string;
   answers: { questionId: string; selectedOption: string }[];
   audioRecording: string | null;
-  location: GeoLocation | null;
   completedAt: string;
   syncedToServer: boolean;
 }

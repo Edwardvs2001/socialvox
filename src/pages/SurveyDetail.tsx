@@ -6,8 +6,7 @@ import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Survey, useSurveyStore } from '@/store/surveyStore';
 import { SurveyForm } from '@/components/surveyor/SurveyForm';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 
 export default function SurveyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -15,14 +14,8 @@ export default function SurveyDetail() {
   const { getSurveyById, isLoading } = useSurveyStore();
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [locationSupported, setLocationSupported] = useState(true);
   
   useEffect(() => {
-    // Check if geolocation is supported
-    if (!navigator.geolocation) {
-      setLocationSupported(false);
-    }
-    
     if (id) {
       const foundSurvey = getSurveyById(id);
       
@@ -82,16 +75,6 @@ export default function SurveyDetail() {
           <ChevronLeft className="mr-2 h-4 w-4" />
           Volver a mis encuestas
         </Button>
-        
-        {!locationSupported && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Ubicación no disponible</AlertTitle>
-            <AlertDescription>
-              Tu dispositivo no soporta la geolocalización. Esta funcionalidad es necesaria para completar la encuesta.
-            </AlertDescription>
-          </Alert>
-        )}
         
         <SurveyForm survey={survey} />
       </SurveyorLayout>
