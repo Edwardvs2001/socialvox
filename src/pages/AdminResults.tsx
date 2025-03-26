@@ -25,7 +25,7 @@ export default function AdminResults() {
     <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
       <AdminLayout
         title={`Resultados: ${survey?.title || ''}`}
-        description="Visualización de los resultados de la encuesta"
+        description="Visualización detallada de los resultados de la encuesta"
         backButton={{
           label: "Volver a Encuestas",
           to: "/admin/surveys"
