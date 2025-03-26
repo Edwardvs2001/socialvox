@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -52,12 +51,15 @@ export function LoginForm() {
     clearError();
     
     try {
-      // Set admin username, password entered by user
+      // Set admin username
       setUsername('admin');
+      
       if (!password) {
         toast.error('Por favor ingrese la contraseña de administrador');
         return;
       }
+      
+      console.log('Attempting admin login with password:', password);
       
       await login('admin', password);
       

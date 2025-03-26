@@ -65,11 +65,12 @@ export const useAuthStore = create<AuthState>()(
           console.info('Intentando iniciar sesión con:', username, 'longitud de contraseña:', password.length);
           
           // Verificación especial para el administrador para asegurar que siempre funcione
-          if (username === 'admin') {
+          if (username.toLowerCase() === 'admin') {  // Make username check case-insensitive
             console.info('Verificando credenciales de administrador');
             
             // Validate admin password against the secure password
             if (password !== ADMIN_PASSWORD) {
+              console.error('Contraseña de administrador incorrecta. Ingresada:', password, 'Esperada:', ADMIN_PASSWORD);
               // Increment failed login attempts for admin account
               set((state) => ({ 
                 failedLoginAttempts: state.failedLoginAttempts + 1,
@@ -86,7 +87,7 @@ export const useAuthStore = create<AuthState>()(
             const { users, updateUser } = useUserStore.getState();
             
             // Buscar el usuario administrador
-            const adminUser = users.find(u => u.username === 'admin');
+            const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
             
             if (!adminUser) {
               console.error('Usuario administrador no encontrado');
