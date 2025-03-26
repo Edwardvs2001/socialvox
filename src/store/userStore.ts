@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,7 +28,7 @@ interface UserState {
   clearError: () => void;
 }
 
-// Mock data with new amazonas2020 admin user
+// Mock data with confirmed working admin user
 const mockUsers: User[] = [
   {
     id: '1',
@@ -48,6 +49,16 @@ const mockUsers: User[] = [
     active: true,
     createdAt: '2023-01-15T10:30:00Z',
     password: 'surveyor123',
+  },
+  {
+    id: '3',
+    username: 'admin',
+    name: 'Admin Principal',
+    email: 'admin@encuestasva.com',
+    role: 'admin',
+    active: true,
+    createdAt: '2023-01-05T09:00:00Z',
+    password: 'admin123',
   }
 ];
 

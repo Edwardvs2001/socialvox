@@ -155,7 +155,8 @@ export function LoginForm() {
         {loginType === 'admin' && (
           <p className="text-xs text-center text-muted-foreground mt-4">
             Credenciales de administrador: <br />
-            <span className="font-medium">Administrador:</span> amazonas2020 / amazonas123
+            <span className="font-medium">Administrador 1:</span> amazonas2020 / amazonas123<br />
+            <span className="font-medium">Administrador 2:</span> admin / admin123
           </p>
         )}
         {loginType === 'surveyor' && (
