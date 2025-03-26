@@ -120,7 +120,7 @@ export function Navbar() {
       {isMenuOpen && <div className="md:hidden">
           <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" />
           <div className="fixed inset-y-0 right-0 z-50 w-3/4 bg-white shadow-lg animate-slide-up">
-            <div className="flex flex-col p-6 space-y-4">
+            <div className="flex flex-col p-6 space-y-4 bg-gray-50">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium">Menú</h2>
                 <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
