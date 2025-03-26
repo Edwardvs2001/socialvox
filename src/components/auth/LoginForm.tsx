@@ -156,22 +156,22 @@ export function LoginForm() {
       </CardHeader>
       <CardContent className="relative z-10">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username" className="text-white font-medium">Usuario</Label>
+          <div className="space-y-2 bg-gray-50">
+            <Label htmlFor="username" className="text-white font-medium rounded-sm bg-gray-900">Usuario</Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <User className="h-4 w-4" />
               </div>
-              <Input id="username" type="text" placeholder="Ingrese su nombre de usuario" required value={username} onChange={e => setUsername(e.target.value)} className="input-focus-ring pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60" autoComplete="username" />
+              <Input id="username" type="text" placeholder="Ingrese su nombre de usuario" required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-white font-medium">Contraseña</Label>
+            <Label htmlFor="password" className="text-white font-medium bg-gray-900">Contraseña</Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <Lock className="h-4 w-4" />
               </div>
-              <Input id="password" type={showPassword ? "text" : "password"} placeholder="Ingrese su contraseña" required value={password} onChange={e => setPassword(e.target.value)} className="input-focus-ring pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/60" autoComplete="current-password" />
+              <Input id="password" type={showPassword ? "text" : "password"} placeholder="Ingrese su contraseña" required value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
               <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" onClick={togglePasswordVisibility}>
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -198,7 +198,7 @@ export function LoginForm() {
               </>}
           </Button>
           
-          <Button type="button" variant="ghost" className="w-full mt-2 text-white hover:text-white hover:bg-white/10" onClick={() => setLoginType(null)}>
+          <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-zinc-50 bg-stone-950 hover:bg-stone-800">
             Volver
           </Button>
         </form>
