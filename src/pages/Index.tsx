@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -8,12 +8,14 @@ const Index = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const redirectingRef = useRef(false);
   const [hasRefreshed, setHasRefreshed] = useState(false);
   
   // Using useCallback to prevent unnecessary re-renders
   const handleRedirect = useCallback(() => {
-    // Prevent multiple redirects
-    if (isRedirecting) return;
+    // Use ref to prevent multiple redirects including during the function execution
+    if (redirectingRef.current) return;
+    redirectingRef.current = true;
     setIsRedirecting(true);
     
     // Check if session is still valid
@@ -30,22 +32,30 @@ const Index = () => {
         }, 100);
       }
       
+      let targetPath = '/';
+      
       switch (user.role) {
         case 'admin':
         case 'admin-manager':
           console.log('Redirigiendo a panel de administrador');
-          navigate('/admin');
+          targetPath = '/admin';
           break;
         case 'surveyor':
           console.log('Redirigiendo a panel de encuestador');
-          navigate('/surveyor');
+          targetPath = '/surveyor';
           break;
         default:
           console.error('Rol no reconocido:', user.role);
           toast.error('Error: Rol de usuario no reconocido');
           logout();
-          navigate('/');
+          targetPath = '/';
       }
+      
+      // Use setTimeout to ensure state updates are processed before navigation
+      setTimeout(() => {
+        navigate(targetPath);
+      }, 50);
+      
     } else {
       if (isAuthenticated && !isSessionValid) {
         // Handle expired session 
@@ -53,13 +63,24 @@ const Index = () => {
         toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
       }
       console.log('Usuario no autenticado o sesión expirada, redirigiendo a login');
-      navigate('/');
+      
+      // Use setTimeout to ensure state updates are processed before navigation
+      setTimeout(() => {
+        navigate('/');
+      }, 50);
     }
-  }, [navigate, isAuthenticated, user, checkSession, logout, isRedirecting, hasRefreshed]);
+  }, [navigate, isAuthenticated, user, checkSession, logout, hasRefreshed, refreshSession]);
 
   useEffect(() => {
     // Only run once when component mounts
-    handleRedirect();
+    if (!redirectingRef.current) {
+      handleRedirect();
+    }
+    
+    return () => {
+      // Clean up when component unmounts
+      redirectingRef.current = false;
+    };
   }, [handleRedirect]);
   
   return (

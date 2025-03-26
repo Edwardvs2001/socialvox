@@ -5,12 +5,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/comp
 import { Button } from '@/components/ui/button';
 import { ChevronRight, FileText, FolderOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { memo } from 'react';
 
 interface SurveyItemProps {
   survey: Survey;
 }
 
-export function SurveyItem({ survey }: SurveyItemProps) {
+export const SurveyItem = memo(({ survey }: SurveyItemProps) => {
   const { folders } = useSurveyStore();
   
   // Get full folder path to display folder hierarchy
@@ -61,7 +62,7 @@ export function SurveyItem({ survey }: SurveyItemProps) {
         <Button 
           asChild 
           size="sm" 
-          className="btn-surveyor"
+          className="btn-surveyor relative z-10"
         >
           <Link to={`/surveyor/survey/${survey.id}`}>
             Completar
@@ -71,4 +72,6 @@ export function SurveyItem({ survey }: SurveyItemProps) {
       </CardFooter>
     </Card>
   );
-}
+});
+
+SurveyItem.displayName = 'SurveyItem';

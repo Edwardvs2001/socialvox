@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSurveyStore } from '@/store/surveyStore';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
@@ -27,6 +27,11 @@ export function useOfflineSync() {
       toast.warning('Conexión perdida. Los datos se guardarán localmente.');
     };
     
+    // Remove any existing listeners first to prevent duplicates
+    window.removeEventListener('online', handleOnline);
+    window.removeEventListener('offline', handleOffline);
+    
+    // Add our fresh listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
@@ -36,15 +41,19 @@ export function useOfflineSync() {
     };
   }, []);
   
-  // Auto-sync when coming back online
-  useEffect(() => {
+  // Auto-sync when coming back online - use useCallback to prevent unnecessary renders
+  const attemptSync = useCallback(() => {
     if (isOnline && pendingCount > 0 && isAuthenticated && checkSession() && !syncInProgressRef.current) {
       sync();
     }
-  }, [isOnline, pendingCount, isAuthenticated]);
+  }, [isOnline, pendingCount, isAuthenticated, checkSession]);
   
-  // Manual sync function
-  const sync = async () => {
+  useEffect(() => {
+    attemptSync();
+  }, [attemptSync]);
+  
+  // Manual sync function - use useCallback to stabilize this function reference
+  const sync = useCallback(async () => {
     if (!isOnline) {
       toast.error('No hay conexión a internet. Intente más tarde.');
       return;
@@ -79,7 +88,7 @@ export function useOfflineSync() {
       setIsSyncing(false);
       syncInProgressRef.current = false;
     }
-  };
+  }, [isOnline, pendingCount, isAuthenticated, checkSession, syncResponses]);
   
   return {
     isOnline,

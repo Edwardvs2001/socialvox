@@ -2,6 +2,7 @@
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { SurveyManager } from '@/components/admin/SurveyManager';
+import { Suspense } from 'react';
 
 export default function AdminSurveys() {
   return (
@@ -10,7 +11,9 @@ export default function AdminSurveys() {
         title="Gestión de Encuestas"
         description="Crear, editar y administrar encuestas"
       >
-        <SurveyManager />
+        <Suspense fallback={<div>Cargando...</div>}>
+          <SurveyManager />
+        </Suspense>
       </AdminLayout>
     </AuthLayout>
   );
