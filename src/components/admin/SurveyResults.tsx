@@ -7,9 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDate } from '@/utils/api';
+import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Loader2, PieChartIcon, BarChartIcon, FileText } from 'lucide-react';
+import { Loader2, PieChartIcon, BarChartIcon, FileText, Download, FileAudio } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { exportResultsToCSV, exportAudioRecordings } from '@/utils/exportUtils';
+import { useToast } from '@/hooks/use-toast';
 
 interface SurveyResultsProps {
   surveyId: string;
@@ -21,6 +24,7 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
   const { users } = useUserStore();
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   
   const survey = getSurveyById(surveyId);
   const responses = getSurveyResponses(surveyId);
@@ -44,6 +48,9 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
     
     const question = survey.questions.find(q => q.id === selectedQuestion);
     if (!question) return [];
+    
+    // For free-text questions, we can't show charts
+    if (question.type === 'free-text') return [];
     
     // Initialize counts for each option
     const counts: Record<string, number> = {};
@@ -77,12 +84,70 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
     return `${Math.round((value / responses.length) * 100)}%`;
   };
   
-  // Call onLowAccuracy callback if needed - simplified to just pass false since we're removing location
+  // Handle exporting survey results
+  const handleExportResults = () => {
+    if (!survey) return;
+    
+    try {
+      exportResultsToCSV(survey, responses);
+      toast({
+        title: "Exportación exitosa",
+        description: "Los resultados se han descargado como un archivo CSV.",
+      });
+    } catch (error) {
+      console.error('Error exporting results:', error);
+      toast({
+        title: "Error al exportar",
+        description: "No se pudieron exportar los resultados. Intente nuevamente.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle exporting audio recordings
+  const handleExportAudio = async () => {
+    if (!survey) return;
+    
+    // Check if there are any recordings to export
+    const hasRecordings = responses.some(r => r.audioRecording);
+    if (!hasRecordings) {
+      toast({
+        title: "Sin grabaciones",
+        description: "No hay grabaciones de audio para exportar en esta encuesta.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await exportAudioRecordings(survey, responses);
+      toast({
+        title: "Exportación exitosa",
+        description: "Las grabaciones de audio se han descargado.",
+      });
+    } catch (error) {
+      console.error('Error exporting audio recordings:', error);
+      toast({
+        title: "Error al exportar",
+        description: "No se pudieron exportar las grabaciones. Intente nuevamente.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Call onLowAccuracy callback if needed
   useEffect(() => {
     if (onLowAccuracy) {
       onLowAccuracy(false);
     }
   }, [onLowAccuracy]);
+  
+  // Check if the selected question is free-text
+  const isSelectedQuestionFreeText = () => {
+    if (!survey || !selectedQuestion) return false;
+    const question = survey.questions.find(q => q.id === selectedQuestion);
+    return question?.type === 'free-text';
+  };
   
   return (
     <div className="space-y-4 md:space-y-6">
@@ -92,11 +157,36 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
         </div>
       ) : (
         <>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <h2 className={`${isMobile ? "text-lg" : "text-xl"} font-semibold`}>
+              {responses.length} {responses.length === 1 ? 'respuesta' : 'respuestas'} recibidas
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size={isMobile ? "sm" : "default"}
+                onClick={handleExportResults}
+                className="flex items-center gap-1"
+              >
+                <Download className={`${isMobile ? "h-3 w-3" : "h-4 w-4"}`} />
+                <span>{isMobile ? "Exportar CSV" : "Exportar Resultados"}</span>
+              </Button>
+              <Button
+                variant="outline"
+                size={isMobile ? "sm" : "default"}
+                onClick={handleExportAudio}
+                className="flex items-center gap-1"
+              >
+                <FileAudio className={`${isMobile ? "h-3 w-3" : "h-4 w-4"}`} />
+                <span>{isMobile ? "Exportar Audio" : "Exportar Grabaciones"}</span>
+              </Button>
+            </div>
+          </div>
+          
           <Card>
             <CardHeader className={isMobile ? "py-3" : "py-4"}>
               <CardTitle className={`flex items-center justify-between ${isMobile ? "text-lg" : "text-xl"}`}>
                 <span>Resumen</span>
-                <Badge>{responses.length} respuestas</Badge>
               </CardTitle>
               <CardDescription className={isMobile ? "text-xs" : "text-sm"}>
                 Resultados generales de la encuesta
@@ -125,85 +215,91 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
                   </div>
                   
                   {responses.length > 0 ? (
-                    <Tabs defaultValue="bar">
-                      <TabsList className={`grid w-full grid-cols-3 ${isMobile ? "text-xs" : "text-sm"}`}>
-                        <TabsTrigger value="bar" className="flex items-center">
-                          <BarChartIcon className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
-                          {isMobile ? "Barras" : "Gráfico de Barras"}
-                        </TabsTrigger>
-                        <TabsTrigger value="pie" className="flex items-center">
-                          <PieChartIcon className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
-                          {isMobile ? "Circular" : "Gráfico Circular"}
-                        </TabsTrigger>
-                        <TabsTrigger value="table" className="flex items-center">
-                          <FileText className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
-                          Tabla
-                        </TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="bar" className="pt-3 md:pt-4">
-                        <div className={`${isMobile ? "h-60" : "h-80"} w-full`}>
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} margin={isMobile ? { top: 5, right: 5, bottom: 5, left: 5 } : { top: 20, right: 30, bottom: 5, left: 20 }}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" tick={{ fontSize: isMobile ? 10 : 12 }} />
-                              <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} />
-                              <Tooltip contentStyle={{ fontSize: isMobile ? 10 : 12 }} />
-                              <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12 }} />
-                              <Bar dataKey="count" fill="#8884d8" name="Respuestas" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </TabsContent>
-                      
-                      <TabsContent value="pie" className="pt-3 md:pt-4">
-                        <div className={`${isMobile ? "h-60" : "h-80"} w-full`}>
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart margin={isMobile ? { top: 5, right: 5, bottom: 5, left: 5 } : { top: 20, right: 30, bottom: 5, left: 20 }}>
-                              <Pie
-                                data={chartData}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={!isMobile}
-                                label={isMobile ? undefined : ({ name, value }) => `${name}: ${value}`}
-                                outerRadius={isMobile ? 60 : 80}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
-                                {chartData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip contentStyle={{ fontSize: isMobile ? 10 : 12 }} />
-                              <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12 }} />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </TabsContent>
-                      
-                      <TabsContent value="table" className="pt-3 md:pt-4">
-                        <div className="overflow-x-auto">
-                          <table className="w-full border-collapse">
-                            <thead>
-                              <tr className="bg-muted border-b">
-                                <th className={`text-left py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Opción</th>
-                                <th className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Respuestas</th>
-                                <th className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Porcentaje</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {chartData.map((item, index) => (
-                                <tr key={index} className="border-b">
-                                  <td className={`py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{item.name}</td>
-                                  <td className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{item.value}</td>
-                                  <td className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{getPercentage(item.value)}</td>
+                    isSelectedQuestionFreeText() ? (
+                      <div className={`text-center py-4 md:py-8 ${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}>
+                        <p>Las preguntas de texto libre no se pueden visualizar en gráficos.</p>
+                      </div>
+                    ) : (
+                      <Tabs defaultValue="bar">
+                        <TabsList className={`grid w-full grid-cols-3 ${isMobile ? "text-xs" : "text-sm"}`}>
+                          <TabsTrigger value="bar" className="flex items-center">
+                            <BarChartIcon className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
+                            {isMobile ? "Barras" : "Gráfico de Barras"}
+                          </TabsTrigger>
+                          <TabsTrigger value="pie" className="flex items-center">
+                            <PieChartIcon className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
+                            {isMobile ? "Circular" : "Gráfico Circular"}
+                          </TabsTrigger>
+                          <TabsTrigger value="table" className="flex items-center">
+                            <FileText className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
+                            Tabla
+                          </TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="bar" className="pt-3 md:pt-4">
+                          <div className={`${isMobile ? "h-60" : "h-80"} w-full`}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={chartData} margin={isMobile ? { top: 5, right: 5, bottom: 5, left: 5 } : { top: 20, right: 30, bottom: 5, left: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" tick={{ fontSize: isMobile ? 10 : 12 }} />
+                                <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} />
+                                <Tooltip contentStyle={{ fontSize: isMobile ? 10 : 12 }} />
+                                <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12 }} />
+                                <Bar dataKey="count" fill="#8884d8" name="Respuestas" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="pie" className="pt-3 md:pt-4">
+                          <div className={`${isMobile ? "h-60" : "h-80"} w-full`}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart margin={isMobile ? { top: 5, right: 5, bottom: 5, left: 5 } : { top: 20, right: 30, bottom: 5, left: 20 }}>
+                                <Pie
+                                  data={chartData}
+                                  cx="50%"
+                                  cy="50%"
+                                  labelLine={!isMobile}
+                                  label={isMobile ? undefined : ({ name, value }) => `${name}: ${value}`}
+                                  outerRadius={isMobile ? 60 : 80}
+                                  fill="#8884d8"
+                                  dataKey="value"
+                                >
+                                  {chartData.map((entry, index) =>
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                  )}
+                                </Pie>
+                                <Tooltip contentStyle={{ fontSize: isMobile ? 10 : 12 }} />
+                                <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12 }} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="table" className="pt-3 md:pt-4">
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr className="bg-muted border-b">
+                                  <th className={`text-left py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Opción</th>
+                                  <th className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Respuestas</th>
+                                  <th className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Porcentaje</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                              </thead>
+                              <tbody>
+                                {chartData.map((item, index) => (
+                                  <tr key={index} className="border-b">
+                                    <td className={`py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{item.name}</td>
+                                    <td className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{item.value}</td>
+                                    <td className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{getPercentage(item.value)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    )
                   ) : (
                     <div className={`text-center py-4 md:py-8 ${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}>
                       <p>No hay respuestas para esta encuesta.</p>
@@ -283,3 +379,4 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
     </div>
   );
 }
+

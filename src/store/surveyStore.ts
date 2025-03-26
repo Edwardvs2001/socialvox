@@ -67,16 +67,19 @@ const mockSurveys: Survey[] = [
       {
         id: 'q1',
         text: '¿Cómo calificaría la calidad de nuestro servicio?',
+        type: 'multiple-choice',
         options: ['Excelente', 'Bueno', 'Regular', 'Malo', 'Muy malo']
       },
       {
         id: 'q2',
         text: '¿Qué tan probable es que recomiende nuestros productos a otras personas?',
+        type: 'multiple-choice',
         options: ['Muy probable', 'Probable', 'Neutral', 'Poco probable', 'Nada probable']
       },
       {
         id: 'q3',
         text: '¿Qué aspecto de nuestro servicio podríamos mejorar?',
+        type: 'multiple-choice',
         options: [
           'Atención al cliente', 
           'Calidad del producto', 
@@ -99,11 +102,13 @@ const mockSurveys: Survey[] = [
       {
         id: 'q1',
         text: '¿Cómo se enteró de nuestro nuevo producto?',
+        type: 'multiple-choice',
         options: ['Redes sociales', 'Correo electrónico', 'Recomendación', 'Publicidad', 'Otro']
       },
       {
         id: 'q2',
         text: '¿Qué características le parecen más interesantes?',
+        type: 'multiple-choice',
         options: ['Diseño', 'Funcionalidad', 'Precio', 'Innovación', 'Calidad']
       }
     ],
