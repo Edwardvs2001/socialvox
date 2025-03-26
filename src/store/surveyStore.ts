@@ -1,7 +1,14 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+
+export interface SurveyFolder {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+  createdBy: string;
+}
 
 export interface SurveyQuestion {
   id: string;
@@ -19,6 +26,7 @@ export interface Survey {
   createdAt: string;
   createdBy: string;
   assignedTo: string[];
+  folderId: string | null;
 }
 
 export interface SurveyResponse {
@@ -33,6 +41,7 @@ export interface SurveyResponse {
 
 interface SurveyState {
   surveys: Survey[];
+  folders: SurveyFolder[];
   responses: SurveyResponse[];
   isLoading: boolean;
   error: string | null;
@@ -53,11 +62,37 @@ interface SurveyState {
   // Assign surveys
   assignSurvey: (surveyId: string, surveyorIds: string[]) => Promise<void>;
   
+  // Folder operations
+  createFolder: (folder: Omit<SurveyFolder, 'id' | 'createdAt'>) => Promise<SurveyFolder>;
+  updateFolder: (id: string, updates: Partial<SurveyFolder>) => Promise<void>;
+  deleteFolder: (id: string) => Promise<void>;
+  getFolderById: (id: string) => SurveyFolder | undefined;
+  assignSurveyToFolder: (surveyId: string, folderId: string | null) => Promise<void>;
+  assignFolderToSurveyors: (folderId: string, surveyorIds: string[]) => Promise<void>;
+  
   // Utility
   clearError: () => void;
 }
 
-// Mock data
+// Mock data for folders
+const mockFolders: SurveyFolder[] = [
+  {
+    id: 'folder-1',
+    name: 'Satisfacción del Cliente',
+    description: 'Encuestas relacionadas con la satisfacción de nuestros clientes',
+    createdAt: '2023-09-01T10:00:00Z',
+    createdBy: '1', // admin ID
+  },
+  {
+    id: 'folder-2',
+    name: 'Evaluación de Productos',
+    description: 'Encuestas para evaluar nuestros productos',
+    createdAt: '2023-09-05T14:00:00Z',
+    createdBy: '1', // admin ID
+  }
+];
+
+// Mock data for surveys with folder assignments
 const mockSurveys: Survey[] = [
   {
     id: '1',
@@ -92,7 +127,8 @@ const mockSurveys: Survey[] = [
     isActive: true,
     createdAt: '2023-09-15T10:30:00Z',
     createdBy: '1', // admin ID
-    assignedTo: ['2'] // surveyor ID
+    assignedTo: ['2'], // surveyor ID
+    folderId: 'folder-1'
   },
   {
     id: '2',
@@ -115,7 +151,8 @@ const mockSurveys: Survey[] = [
     isActive: true,
     createdAt: '2023-10-05T14:45:00Z',
     createdBy: '1',
-    assignedTo: ['2']
+    assignedTo: ['2'],
+    folderId: 'folder-2'
   }
 ];
 
@@ -123,6 +160,7 @@ export const useSurveyStore = create<SurveyState>()(
   persist(
     (set, get) => ({
       surveys: mockSurveys,
+      folders: mockFolders,
       responses: [],
       isLoading: false,
       error: null,
@@ -308,6 +346,136 @@ export const useSurveyStore = create<SurveyState>()(
         }
       },
       
+      createFolder: async (folderData) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Simulate API call delay
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          const newFolder: SurveyFolder = {
+            ...folderData,
+            id: uuidv4(),
+            createdAt: new Date().toISOString(),
+          };
+          
+          set(state => ({
+            folders: [...state.folders, newFolder],
+            isLoading: false,
+          }));
+          
+          return newFolder;
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Error al crear carpeta',
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+      
+      updateFolder: async (id, updates) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Simulate API call delay
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          set(state => ({
+            folders: state.folders.map(folder => 
+              folder.id === id ? { ...folder, ...updates } : folder
+            ),
+            isLoading: false,
+          }));
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Error al actualizar carpeta',
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+      
+      deleteFolder: async (id) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Simulate API call delay
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // When deleting a folder, remove folder assignment from associated surveys
+          set(state => ({
+            folders: state.folders.filter(folder => folder.id !== id),
+            surveys: state.surveys.map(survey => 
+              survey.folderId === id ? { ...survey, folderId: null } : survey
+            ),
+            isLoading: false,
+          }));
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Error al eliminar carpeta',
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+      
+      getFolderById: (id) => {
+        return get().folders.find(folder => folder.id === id);
+      },
+      
+      assignSurveyToFolder: async (surveyId, folderId) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Simulate API call delay
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          set(state => ({
+            surveys: state.surveys.map(survey => 
+              survey.id === surveyId ? { ...survey, folderId } : survey
+            ),
+            isLoading: false,
+          }));
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Error al asignar encuesta a carpeta',
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+      
+      assignFolderToSurveyors: async (folderId, surveyorIds) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Simulate API call delay
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // When assigning a folder to surveyors, assign all surveys in that folder to those surveyors
+          const folderSurveys = get().surveys.filter(survey => survey.folderId === folderId);
+          
+          const updatedSurveys = get().surveys.map(survey => {
+            if (survey.folderId === folderId) {
+              return { ...survey, assignedTo: surveyorIds };
+            }
+            return survey;
+          });
+          
+          set(state => ({
+            surveys: updatedSurveys,
+            isLoading: false,
+          }));
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Error al asignar carpeta a encuestadores',
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+      
       clearError: () => {
         set({ error: null });
       },
@@ -316,6 +484,7 @@ export const useSurveyStore = create<SurveyState>()(
       name: 'encuestas-va-surveys',
       partialize: (state) => ({
         surveys: state.surveys,
+        folders: state.folders,
         responses: state.responses,
       }),
     }
