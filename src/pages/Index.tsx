@@ -6,12 +6,18 @@ import { toast } from 'sonner';
 
 const Index = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, checkSession, refreshSession } = useAuthStore();
   
   // Using useCallback to prevent unnecessary re-renders
   const handleRedirect = useCallback(() => {
-    if (isAuthenticated && user) {
+    // Check if session is still valid
+    const isSessionValid = checkSession();
+    
+    if (isAuthenticated && isSessionValid && user) {
       console.log('Usuario autenticado:', user);
+      
+      // Refresh the session timer
+      refreshSession();
       
       switch (user.role) {
         case 'admin':
@@ -28,10 +34,13 @@ const Index = () => {
           toast.error('Error: Rol de usuario no reconocido');
       }
     } else {
-      console.log('Usuario no autenticado, redirigiendo a login');
+      if (isAuthenticated && !isSessionValid) {
+        toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
+      }
+      console.log('Usuario no autenticado o sesión expirada, redirigiendo a login');
       navigate('/');
     }
-  }, [navigate, isAuthenticated, user]);
+  }, [navigate, isAuthenticated, user, checkSession, refreshSession]);
 
   useEffect(() => {
     // Only run once when component mounts

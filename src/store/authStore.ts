@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -20,10 +21,13 @@ interface AuthState {
   failedLoginAttempts: number;
   lastLoginAttempt: number | null;
   adminPassword: string;
+  sessionExpiration: number | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   resetLoginAttempts: () => void;
+  checkSession: () => boolean;
+  refreshSession: () => void;
   changeAdminPassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
@@ -31,6 +35,7 @@ interface AuthState {
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_TIME = 10 * 60 * 1000; // 10 minutes in milliseconds
 const DEFAULT_ADMIN_PASSWORD = 'Admin@2024!'; // Default admin password
+const SESSION_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -43,6 +48,32 @@ export const useAuthStore = create<AuthState>()(
       failedLoginAttempts: 0,
       lastLoginAttempt: null,
       adminPassword: DEFAULT_ADMIN_PASSWORD,
+      sessionExpiration: null,
+      
+      checkSession: () => {
+        const { sessionExpiration, isAuthenticated, logout } = get();
+        
+        // If not authenticated, no need to check
+        if (!isAuthenticated) return false;
+        
+        // If session has expired, log out and return false
+        if (sessionExpiration && Date.now() > sessionExpiration) {
+          console.info('Sesión expirada, cerrando sesión automáticamente');
+          logout();
+          return false;
+        }
+        
+        return true;
+      },
+      
+      refreshSession: () => {
+        if (get().isAuthenticated) {
+          set({ 
+            sessionExpiration: Date.now() + SESSION_TIMEOUT,
+            error: null
+          });
+        }
+      },
       
       login: async (username, password) => {
         set({ isLoading: true, error: null });
@@ -114,6 +145,7 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               isLoading: false,
               failedLoginAttempts: 0, // Reset counter on successful login
+              sessionExpiration: currentTime + SESSION_TIMEOUT, // Set session expiration
             });
             
             console.info('Inicio de sesión de administrador exitoso');
@@ -169,6 +201,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
             failedLoginAttempts: 0, // Reset counter on successful login
+            sessionExpiration: currentTime + SESSION_TIMEOUT, // Set session expiration
           });
         } catch (error) {
           console.error('Error de autenticación:', error);
@@ -186,6 +219,7 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           token: null,
           isAuthenticated: false,
+          sessionExpiration: null,
         });
       },
       
@@ -273,7 +307,9 @@ export const useAuthStore = create<AuthState>()(
         failedLoginAttempts: state.failedLoginAttempts,
         lastLoginAttempt: state.lastLoginAttempt,
         // Include admin password in persisted state
-        adminPassword: state.adminPassword, 
+        adminPassword: state.adminPassword,
+        // Include session expiration
+        sessionExpiration: state.sessionExpiration,
       }),
     }
   )
