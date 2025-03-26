@@ -100,7 +100,7 @@ export function LoginForm() {
     return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-red-700/5"></div>
         <CardHeader className="space-y-1 relative z-10">
-          <CardTitle className="text-2xl font-bold text-center text-white drop-shadow-md">
+          <CardTitle className="text-2xl font-bold text-center drop-shadow-md text-blue-600">
             Acceso de administrador
           </CardTitle>
           <CardDescription className="text-center text-white/90 font-medium">
@@ -109,12 +109,12 @@ export function LoginForm() {
         </CardHeader>
         <CardContent className="space-y-6 relative z-10">
           <div className="space-y-2">
-            <Label htmlFor="admin-password" className="text-white font-medium">Contraseña de Administrador</Label>
+            <Label htmlFor="admin-password" className="text-white font-medium bg-neutral-100">Contraseña de Administrador</Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <Lock className="h-4 w-4" />
               </div>
-              <Input id="admin-password" type={showPassword ? "text" : "password"} placeholder="Ingrese la contraseña de administrador" required value={password} onChange={e => setPassword(e.target.value)} className="input-focus-ring pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/60" autoComplete="current-password" />
+              <Input id="admin-password" type={showPassword ? "text" : "password"} placeholder="Ingrese la contraseña de administrador" required value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-400" />
               <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" onClick={togglePasswordVisibility}>
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
