@@ -6,12 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, Lock, KeyRound } from 'lucide-react';
+import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, Lock, KeyRound, Mail } from 'lucide-react';
 import { toast } from 'sonner';
-import { useUserStore } from '@/store/userStore';
 
 export function LoginForm() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginType, setLoginType] = useState<'admin' | 'surveyor' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,7 +22,6 @@ export function LoginForm() {
     failedLoginAttempts,
     checkSession,
     logout,
-    adminPassword
   } = useAuthStore();
   const navigate = useNavigate();
   
@@ -55,13 +53,13 @@ export function LoginForm() {
     e.preventDefault();
     clearError();
     
-    if (!username || !password) {
+    if (!email || !password) {
       toast.error('Por favor complete todos los campos');
       return;
     }
     
     try {
-      await login(username, password);
+      await login(email, password);
       const user = useAuthStore.getState().user;
       if (user?.role === 'surveyor') {
         navigate('/surveyor');
@@ -77,36 +75,8 @@ export function LoginForm() {
   const handleLoginTypeSelect = (type: 'admin' | 'surveyor') => {
     setLoginType(type);
     clearError();
-    setUsername('');
+    setEmail('');
     setPassword('');
-  };
-  
-  const handleDirectAdminAccess = async () => {
-    clearError();
-    
-    if (!password) {
-      toast.error('Por favor ingrese la contraseña de administrador');
-      return;
-    }
-    
-    try {
-      // Always use 'admin' username for admin login
-      setUsername('admin');
-      
-      // Log login attempt for debugging
-      console.info('Attempting admin login with password:', password.length, 'characters');
-      
-      await login('admin', password);
-      const user = useAuthStore.getState().user;
-      if (user?.role === 'admin' || user?.role === 'admin-manager') {
-        navigate('/admin');
-      } else {
-        toast.error('Error al acceder: El usuario no tiene permisos de administrador');
-      }
-    } catch (err) {
-      console.error('Direct login error:', err);
-      // The error message is already set in the auth store
-    }
   };
   
   const togglePasswordVisibility = () => {
@@ -154,43 +124,77 @@ export function LoginForm() {
             Acceso de administrador
           </CardTitle>
           <CardDescription className="text-center font-medium text-gray-800">
-            Ingrese la contraseña para acceder
+            Ingrese sus credenciales para acceder
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 relative z-10">
-          <div className="space-y-2">
-            <Label htmlFor="admin-password" className="text-black font-medium bg-gray-50">Contraseña de Administrador</Label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
-                <Lock className="h-4 w-4" />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-email" className="text-black font-medium bg-gray-50">Correo Electrónico</Label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <Input 
+                  id="admin-email" 
+                  type="email" 
+                  placeholder="correo@ejemplo.com" 
+                  required 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  autoComplete="email" 
+                  className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-400" 
+                />
               </div>
-              <Input id="admin-password" type={showPassword ? "text" : "password"} placeholder="Ingrese la contraseña de administrador" required value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-400" />
-              <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" onClick={togglePasswordVisibility}>
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
             </div>
-          </div>
-          
-          {failedLoginAttempts > 0 && <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-100 text-sm flex items-center font-medium">
-              <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
-              <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
-            </div>}
-          
-          {error && <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
-              <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
-              <span>{error}</span>
-            </div>}
-          
-          <div className="grid grid-cols-1 gap-4">
-            <Button onClick={handleDirectAdminAccess} variant="red" className="p-6 h-auto flex flex-col gap-3 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 transition-all duration-300" disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-8 w-8 animate-spin text-white" /> : <Users className="h-8 w-8 text-white drop-shadow-md" />}
-              <span className="font-medium text-white">Ingresar como Administrador</span>
+            
+            <div className="space-y-2">
+              <Label htmlFor="admin-password" className="text-black font-medium bg-gray-50">Contraseña</Label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
+                  <Lock className="h-4 w-4" />
+                </div>
+                <Input 
+                  id="admin-password" 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="Ingrese su contraseña" 
+                  required 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  autoComplete="current-password" 
+                  className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-400" 
+                />
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" 
+                  onClick={togglePasswordVisibility}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            
+            {failedLoginAttempts > 0 && <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-100 text-sm flex items-center font-medium">
+                <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
+              </div>}
+            
+            {error && <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
+                <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span>{error}</span>
+              </div>}
+            
+            <Button type="submit" variant="red" className="w-full p-6 h-auto flex items-center justify-center gap-3 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 transition-all duration-300" disabled={isLoading}>
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Users className="h-5 w-5 text-white drop-shadow-md" />}
+              <span className="font-medium text-white">{isLoading ? 'Iniciando sesión...' : 'Ingresar como Administrador'}</span>
             </Button>
-          </div>
-          
-          <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-white hover:text-white bg-black">
-            Volver
-          </Button>
+            
+            <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-white hover:text-white bg-black">
+              Volver
+            </Button>
+          </form>
         </CardContent>
       </Card>;
   }
@@ -209,12 +213,21 @@ export function LoginForm() {
       <CardContent className="relative z-10">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2 bg-gray-50">
-            <Label htmlFor="username" className="text-black font-medium rounded-sm bg-gray-50">Usuario</Label>
+            <Label htmlFor="email" className="text-black font-medium rounded-sm bg-gray-50">Correo Electrónico</Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
-                <User className="h-4 w-4" />
+                <Mail className="h-4 w-4" />
               </div>
-              <Input id="username" type="text" placeholder="Ingrese su nombre de usuario" required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="correo@ejemplo.com" 
+                required 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                autoComplete="email" 
+                className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" 
+              />
             </div>
           </div>
           <div className="space-y-2">
@@ -223,8 +236,23 @@ export function LoginForm() {
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <Lock className="h-4 w-4" />
               </div>
-              <Input id="password" type={showPassword ? "text" : "password"} placeholder="Ingrese su contraseña" required value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
-              <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" onClick={togglePasswordVisibility}>
+              <Input 
+                id="password" 
+                type={showPassword ? "text" : "password"} 
+                placeholder="Ingrese su contraseña" 
+                required 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                autoComplete="current-password" 
+                className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" 
+              />
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" 
+                onClick={togglePasswordVisibility}
+              >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>

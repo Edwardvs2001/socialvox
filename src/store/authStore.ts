@@ -1,7 +1,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useUserStore } from './userStore';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export type UserRole = 'admin' | 'surveyor' | 'admin-manager';
 
@@ -14,7 +15,7 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  token: string | null;
+  session: any | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -22,8 +23,10 @@ interface AuthState {
   lastLoginAttempt: number | null;
   adminPassword: string;
   sessionExpiration: number | null;
-  login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
+  
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, userData: Partial<User>) => Promise<void>;
+  logout: () => Promise<void>;
   clearError: () => void;
   resetLoginAttempts: () => void;
   checkSession: () => boolean;
@@ -31,7 +34,7 @@ interface AuthState {
   changeAdminPassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
-// Admin security constants
+// Auth security constants
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_TIME = 10 * 60 * 1000; // 10 minutes in milliseconds
 const DEFAULT_ADMIN_PASSWORD = 'Admin@2024!'; // Default admin password
@@ -41,7 +44,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      token: null,
+      session: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
@@ -51,45 +54,28 @@ export const useAuthStore = create<AuthState>()(
       sessionExpiration: null,
       
       checkSession: () => {
-        const { sessionExpiration, isAuthenticated } = get();
-        
-        // If not authenticated, no need to check
-        if (!isAuthenticated) return false;
-        
-        // If session has expired, return false
-        if (sessionExpiration && Date.now() > sessionExpiration) {
-          console.info('Sesión expirada, cerrando sesión automáticamente');
-          // Don't call logout directly here to avoid state updates during render
-          return false;
-        }
+        // Always check with supabase if session is valid
+        const session = supabase.auth.session();
+        if (!session) return false;
         
         return true;
       },
       
       refreshSession: () => {
-        // Only refresh if authenticated to avoid unnecessary state updates
-        if (get().isAuthenticated) {
-          // Use a stable timestamp for session expiration
-          const newExpiration = Date.now() + SESSION_TIMEOUT;
-          
-          // Only update if the session would be extended by at least 1 minute
-          // This helps reduce unnecessary state updates
-          const currentExpiration = get().sessionExpiration || 0;
-          if (newExpiration > currentExpiration + 60000) {
-            set({ 
-              sessionExpiration: newExpiration,
-              error: null
-            });
-          }
-        }
+        // Supabase handles token refreshing automatically
+        const currentTime = Date.now();
+        set({ 
+          sessionExpiration: currentTime + SESSION_TIMEOUT,
+          error: null
+        });
       },
       
-      login: async (username, password) => {
+      login: async (email, password) => {
         set({ isLoading: true, error: null });
         
         try {
           const currentTime = Date.now();
-          const { failedLoginAttempts, lastLoginAttempt, adminPassword } = get();
+          const { failedLoginAttempts, lastLoginAttempt } = get();
           
           // Check if account is locked out
           if (failedLoginAttempts >= MAX_LOGIN_ATTEMPTS && lastLoginAttempt) {
@@ -103,136 +89,124 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           
-          // Normalize username for case-insensitive comparison
-          const normalizedUsername = username.toLowerCase().trim();
+          // Call Supabase auth login
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+          });
           
-          // Admin login handling - always case insensitive
-          if (normalizedUsername === 'admin') {
-            // Use adminPassword from state for verification
-            if (password !== adminPassword) {
-              // Increment failed login attempts and throw error
-              set((state) => ({ 
-                failedLoginAttempts: state.failedLoginAttempts + 1,
-                lastLoginAttempt: currentTime,
-                error: 'Credenciales inválidas. La contraseña de administrador es incorrecta.',
-                isLoading: false
-              }));
-              throw new Error('Credenciales inválidas');
-            }
-            
-            // Get users from userStore
-            const { users, createUser, updateUser } = useUserStore.getState();
-            
-            // Find admin user (case-insensitive)
-            const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
-            
-            if (!adminUser) {
-              // Create admin user if not found
-              const newAdminUser = await createUser({
-                username: 'admin',
-                password: adminPassword,
-                name: 'Admin Principal',
-                role: 'admin',
-                active: true,
-                email: 'admin@encuestasva.com'
-              });
-              
-              // Set admin user in auth state
-              set({
-                user: {
-                  id: newAdminUser.id,
-                  username: 'admin',
-                  name: 'Admin Principal',
-                  role: 'admin'
-                },
-                token: 'mock-jwt-token',
-                isAuthenticated: true,
-                isLoading: false,
-                failedLoginAttempts: 0,
-                sessionExpiration: currentTime + SESSION_TIMEOUT,
-              });
-              
-              return;
-            }
-            
-            // Ensure admin user is active and password is synced
-            await updateUser(adminUser.id, { 
-              active: true,
-              password: adminPassword
-            });
-            
-            // Set admin user in auth state
-            set({
-              user: {
-                id: adminUser.id,
-                username: adminUser.username,
-                name: adminUser.name,
-                role: adminUser.role
-              },
-              token: 'mock-jwt-token',
-              isAuthenticated: true,
-              isLoading: false,
-              failedLoginAttempts: 0,
-              sessionExpiration: currentTime + SESSION_TIMEOUT,
-            });
-            
-            return;
+          if (error) {
+            throw error;
           }
           
-          // Standard login flow for non-admin users
-          const { users } = useUserStore.getState();
-          
-          // Find user with matching username, password and active status
-          // Case-insensitive username comparison for better user experience
-          const user = users.find(
-            u => u.username.toLowerCase() === normalizedUsername && 
-                 u.password === password && 
-                 u.active
-          );
-          
-          if (!user) {
-            // Increment failed attempts on login failure
-            set((state) => ({ 
-              failedLoginAttempts: state.failedLoginAttempts + 1,
-              lastLoginAttempt: currentTime,
-              error: 'Credenciales inválidas o usuario inactivo',
-              isLoading: false
-            }));
-            throw new Error('Credenciales inválidas o usuario inactivo');
+          if (!data.session || !data.user) {
+            throw new Error('No se pudo iniciar sesión');
           }
           
-          // Remove password from user object before storing in state
-          const userWithoutPassword = {
-            id: user.id,
-            username: user.username,
-            name: user.name,
-            role: user.role
-          };
+          // Get user profile from profiles table
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
           
+          if (profileError) {
+            throw profileError;
+          }
+          
+          // Set user data from profile
           set({
-            user: userWithoutPassword,
-            token: 'mock-jwt-token',
+            user: {
+              id: profileData.id,
+              username: profileData.username,
+              name: profileData.name,
+              role: profileData.role,
+            },
+            session: data.session,
             isAuthenticated: true,
             isLoading: false,
-            failedLoginAttempts: 0, // Reset counter on successful login
-            sessionExpiration: currentTime + SESSION_TIMEOUT, // Set session expiration
+            failedLoginAttempts: 0,
+            sessionExpiration: currentTime + SESSION_TIMEOUT,
           });
+          
         } catch (error) {
           console.error('Error de autenticación:', error);
-          if (!get().error) {
-            set({
-              error: error instanceof Error ? error.message : 'Error desconocido',
-              isLoading: false,
-            });
-          }
+          
+          // Increment failed login attempts
+          set((state) => ({ 
+            failedLoginAttempts: state.failedLoginAttempts + 1,
+            lastLoginAttempt: Date.now(),
+            error: error instanceof Error ? error.message : 'Error desconocido',
+            isLoading: false,
+          }));
+          
           throw error;
         }
       },
       
-      logout: () => {
+      signup: async (email, password, userData) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Sign up with supabase
+          const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+              data: {
+                username: userData.username,
+                name: userData.name,
+                role: userData.role || 'surveyor',
+              }
+            }
+          });
+          
+          if (error) {
+            throw error;
+          }
+          
+          // Success, but may require email confirmation
+          if (data.user?.identities?.length === 0) {
+            throw new Error('Este correo ya está registrado');
+          }
+          
+          if (data.session) {
+            set({
+              user: {
+                id: data.user.id,
+                username: userData.username || '',
+                name: userData.name || '',
+                role: userData.role || 'surveyor',
+              },
+              session: data.session,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          } else {
+            // Email confirmation may be required
+            set({ isLoading: false });
+          }
+          
+        } catch (error) {
+          console.error('Error en el registro:', error);
+          set({
+            error: error instanceof Error ? error.message : 'Error desconocido',
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+      
+      logout: async () => {
+        try {
+          await supabase.auth.signOut();
+        } catch (error) {
+          console.error('Error al cerrar sesión:', error);
+        }
+        
         set({
           user: null,
-          token: null,
+          session: null,
           isAuthenticated: false,
           sessionExpiration: null,
         });
@@ -250,23 +224,18 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { adminPassword } = get();
+          // First verify current password by trying to sign in
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: 'admin@encuestasva.com', // Assuming this is admin email
+            password: currentPassword,
+          });
           
-          // Verify current password
-          if (currentPassword !== adminPassword) {
-            set({ 
-              error: 'La contraseña actual es incorrecta',
-              isLoading: false 
-            });
+          if (signInError) {
             throw new Error('La contraseña actual es incorrecta');
           }
           
           // Validate new password
           if (newPassword.length < 8) {
-            set({ 
-              error: 'La nueva contraseña debe tener al menos 8 caracteres',
-              isLoading: false 
-            });
             throw new Error('La nueva contraseña debe tener al menos 8 caracteres');
           }
           
@@ -277,36 +246,31 @@ export const useAuthStore = create<AuthState>()(
           const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
           
           if (!(hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar)) {
-            set({ 
-              error: 'La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales',
-              isLoading: false 
-            });
             throw new Error('La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales');
           }
           
-          // Update admin password
+          // Update password in Supabase
+          const { error: updateError } = await supabase.auth.updateUser({
+            password: newPassword
+          });
+          
+          if (updateError) {
+            throw updateError;
+          }
+          
+          // Store the admin password in state for backward compatibility
           set({ 
             adminPassword: newPassword,
             isLoading: false 
           });
           
-          // Also update the password in userStore to keep them in sync
-          const { users, updateUser } = useUserStore.getState();
-          const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
-          
-          if (adminUser) {
-            await updateUser(adminUser.id, { password: newPassword });
-          }
-          
           return;
         } catch (error) {
           console.error('Error al cambiar la contraseña:', error);
-          if (!get().error) {
-            set({ 
-              error: error instanceof Error ? error.message : 'Error al cambiar la contraseña',
-              isLoading: false 
-            });
-          }
+          set({ 
+            error: error instanceof Error ? error.message : 'Error al cambiar la contraseña',
+            isLoading: false 
+          });
           throw error;
         }
       },
@@ -315,7 +279,7 @@ export const useAuthStore = create<AuthState>()(
       name: 'encuestas-va-auth',
       partialize: (state) => ({ 
         user: state.user,
-        token: state.token,
+        session: state.session,
         isAuthenticated: state.isAuthenticated,
         failedLoginAttempts: state.failedLoginAttempts,
         lastLoginAttempt: state.lastLoginAttempt,
@@ -325,21 +289,77 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {
-            // Ensure admin password is synchronized with userStore on app load
-            try {
-              const userStore = useUserStore.getState();
-              const adminUser = userStore.users.find(u => u.username.toLowerCase() === 'admin');
-              
-              if (adminUser && adminUser.password && adminUser.password !== state.adminPassword) {
-                // If passwords don't match, update userStore to match authStore
-                userStore.updateUser(adminUser.id, { 
-                  password: state.adminPassword,
-                  active: true
-                }).catch(e => console.error('Error syncing admin password:', e));
+            // Set up auth state change listener
+            supabase.auth.onAuthStateChange((event, session) => {
+              if (event === 'SIGNED_IN' && session) {
+                // Get user profile
+                setTimeout(async () => {
+                  try {
+                    const { data, error } = await supabase
+                      .from('profiles')
+                      .select('*')
+                      .eq('id', session.user.id)
+                      .single();
+                      
+                    if (error) throw error;
+                    
+                    // Update state with user info
+                    useAuthStore.setState({
+                      user: {
+                        id: data.id,
+                        username: data.username,
+                        name: data.name,
+                        role: data.role,
+                      },
+                      session: session,
+                      isAuthenticated: true,
+                    });
+                  } catch (err) {
+                    console.error('Error fetching user profile:', err);
+                  }
+                }, 0);
+              } else if (event === 'SIGNED_OUT') {
+                useAuthStore.setState({
+                  user: null,
+                  session: null,
+                  isAuthenticated: false,
+                });
               }
-            } catch (e) {
-              console.error('Error during auth store rehydration:', e);
-            }
+            });
+            
+            // Check for existing session on page load
+            supabase.auth.getSession().then(({ data: { session } }) => {
+              if (session) {
+                // Get user profile
+                setTimeout(async () => {
+                  try {
+                    const { data, error } = await supabase
+                      .from('profiles')
+                      .select('*')
+                      .eq('id', session.user.id)
+                      .single();
+                      
+                    if (error) throw error;
+                    
+                    // Update state with user info
+                    useAuthStore.setState({
+                      user: {
+                        id: data.id,
+                        username: data.username,
+                        name: data.name,
+                        role: data.role,
+                      },
+                      session: session,
+                      isAuthenticated: true,
+                    });
+                  } catch (err) {
+                    console.error('Error fetching user profile:', err);
+                  }
+                }, 0);
+              }
+            }).catch(err => {
+              console.error('Error checking session:', err);
+            });
           }
         };
       }

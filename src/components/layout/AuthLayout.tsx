@@ -2,6 +2,7 @@
 import { ReactNode, useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface AuthLayoutProps {
@@ -103,6 +104,16 @@ export function AuthLayout({
   }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession, refreshSession, logout]);
   
   useEffect(() => {
+    // Set up auth state listener for Supabase
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event);
+      
+      if (event === 'SIGNED_OUT') {
+        // User signed out, update state
+        useAuthStore.getState().logout();
+      }
+    });
+    
     // Run the auth check only once on component mount
     checkAuth();
     
@@ -121,6 +132,11 @@ export function AuthLayout({
     return () => {
       if (refreshTimerRef.current) {
         clearInterval(refreshTimerRef.current);
+      }
+      
+      // Clean up Supabase auth listener
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
       }
     };
   }, [checkAuth]);
