@@ -80,7 +80,7 @@ export function LoginForm() {
         <CardContent className="space-y-4 relative z-10">
           <div className="grid grid-cols-2 gap-4">
             <Button onClick={() => handleLoginTypeSelect('admin')} variant="red" className="p-8 h-auto flex flex-col gap-4 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 hover:-translate-y-1 transition-all duration-300">
-              <div className="bg-red-500/30 p-4 rounded-full">
+              <div className="p-4 rounded-full bg-neutral-100">
                 <Users className="h-10 w-10 text-white drop-shadow-md" />
               </div>
               <span className="font-medium text-white">Administrador</span>
