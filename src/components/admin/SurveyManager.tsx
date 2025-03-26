@@ -64,13 +64,24 @@ export function SurveyManager() {
   const [isAssigningFolder, setIsAssigningFolder] = useState(false);
   const [sortBy, setSortBy] = useState<'title' | 'folder' | 'date'>('title');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [localSurveys, setLocalSurveys] = useState<Survey[]>([]);
   
+  // Load surveys and users on component mount
   useEffect(() => {
-    fetchSurveys();
-    fetchUsers();
+    const loadData = async () => {
+      await fetchSurveys();
+      await fetchUsers();
+    };
+    
+    loadData();
   }, [fetchSurveys, fetchUsers]);
   
-  const filteredSurveys = surveys.filter(survey => 
+  // Update local surveys when the store changes
+  useEffect(() => {
+    setLocalSurveys(surveys);
+  }, [surveys]);
+  
+  const filteredSurveys = localSurveys.filter(survey => 
     survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     survey.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -143,7 +154,10 @@ export function SurveyManager() {
     
     try {
       await deleteSurvey(selectedSurvey.id);
+      // Update local surveys immediately to reflect the deletion
+      setLocalSurveys(prev => prev.filter(s => s.id !== selectedSurvey.id));
       toast.success('Encuesta eliminada correctamente');
+      await fetchSurveys(); // Refresh surveys from store
     } catch (error) {
       console.error('Error deleting survey:', error);
       toast.error('Error al eliminar la encuesta');
@@ -183,8 +197,13 @@ export function SurveyManager() {
     
     try {
       await assignSurvey(selectedSurvey.id, selectedSurveyors);
+      // Update the local surveys immediately
+      setLocalSurveys(prev => 
+        prev.map(s => s.id === selectedSurvey.id ? {...s, assignedTo: selectedSurveyors} : s)
+      );
       toast.success('Encuestadores asignados correctamente');
       setShowAssignDialog(false);
+      await fetchSurveys(); // Refresh surveys from store
     } catch (error) {
       console.error('Error assigning surveyors:', error);
       toast.error('Error al asignar encuestadores');
@@ -200,8 +219,13 @@ export function SurveyManager() {
     
     try {
       await assignSurveyToFolder(selectedSurvey.id, selectedFolderId);
+      // Update the local surveys immediately
+      setLocalSurveys(prev => 
+        prev.map(s => s.id === selectedSurvey.id ? {...s, folderId: selectedFolderId} : s)
+      );
       toast.success('Encuesta asignada a carpeta correctamente');
       setShowFolderDialog(false);
+      await fetchSurveys(); // Refresh surveys from store
     } catch (error) {
       console.error('Error assigning survey to folder:', error);
       toast.error('Error al asignar encuesta a carpeta');

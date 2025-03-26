@@ -19,7 +19,6 @@ export function useOfflineSync() {
   // Check online status - ensure we only set up listeners once
   useEffect(() => {
     if (setupListenersRef.current) return;
-    setupListenersRef.current = true;
     
     const handleOnline = () => {
       setIsOnline(true);
@@ -33,6 +32,7 @@ export function useOfflineSync() {
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    setupListenersRef.current = true;
     
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -41,25 +41,31 @@ export function useOfflineSync() {
     };
   }, []);
   
-  // Auto-sync when coming back online - use useCallback to prevent unnecessary renders
+  // Auto-sync when coming back online
   const attemptSync = useCallback(() => {
     if (isOnline && pendingCount > 0 && isAuthenticated && checkSession() && !syncInProgressRef.current) {
       sync();
     }
-  }, [isOnline, pendingCount, isAuthenticated]);
+  }, [isOnline, pendingCount, isAuthenticated, checkSession]);
   
   // Set up sync attempt when conditions change
   useEffect(() => {
-    const syncTimeoutId = setTimeout(() => {
-      attemptSync();
-    }, 100);
+    let syncTimeoutId: number | undefined;
+    
+    if (isOnline && pendingCount > 0 && isAuthenticated && !syncInProgressRef.current) {
+      syncTimeoutId = window.setTimeout(() => {
+        attemptSync();
+      }, 100);
+    }
     
     return () => {
-      clearTimeout(syncTimeoutId);
+      if (syncTimeoutId) {
+        clearTimeout(syncTimeoutId);
+      }
     };
   }, [attemptSync, isOnline, pendingCount, isAuthenticated]);
   
-  // Manual sync function - use useCallback to stabilize this function reference
+  // Manual sync function
   const sync = useCallback(async () => {
     if (!isOnline) {
       toast.error('No hay conexión a internet. Intente más tarde.');
