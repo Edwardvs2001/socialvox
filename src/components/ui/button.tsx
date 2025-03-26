@@ -77,7 +77,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           if (isMounted.current) {
             setIsDisabled(false);
           }
-        }, 300);
+        }, 350); // Slightly longer delay to prevent rapid clicks
         
         return () => {
           clearTimeout(timer);

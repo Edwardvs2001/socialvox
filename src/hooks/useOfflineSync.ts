@@ -13,6 +13,7 @@ export function useOfflineSync() {
   const syncInProgressRef = useRef(false);
   const setupListenersRef = useRef(false);
   const isMountedRef = useRef(true);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Number of pending responses that need sync
   const pendingCount = responses.filter(r => !r.syncedToServer).length;
@@ -41,6 +42,13 @@ export function useOfflineSync() {
     
     return () => {
       isMountedRef.current = false;
+      
+      // Clear any pending timeouts on unmount
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+      }
+      
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       setupListenersRef.current = false;
@@ -58,17 +66,25 @@ export function useOfflineSync() {
   
   // Set up sync attempt when conditions change
   useEffect(() => {
-    let syncTimeoutId: number;
+    if (!isMountedRef.current) return;
+    
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
     
     if (isOnline && pendingCount > 0 && isAuthenticated && !syncInProgressRef.current) {
-      syncTimeoutId = window.setTimeout(() => {
-        attemptSync();
-      }, 100);
+      syncTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          attemptSync();
+        }
+      }, 300);
     }
     
     return () => {
-      if (syncTimeoutId) {
-        clearTimeout(syncTimeoutId);
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
       }
     };
   }, [attemptSync, isOnline, pendingCount, isAuthenticated]);
@@ -118,9 +134,14 @@ export function useOfflineSync() {
       }
       
       // Use setTimeout to ensure state updates are completed before changing the ref
-      setTimeout(() => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+      
+      syncTimeoutRef.current = setTimeout(() => {
         syncInProgressRef.current = false;
-      }, 300);
+        syncTimeoutRef.current = null;
+      }, 350);
     }
   }, [isOnline, pendingCount, isAuthenticated, checkSession, syncResponses]);
   
