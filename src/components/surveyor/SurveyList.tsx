@@ -7,12 +7,24 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SurveyItem } from './SurveyItem';
 import { Button } from '@/components/ui/button';
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from '@/components/ui/pagination';
 
 export function SurveyList() {
   const { user } = useAuthStore();
   const { surveys, folders, fetchSurveys, isLoading } = useSurveyStore();
   const [activeTab, setActiveTab] = useState<string>("all");
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   
   // Filter surveys assigned to the current surveyor
   const assignedSurveys = surveys.filter(
@@ -35,6 +47,19 @@ export function SurveyList() {
   const assignedFolders = folders.filter(
     folder => folder.parentId === null && (hasSurveysInFolder(folder.id) || hasSubfoldersWithSurveys(folder.id))
   );
+  
+  // Pagination calculations
+  const totalItems = activeTab === "all" ? assignedSurveys.length : 
+                    activeTab === "folder" ? currentSurveys.length : 
+                    assignedSurveys.filter(survey => survey.folderId === null).length;
+  
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  
+  const paginatedSurveys = (surveys: typeof assignedSurveys) => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return surveys.slice(startIndex, endIndex);
+  };
   
   // Check if a folder or its subfolders contain assigned surveys
   function hasSurveysInFolder(folderId: string): boolean {
@@ -74,6 +99,7 @@ export function SurveyList() {
   const navigateTo = (folderId: string | null) => {
     setCurrentFolderId(folderId);
     setActiveTab('folder');
+    setCurrentPage(1); // Reset to first page when navigating
   };
   
   useEffect(() => {
@@ -85,6 +111,7 @@ export function SurveyList() {
     if (activeTab === "all") {
       setCurrentFolderId(null);
     }
+    setCurrentPage(1); // Reset to first page when changing tabs
   }, [activeTab]);
   
   if (isLoading) {
@@ -124,10 +151,46 @@ export function SurveyList() {
         
         <TabsContent value="all">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {assignedSurveys.map(survey => (
+            {paginatedSurveys(assignedSurveys).map(survey => (
               <SurveyItem key={survey.id} survey={survey} />
             ))}
           </div>
+          
+          {totalPages > 1 && (
+            <Pagination className="mt-8">
+              <PaginationContent>
+                {currentPage > 1 && (
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+                      className="cursor-pointer"
+                    />
+                  </PaginationItem>
+                )}
+                
+                {Array.from({ length: totalPages }).map((_, index) => (
+                  <PaginationItem key={index}>
+                    <PaginationLink
+                      isActive={currentPage === index + 1}
+                      onClick={() => setCurrentPage(index + 1)}
+                      className="cursor-pointer"
+                    >
+                      {index + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                
+                {currentPage < totalPages && (
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+                      className="cursor-pointer"
+                    />
+                  </PaginationItem>
+                )}
+              </PaginationContent>
+            </Pagination>
+          )}
         </TabsContent>
         
         <TabsContent value="folder">
@@ -213,10 +276,46 @@ export function SurveyList() {
                   Encuestas {currentFolderId ? `en esta carpeta` : 'sin carpeta'}
                 </h3>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {currentSurveys.map(survey => (
+                  {paginatedSurveys(currentSurveys).map(survey => (
                     <SurveyItem key={survey.id} survey={survey} />
                   ))}
                 </div>
+                
+                {totalPages > 1 && (
+                  <Pagination className="mt-8">
+                    <PaginationContent>
+                      {currentPage > 1 && (
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                      
+                      {Array.from({ length: totalPages }).map((_, index) => (
+                        <PaginationItem key={index}>
+                          <PaginationLink
+                            isActive={currentPage === index + 1}
+                            onClick={() => setCurrentPage(index + 1)}
+                            className="cursor-pointer"
+                          >
+                            {index + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      
+                      {currentPage < totalPages && (
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                    </PaginationContent>
+                  </Pagination>
+                )}
               </>
             ) : currentFolderId && currentFolders.length === 0 ? (
               <Card className="bg-muted/50 mt-4">
@@ -246,10 +345,46 @@ export function SurveyList() {
               <h3 className="text-lg font-medium">Encuestas sin carpeta</h3>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {unassignedSurveys.map(survey => (
+              {paginatedSurveys(unassignedSurveys).map(survey => (
                 <SurveyItem key={survey.id} survey={survey} />
               ))}
             </div>
+            
+            {unassignedSurveys.length > itemsPerPage && (
+              <Pagination className="mt-8">
+                <PaginationContent>
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+                        className="cursor-pointer"
+                      />
+                    </PaginationItem>
+                  )}
+                  
+                  {Array.from({ length: Math.ceil(unassignedSurveys.length / itemsPerPage) }).map((_, index) => (
+                    <PaginationItem key={index}>
+                      <PaginationLink
+                        isActive={currentPage === index + 1}
+                        onClick={() => setCurrentPage(index + 1)}
+                        className="cursor-pointer"
+                      >
+                        {index + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  
+                  {currentPage < Math.ceil(unassignedSurveys.length / itemsPerPage) && (
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(unassignedSurveys.length / itemsPerPage)))} 
+                        className="cursor-pointer"
+                      />
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
+            )}
           </TabsContent>
         )}
       </Tabs>
