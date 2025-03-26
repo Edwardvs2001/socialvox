@@ -109,7 +109,7 @@ export function LoginForm() {
         </CardHeader>
         <CardContent className="space-y-6 relative z-10">
           <div className="space-y-2">
-            <Label htmlFor="admin-password" className="text-white font-medium bg-neutral-100">Contraseña de Administrador</Label>
+            <Label htmlFor="admin-password" className="text-white font-medium bg-gray-950">Contraseña de Administrador</Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <Lock className="h-4 w-4" />
