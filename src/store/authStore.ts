@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -129,7 +128,7 @@ export const useAuthStore = create<AuthState>()(
             console.info('Autenticación de administrador correcta');
             
             // Obtener los usuarios del userStore
-            const { users, updateUser } = useUserStore.getState();
+            const { users, createUser } = useUserStore.getState();
             
             // Buscar el usuario administrador (case-insensitive)
             const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
@@ -138,16 +137,16 @@ export const useAuthStore = create<AuthState>()(
               console.error('Usuario administrador no encontrado');
               
               // Create admin user if not found
-              const { addUser } = useUserStore.getState();
               const newAdminId = '1';
               
-              await addUser({
+              await createUser({
                 id: newAdminId,
                 username: 'admin',
                 password: adminPassword,
                 name: 'Admin Principal',
                 role: 'admin',
-                active: true
+                active: true,
+                email: 'admin@encuestasva.com'
               });
               
               // Set admin user in auth state
@@ -172,7 +171,7 @@ export const useAuthStore = create<AuthState>()(
             // Asegurar que el usuario administrador esté activo antes del intento de inicio de sesión
             if (!adminUser.active) {
               console.info('Activando usuario administrador');
-              await updateUser(adminUser.id, { active: true });
+              await useUserStore.getState().updateUser(adminUser.id, { active: true });
             }
             
             // Establecer el usuario administrador en el estado de autenticación
