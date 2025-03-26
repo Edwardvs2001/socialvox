@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -73,12 +74,12 @@ export function Navbar() {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`flex items-center text-sm font-medium transition-colors hover:text-primary 
+                  className={`flex items-center text-sm font-medium transition-colors
                     ${isActive 
-                      ? (isAdmin ? 'text-admin' : 'text-surveyor') 
-                      : 'text-muted-foreground'}`}
+                      ? (isAdmin ? 'text-admin font-semibold' : 'text-surveyor font-semibold') 
+                      : 'text-foreground hover:text-primary'}`}
                 >
-                  <Icon className="w-4 h-4 mr-2" />
+                  <Icon className={`w-4 h-4 mr-2 ${isActive ? (isAdmin ? 'text-admin' : 'text-surveyor') : 'text-foreground'}`} />
                   {link.label}
                 </Link>
               );
@@ -102,7 +103,7 @@ export function Navbar() {
               )}
               
               {pendingCount > 0 && (
-                <div className="ml-4 text-sm text-muted-foreground">
+                <div className="ml-4 text-sm text-foreground">
                   <span>{pendingCount} {pendingCount === 1 ? 'encuesta pendiente' : 'encuestas pendientes'}</span>
                 </div>
               )}
@@ -168,12 +169,12 @@ export function Navbar() {
                     key={link.to}
                     to={link.to}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center py-2 text-sm font-medium transition-colors hover:text-primary 
+                    className={`flex items-center py-2 text-sm font-medium transition-colors
                       ${isActive 
-                        ? (isAdmin ? 'text-admin' : 'text-surveyor') 
-                        : 'text-muted-foreground'}`}
+                        ? (isAdmin ? 'text-admin font-semibold' : 'text-surveyor font-semibold') 
+                        : 'text-foreground hover:text-primary'}`}
                   >
-                    <Icon className="w-4 h-4 mr-2" />
+                    <Icon className={`w-4 h-4 mr-2 ${isActive ? (isAdmin ? 'text-admin' : 'text-surveyor') : 'text-foreground'}`} />
                     {link.label}
                   </Link>
                 );
@@ -195,7 +196,7 @@ export function Navbar() {
                     )}
                     
                     {pendingCount > 0 && (
-                      <div className="ml-4 text-sm text-muted-foreground">
+                      <div className="ml-4 text-sm text-foreground">
                         <span>{pendingCount} {pendingCount === 1 ? 'pendiente' : 'pendientes'}</span>
                       </div>
                     )}
