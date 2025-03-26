@@ -155,8 +155,6 @@ export function UserManager() {
   
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
-      case 'admin-manager':
-        return <Badge className="bg-red-500">Administrador Principal</Badge>;
       case 'admin':
         return <Badge className="bg-blue-500">Administrador</Badge>;
       case 'surveyor':
@@ -230,16 +228,14 @@ export function UserManager() {
                   <Edit className="mr-2 h-4 w-4" />
                   Editar
                 </Button>
-                {user.role !== 'admin-manager' && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => openDeleteDialog(user)}
-                  >
-                    <Trash className="mr-2 h-4 w-4" />
-                    Eliminar
-                  </Button>
-                )}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => openDeleteDialog(user)}
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Eliminar
+                </Button>
               </CardFooter>
             </Card>
           ))}
