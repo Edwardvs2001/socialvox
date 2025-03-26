@@ -9,7 +9,7 @@ const Index = () => {
   const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const redirectingRef = useRef(false);
-  const [hasRefreshed, setHasRefreshed] = useState(false);
+  const hasRefreshedRef = useRef(false);
   
   // Using useCallback to prevent unnecessary re-renders
   const handleRedirect = useCallback(() => {
@@ -25,10 +25,10 @@ const Index = () => {
       console.log('Usuario autenticado:', user);
       
       // Refresh the session timer in an async way to prevent infinite loops
-      if (!hasRefreshed) {
+      if (!hasRefreshedRef.current) {
         setTimeout(() => {
           refreshSession();
-          setHasRefreshed(true);
+          hasRefreshedRef.current = true;
         }, 100);
       }
       
@@ -69,7 +69,7 @@ const Index = () => {
         navigate('/');
       }, 50);
     }
-  }, [navigate, isAuthenticated, user, checkSession, logout, hasRefreshed, refreshSession]);
+  }, [navigate, isAuthenticated, user, checkSession, logout, refreshSession]);
 
   useEffect(() => {
     // Only run once when component mounts

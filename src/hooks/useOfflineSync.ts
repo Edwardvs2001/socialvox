@@ -11,12 +11,16 @@ export function useOfflineSync() {
   const { responses, syncResponses } = useSurveyStore();
   const { isAuthenticated, checkSession } = useAuthStore();
   const syncInProgressRef = useRef(false);
+  const setupListenersRef = useRef(false);
   
   // Number of pending responses that need sync
   const pendingCount = responses.filter(r => !r.syncedToServer).length;
   
-  // Check online status
+  // Check online status - ensure we only set up listeners once
   useEffect(() => {
+    if (setupListenersRef.current) return;
+    setupListenersRef.current = true;
+    
     const handleOnline = () => {
       setIsOnline(true);
       toast.success('Conexión reestablecida');
@@ -27,17 +31,13 @@ export function useOfflineSync() {
       toast.warning('Conexión perdida. Los datos se guardarán localmente.');
     };
     
-    // Remove any existing listeners first to prevent duplicates
-    window.removeEventListener('online', handleOnline);
-    window.removeEventListener('offline', handleOffline);
-    
-    // Add our fresh listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      setupListenersRef.current = false;
     };
   }, []);
   
@@ -46,11 +46,18 @@ export function useOfflineSync() {
     if (isOnline && pendingCount > 0 && isAuthenticated && checkSession() && !syncInProgressRef.current) {
       sync();
     }
-  }, [isOnline, pendingCount, isAuthenticated, checkSession]);
+  }, [isOnline, pendingCount, isAuthenticated]);
   
+  // Set up sync attempt when conditions change
   useEffect(() => {
-    attemptSync();
-  }, [attemptSync]);
+    const syncTimeoutId = setTimeout(() => {
+      attemptSync();
+    }, 100);
+    
+    return () => {
+      clearTimeout(syncTimeoutId);
+    };
+  }, [attemptSync, isOnline, pendingCount, isAuthenticated]);
   
   // Manual sync function - use useCallback to stabilize this function reference
   const sync = useCallback(async () => {

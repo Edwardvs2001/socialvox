@@ -1,3 +1,4 @@
+
 import { ReactNode, useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -16,7 +17,7 @@ export function AuthLayout({
 }: AuthLayoutProps) {
   const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
   const navigate = useNavigate();
-  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const hasCheckedAuthRef = useRef(false);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initialCheckRef = useRef(false);
   
@@ -51,8 +52,8 @@ export function AuthLayout({
       
       // Only refresh session when authenticated and have valid session
       // Use setTimeout to prevent infinite update loops
-      if (isAuthenticated && isSessionValid && !hasCheckedAuth) {
-        setHasCheckedAuth(true);
+      if (isAuthenticated && isSessionValid && !hasCheckedAuthRef.current) {
+        hasCheckedAuthRef.current = true;
         setTimeout(() => {
           refreshSession();
         }, 100);
@@ -84,8 +85,8 @@ export function AuthLayout({
         console.log('Already authenticated, redirecting to dashboard');
         
         // Only schedule refresh if we haven't already checked auth
-        if (!hasCheckedAuth) {
-          setHasCheckedAuth(true);
+        if (!hasCheckedAuthRef.current) {
+          hasCheckedAuthRef.current = true;
           setTimeout(() => {
             refreshSession();
           }, 100);
@@ -99,9 +100,10 @@ export function AuthLayout({
         }
       }
     }
-  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession, hasCheckedAuth]);
+  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession, refreshSession, logout]);
   
   useEffect(() => {
+    // Run the auth check only once on component mount
     checkAuth();
     
     // Set up a periodic refresh for the session (every 15 minutes)
@@ -121,7 +123,7 @@ export function AuthLayout({
         clearInterval(refreshTimerRef.current);
       }
     };
-  }, [checkAuth, isAuthenticated, checkSession, refreshSession]);
+  }, [checkAuth]);
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
