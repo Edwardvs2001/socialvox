@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -17,29 +18,68 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  failedLoginAttempts: number;
+  lastLoginAttempt: number | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  resetLoginAttempts: () => void;
 }
+
+// Admin security constants
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_TIME = 10 * 60 * 1000; // 10 minutes in milliseconds
+const ADMIN_PASSWORD = 'Admin@2024!'; // Stronger admin password
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      failedLoginAttempts: 0,
+      lastLoginAttempt: null,
       
       login: async (username, password) => {
         set({ isLoading: true, error: null });
         
         try {
+          const currentTime = Date.now();
+          const { failedLoginAttempts, lastLoginAttempt } = get();
+          
+          // Check if account is locked out
+          if (failedLoginAttempts >= MAX_LOGIN_ATTEMPTS && lastLoginAttempt) {
+            const timeElapsed = currentTime - lastLoginAttempt;
+            if (timeElapsed < LOCKOUT_TIME) {
+              const minutesLeft = Math.ceil((LOCKOUT_TIME - timeElapsed) / 60000);
+              throw new Error(`Demasiados intentos fallidos. Intente nuevamente en ${minutesLeft} minutos.`);
+            } else {
+              // Reset lockout if time has passed
+              set({ failedLoginAttempts: 0 });
+            }
+          }
+          
           // Para depuración
           console.info('Intentando iniciar sesión con:', username, 'longitud de contraseña:', password.length);
           
           // Verificación especial para el administrador para asegurar que siempre funcione
-          if (username === 'admin' && password === 'admin123') {
+          if (username === 'admin') {
+            console.info('Verificando credenciales de administrador');
+            
+            // Validate admin password against the secure password
+            if (password !== ADMIN_PASSWORD) {
+              // Increment failed login attempts for admin account
+              set((state) => ({ 
+                failedLoginAttempts: state.failedLoginAttempts + 1,
+                lastLoginAttempt: currentTime,
+                error: 'Credenciales inválidas',
+                isLoading: false
+              }));
+              throw new Error('Credenciales inválidas');
+            }
+            
             console.info('Autenticación de administrador correcta');
             
             // Obtener los usuarios del userStore
@@ -70,6 +110,7 @@ export const useAuthStore = create<AuthState>()(
               token: 'mock-jwt-token',
               isAuthenticated: true,
               isLoading: false,
+              failedLoginAttempts: 0, // Reset counter on successful login
             });
             
             console.info('Inicio de sesión de administrador exitoso');
@@ -101,6 +142,13 @@ export const useAuthStore = create<AuthState>()(
           console.info('¿Usuario encontrado?', user ? 'Sí' : 'No');
           
           if (!user) {
+            // Increment failed attempts on login failure
+            set((state) => ({ 
+              failedLoginAttempts: state.failedLoginAttempts + 1,
+              lastLoginAttempt: currentTime,
+              error: 'Credenciales inválidas o usuario inactivo',
+              isLoading: false
+            }));
             throw new Error('Credenciales inválidas o usuario inactivo');
           }
           
@@ -117,13 +165,15 @@ export const useAuthStore = create<AuthState>()(
             token: 'mock-jwt-token',
             isAuthenticated: true,
             isLoading: false,
+            failedLoginAttempts: 0, // Reset counter on successful login
           });
         } catch (error) {
           console.error('Error de autenticación:', error);
-          set({
+          set((state) => ({
             error: error instanceof Error ? error.message : 'Error desconocido',
             isLoading: false,
-          });
+            // Note: failedLoginAttempts is updated in the specific error cases above
+          }));
           throw error;
         }
       },
@@ -139,13 +189,20 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => {
         set({ error: null });
       },
+      
+      resetLoginAttempts: () => {
+        set({ failedLoginAttempts: 0, lastLoginAttempt: null });
+      },
     }),
     {
       name: 'encuestas-va-auth',
       partialize: (state) => ({ 
         user: state.user,
         token: state.token,
-        isAuthenticated: state.isAuthenticated 
+        isAuthenticated: state.isAuthenticated,
+        // Include these in persisted state to maintain lockout between sessions
+        failedLoginAttempts: state.failedLoginAttempts,
+        lastLoginAttempt: state.lastLoginAttempt, 
       }),
     }
   )

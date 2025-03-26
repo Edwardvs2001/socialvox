@@ -28,7 +28,7 @@ interface UserState {
   clearError: () => void;
 }
 
-// Initial mock data with admin always active
+// Initial mock data with admin always active and secure password
 const mockUsers: User[] = [
   {
     id: '1',
@@ -38,7 +38,7 @@ const mockUsers: User[] = [
     role: 'admin',
     active: true, // Ensure admin is always active
     createdAt: '2023-01-10T08:00:00Z',
-    password: 'admin123',
+    password: 'Admin@2024!', // Updated secure password
   },
   {
     id: '2',

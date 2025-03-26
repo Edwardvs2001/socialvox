@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, User, Users } from 'lucide-react';
+import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
 
@@ -13,7 +14,7 @@ export function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginType, setLoginType] = useState<'admin' | 'surveyor' | null>(null);
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError, failedLoginAttempts } = useAuthStore();
   const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,8 +52,14 @@ export function LoginForm() {
     clearError();
     
     try {
-      // Use admin credentials directly
-      await login('admin', 'admin123');
+      // Set admin username, password entered by user
+      setUsername('admin');
+      if (!password) {
+        toast.error('Por favor ingrese la contraseña de administrador');
+        return;
+      }
+      
+      await login('admin', password);
       
       // Get user after login
       const user = useAuthStore.getState().user;
@@ -114,6 +121,34 @@ export function LoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="admin-password">Contraseña de Administrador</Label>
+            <Input
+              id="admin-password"
+              type="password"
+              placeholder="Ingrese la contraseña de administrador"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input-focus-ring"
+              autoComplete="current-password"
+            />
+          </div>
+          
+          {failedLoginAttempts > 0 && (
+            <div className="p-3 rounded-md bg-amber-100 border border-amber-200 text-amber-800 text-sm flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
+            </div>
+          )}
+          
+          {error && (
+            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm flex items-center">
+              <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 gap-4">
             <Button 
               onClick={handleDirectAdminAccess}
@@ -130,12 +165,6 @@ export function LoginForm() {
             </Button>
           </div>
           
-          {error && (
-            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-              {error}
-            </div>
-          )}
-          
           <Button 
             type="button" 
             variant="ghost" 
@@ -145,6 +174,11 @@ export function LoginForm() {
             Volver
           </Button>
         </CardContent>
+        <CardFooter className="flex flex-col">
+          <p className="text-xs text-center text-muted-foreground mt-4">
+            <span className="font-medium">Contraseña de administrador:</span> Admin@2024!
+          </p>
+        </CardFooter>
       </Card>
     );
   }
@@ -187,9 +221,17 @@ export function LoginForm() {
             />
           </div>
           
+          {failedLoginAttempts > 0 && (
+            <div className="p-3 rounded-md bg-amber-100 border border-amber-200 text-amber-800 text-sm flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
+            </div>
+          )}
+          
           {error && (
-            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-              {error}
+            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm flex items-center">
+              <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>{error}</span>
             </div>
           )}
           
