@@ -13,6 +13,9 @@ export function DashboardOverview() {
   const { users, fetchUsers } = useUserStore();
   const [chartData, setChartData] = useState([]);
   const updateTimerRef = useRef(null);
+  const [activeSurveys, setActiveSurveys] = useState(0);
+  const [surveyors, setSurveyors] = useState(0);
+  const [responseCount, setResponseCount] = useState(0);
   
   // Efecto para cargar datos iniciales y configurar actualizaciones periódicas
   useEffect(() => {
@@ -36,16 +39,13 @@ export function DashboardOverview() {
     };
   }, [fetchSurveys, fetchUsers]);
   
-  // Efecto para actualizar los datos del gráfico cuando cambian las respuestas
+  // Update metrics when data changes
   useEffect(() => {
+    setActiveSurveys(surveys.filter(s => s.isActive).length);
+    setSurveyors(users.filter(u => u.role === 'surveyor' && u.active).length);
+    setResponseCount(responses.length);
     setChartData(generateChartData());
-  }, [responses]);
-  
-  // Count active surveys
-  const activeSurveys = surveys.filter(s => s.isActive).length;
-  
-  // Count surveyors
-  const surveyors = users.filter(u => u.role === 'surveyor' && u.active).length;
+  }, [surveys, responses, users]);
   
   function generateChartData() {
     const today = new Date();
@@ -105,7 +105,7 @@ export function DashboardOverview() {
             <FileText className="h-4 w-4 text-admin" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{responses.length}</div>
+            <div className="text-2xl font-bold">{responseCount}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Desde el inicio
             </p>

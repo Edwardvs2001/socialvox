@@ -18,6 +18,10 @@ export function AdminDashboard() {
   const { user } = useAuthStore();
   const { surveys, responses, fetchSurveys } = useSurveyStore();
   const { users, fetchUsers } = useUserStore();
+  const [activeSurveys, setActiveSurveys] = useState(0);
+  const [surveyors, setSurveyors] = useState(0);
+  const [surveyCount, setSurveyCount] = useState(0);
+  const [responseCount, setResponseCount] = useState(0);
   
   // Fetch data on component mount and when admin page is visited
   useEffect(() => {
@@ -37,9 +41,13 @@ export function AdminDashboard() {
     return () => clearInterval(refreshInterval);
   }, [fetchSurveys, fetchUsers]);
   
-  // Count active surveys and surveyors - calculated on every render
-  const activeSurveys = surveys.filter(s => s.isActive).length;
-  const surveyors = users.filter(u => u.role === 'surveyor' && u.active).length;
+  // Update counts whenever surveys, responses, or users change
+  useEffect(() => {
+    setSurveyCount(surveys.length);
+    setResponseCount(responses.length);
+    setActiveSurveys(surveys.filter(s => s.isActive).length);
+    setSurveyors(users.filter(u => u.role === 'surveyor' && u.active).length);
+  }, [surveys, responses, users]);
 
   return (
     <div className="space-y-8">
@@ -59,7 +67,7 @@ export function AdminDashboard() {
               Gestiona todas las encuestas activas e inactivas. Crea nuevas encuestas y revisa los resultados.
             </p>
             <div className="flex justify-between items-center">
-              <span className="text-2xl font-bold">{surveys.length}</span>
+              <span className="text-2xl font-bold">{surveyCount}</span>
               <Button onClick={() => navigate('/admin/surveys')} className="bg-admin hover:bg-admin/90">
                 Administrar
               </Button>
@@ -79,7 +87,7 @@ export function AdminDashboard() {
               Visualiza y analiza los resultados de todas las encuestas. Revisa las respuestas recopiladas.
             </p>
             <div className="flex justify-between items-center">
-              <span className="text-2xl font-bold">{responses.length}</span>
+              <span className="text-2xl font-bold">{responseCount}</span>
               <Button onClick={() => navigate('/admin/results')} className="bg-admin hover:bg-admin/90">
                 Ver Datos
               </Button>
@@ -135,7 +143,7 @@ export function AdminDashboard() {
             <div className="flex flex-col items-center">
               <BarChart3 className="h-8 w-8 text-admin mb-2" />
               <p className="text-sm font-medium text-muted-foreground">Respuestas</p>
-              <h3 className="text-2xl font-bold mt-1">{responses.length}</h3>
+              <h3 className="text-2xl font-bold mt-1">{responseCount}</h3>
             </div>
           </CardContent>
         </Card>
