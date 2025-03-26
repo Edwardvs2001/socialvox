@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -39,7 +38,6 @@ export function LoginForm() {
     }
   };
   
-  // Handle login type selection
   const handleLoginTypeSelect = (type: 'admin' | 'surveyor') => {
     setLoginType(type);
     clearError();
@@ -48,7 +46,6 @@ export function LoginForm() {
     setPassword('');
   };
 
-  // Handle direct admin access
   const handleDirectAdminAccess = async () => {
     clearError();
     
@@ -83,10 +80,9 @@ export function LoginForm() {
     setShowPassword(!showPassword);
   };
   
-  // Show login type selection if no type is selected yet
   if (loginType === null) {
     return (
-      <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in login-card">
+      <Card className="w-full max-w-md mx-auto shadow-lg animate-fade-in login-card">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Seleccione su tipo de acceso</CardTitle>
           <CardDescription className="text-center">
@@ -118,10 +114,9 @@ export function LoginForm() {
     );
   }
 
-  // Admin Direct Access
   if (loginType === 'admin') {
     return (
-      <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in login-card">
+      <Card className="w-full max-w-md mx-auto shadow-lg animate-fade-in login-card">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Acceso de administrador</CardTitle>
           <CardDescription className="text-center">
@@ -197,9 +192,8 @@ export function LoginForm() {
     );
   }
   
-  // Surveyor login
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in login-card">
+    <Card className="w-full max-w-md mx-auto shadow-lg animate-fade-in login-card">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold text-center">Acceso de encuestador</CardTitle>
         <CardDescription className="text-center">
