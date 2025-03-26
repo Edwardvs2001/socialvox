@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useSurveyStore, SurveyResponse } from '@/store/surveyStore';
+import { useSurveyStore, SurveyResponse, GeoLocation } from '@/store/surveyStore';
 import { useUserStore } from '@/store/userStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,12 +16,20 @@ interface SurveyResultsProps {
   surveyId: string;
 }
 
-interface LocationWithAddress extends SurveyResponse['location'] {
+interface LocationWithAddress extends GeoLocation {
   address?: string;
 }
 
-interface ResponseWithAddress extends SurveyResponse {
+interface ResponseWithAddress {
+  id: string;
+  surveyId: string;
+  respondentId: string;
+  answers: { questionId: string; selectedOption: string }[];
+  audioRecording: string | null;
+  location: GeoLocation | null;
   locationWithAddress?: LocationWithAddress;
+  completedAt: string;
+  syncedToServer: boolean;
 }
 
 export function SurveyResults({ surveyId }: SurveyResultsProps) {
@@ -46,10 +54,13 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
       if (responses.length === 0) return;
       
       setAddressesLoading(true);
-      const responsesWithAddressesTemp = [...responses];
+      const responsesWithAddressesTemp: ResponseWithAddress[] = [];
       
-      for (let i = 0; i < responsesWithAddressesTemp.length; i++) {
-        const response = responsesWithAddressesTemp[i];
+      for (const response of responses) {
+        const newResponseWithAddress: ResponseWithAddress = {
+          ...response
+        };
+        
         if (response.location && 
             response.location.latitude !== null && 
             response.location.longitude !== null) {
@@ -59,24 +70,20 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
               response.location.longitude
             );
             
-            responsesWithAddressesTemp[i] = {
-              ...response,
-              locationWithAddress: {
-                ...response.location,
-                address
-              }
+            newResponseWithAddress.locationWithAddress = {
+              ...response.location,
+              address
             };
           } catch (error) {
             console.error('Error al obtener la dirección:', error);
-            responsesWithAddressesTemp[i] = {
-              ...response,
-              locationWithAddress: {
-                ...response.location,
-                address: 'No se pudo determinar la dirección'
-              }
+            newResponseWithAddress.locationWithAddress = {
+              ...response.location,
+              address: 'No se pudo determinar la dirección'
             };
           }
         }
+        
+        responsesWithAddressesTemp.push(newResponseWithAddress);
       }
       
       setResponsesWithAddresses(responsesWithAddressesTemp);
@@ -418,3 +425,4 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
     </div>
   );
 }
+
