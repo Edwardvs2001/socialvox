@@ -8,7 +8,7 @@ export default function Admin() {
   const { user } = useAuthStore();
   
   return (
-    <AuthLayout requiresAuth={true} allowedRoles={['admin']}>
+    <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
       <AdminLayout title={`Panel Administrativo`} description={`Bienvenido, ${user?.name}`}>
         <AdminDashboard />
       </AdminLayout>

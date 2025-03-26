@@ -15,6 +15,7 @@ const Index = () => {
       
       switch (user.role) {
         case 'admin':
+        case 'admin-manager':
           console.log('Redirigiendo a panel de administrador');
           navigate('/admin');
           break;
@@ -33,9 +34,8 @@ const Index = () => {
   }, [navigate, isAuthenticated, user]);
 
   useEffect(() => {
-    // Only run once when component mounts or when dependencies change
+    // Only run once when component mounts
     handleRedirect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleRedirect]);
   
   return (
@@ -46,6 +46,6 @@ const Index = () => {
       </div>
     </div>
   );
-};
+}
 
 export default Index;

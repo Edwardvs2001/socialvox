@@ -57,7 +57,7 @@ export function LoginForm() {
       // Get user after login
       const user = useAuthStore.getState().user;
       
-      if (user?.role === 'admin') {
+      if (user?.role === 'admin' || user?.role === 'admin-manager') {
         navigate('/admin');
       } else {
         toast.error('Error al acceder: El usuario no tiene permisos de administrador');

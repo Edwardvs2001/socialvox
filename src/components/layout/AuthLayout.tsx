@@ -34,17 +34,22 @@ export function AuthLayout({
         return;
       }
       
-      if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
-        console.log(`User role ${user.role} not allowed, redirecting`);
-        // User doesn't have the required role
-        if (user.role === 'surveyor') {
-          navigate('/surveyor');
-        } else if (user.role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/');
+      if (allowedRoles.length > 0 && user) {
+        // Check if user has admin-manager role, which should have access to admin pages
+        const hasAccess = user.role === 'admin-manager' || allowedRoles.includes(user.role);
+        
+        if (!hasAccess) {
+          console.log(`User role ${user.role} not allowed, redirecting`);
+          // User doesn't have the required role
+          if (user.role === 'surveyor') {
+            navigate('/surveyor');
+          } else if (user.role === 'admin' || user.role === 'admin-manager') {
+            navigate('/admin');
+          } else {
+            navigate('/');
+          }
+          return;
         }
-        return;
       }
     } else {
       // Logic for pages that don't require authentication (like login)
@@ -53,7 +58,7 @@ export function AuthLayout({
         // Already logged in, redirect to appropriate dashboard
         if (user?.role === 'surveyor') {
           navigate('/surveyor');
-        } else if (user?.role === 'admin') {
+        } else if (user?.role === 'admin' || user?.role === 'admin-manager') {
           navigate('/admin');
         }
       }

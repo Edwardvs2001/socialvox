@@ -22,7 +22,7 @@ export default function AdminResultsList() {
   );
   
   return (
-    <AuthLayout requiresAuth={true} allowedRoles={['admin']}>
+    <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
       <AdminLayout
         title="Resultados de Encuestas"
         description="Visualiza y analiza los datos recopilados"
