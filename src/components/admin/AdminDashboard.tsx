@@ -44,7 +44,7 @@ export function AdminDashboard() {
   // Update counts whenever surveys, responses, or users change
   useEffect(() => {
     setSurveyCount(surveys.length);
-    setResponseCount(responses.length);
+    setResponseCount(responses ? responses.length : 0);
     setActiveSurveys(surveys.filter(s => s.isActive).length);
     setSurveyors(users.filter(u => u.role === 'surveyor' && u.active).length);
   }, [surveys, responses, users]);
@@ -87,7 +87,7 @@ export function AdminDashboard() {
               Visualiza y analiza los resultados de todas las encuestas. Revisa las respuestas recopiladas.
             </p>
             <div className="flex justify-between items-center">
-              <span className="text-2xl font-bold">{responseCount}</span>
+              <span className="text-2xl font-bold">{responses ? responses.length : 0}</span>
               <Button onClick={() => navigate('/admin/results')} className="bg-admin hover:bg-admin/90">
                 Ver Datos
               </Button>
@@ -143,7 +143,7 @@ export function AdminDashboard() {
             <div className="flex flex-col items-center">
               <BarChart3 className="h-8 w-8 text-admin mb-2" />
               <p className="text-sm font-medium text-muted-foreground">Respuestas</p>
-              <h3 className="text-2xl font-bold mt-1">{responseCount}</h3>
+              <h3 className="text-2xl font-bold mt-1">{responses ? responses.length : 0}</h3>
             </div>
           </CardContent>
         </Card>
