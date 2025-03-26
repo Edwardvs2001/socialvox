@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSurveyStore, Survey } from '@/store/surveyStore';
@@ -48,22 +47,18 @@ export function SurveyManager() {
   const [selectedSurveyors, setSelectedSurveyors] = useState<string[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
   
-  // Fetch surveys and users
   useEffect(() => {
     fetchSurveys();
     fetchUsers();
   }, [fetchSurveys, fetchUsers]);
   
-  // Filter surveys based on search query
   const filteredSurveys = surveys.filter(survey => 
     survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     survey.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  // Filter only surveyors from users
   const surveyors = users.filter(user => user.role === 'surveyor' && user.active);
   
-  // Get user names for assigned surveyors
   const getSurveyorNames = (surveyorIds: string[]) => {
     return surveyorIds.map(id => {
       const user = users.find(u => u.id === id);
@@ -71,7 +66,6 @@ export function SurveyManager() {
     });
   };
   
-  // Handle survey deletion
   const confirmDelete = async () => {
     if (!selectedSurvey) return;
     
@@ -90,14 +84,12 @@ export function SurveyManager() {
     }
   };
   
-  // Open assign dialog
   const handleOpenAssignDialog = (survey: Survey) => {
     setSelectedSurvey(survey);
     setSelectedSurveyors(survey.assignedTo);
     setShowAssignDialog(true);
   };
   
-  // Handle surveyor selection
   const handleSurveyorSelection = (surveyorId: string) => {
     setSelectedSurveyors(prev => {
       if (prev.includes(surveyorId)) {
@@ -108,7 +100,6 @@ export function SurveyManager() {
     });
   };
   
-  // Save assignments
   const handleSaveAssignments = async () => {
     if (!selectedSurvey) return;
     
@@ -287,7 +278,6 @@ export function SurveyManager() {
         </div>
       )}
       
-      {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -320,7 +310,6 @@ export function SurveyManager() {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Assign surveyors dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
