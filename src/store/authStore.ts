@@ -137,10 +137,7 @@ export const useAuthStore = create<AuthState>()(
               console.error('Usuario administrador no encontrado');
               
               // Create admin user if not found
-              const newAdminId = '1';
-              
-              await createUser({
-                id: newAdminId,
+              const newAdminUser = await createUser({
                 username: 'admin',
                 password: adminPassword,
                 name: 'Admin Principal',
@@ -152,7 +149,7 @@ export const useAuthStore = create<AuthState>()(
               // Set admin user in auth state
               set({
                 user: {
-                  id: newAdminId,
+                  id: newAdminUser.id,
                   username: 'admin',
                   name: 'Admin Principal',
                   role: 'admin'
