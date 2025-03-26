@@ -38,10 +38,6 @@ export const useAuthStore = create<AuthState>()(
         try {
           // For debugging
           console.info('Attempting login with:', username, 'password length:', password.length);
-          console.info('Login attempt:', {
-            username,
-            passwordLength: password.length
-          });
           
           // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 800));
@@ -70,7 +66,13 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Credenciales inválidas o usuario inactivo');
           }
           
-          const { password: _, ...userWithoutPassword } = user;
+          // Remove password from user object before storing in state
+          const userWithoutPassword = {
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            role: user.role
+          };
           
           set({
             user: userWithoutPassword,
