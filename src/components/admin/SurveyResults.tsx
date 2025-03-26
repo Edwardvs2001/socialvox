@@ -8,13 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDate } from '@/utils/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Loader2, PieChart as PieChartIcon, BarChart as BarChartIcon, FileText } from 'lucide-react';
+import { Loader2, PieChartIcon, BarChartIcon, FileText } from 'lucide-react';
 
 interface SurveyResultsProps {
   surveyId: string;
+  onLowAccuracy?: (hasLowAccuracy: boolean) => void;
 }
 
-export function SurveyResults({ surveyId }: SurveyResultsProps) {
+export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
   const { getSurveyById, getSurveyResponses, isLoading } = useSurveyStore();
   const { users } = useUserStore();
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
@@ -73,6 +74,19 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
     if (responses.length === 0) return '0%';
     return `${Math.round((value / responses.length) * 100)}%`;
   };
+  
+  // Call onLowAccuracy callback if any location has low accuracy
+  useEffect(() => {
+    if (!onLowAccuracy) return;
+    
+    const hasLowAccuracyLocation = responses.some(response => 
+      response.location && 
+      response.location.accuracy !== null && 
+      response.location.accuracy > 100 // Consider > 100 meters as low accuracy
+    );
+    
+    onLowAccuracy(hasLowAccuracyLocation);
+  }, [responses, onLowAccuracy]);
   
   return (
     <div className="space-y-6">
