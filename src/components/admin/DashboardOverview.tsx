@@ -9,12 +9,14 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { BarChart3, ClipboardList, FileText, Users, Plus } from 'lucide-react';
 
 export function DashboardOverview() {
-  const { surveys, fetchSurveys } = useSurveyStore();
+  const { surveys, responses, fetchSurveys } = useSurveyStore();
   const { users, fetchUsers } = useUserStore();
   const [chartData, setChartData] = useState([]);
   const updateTimerRef = useRef(null);
   const [activeSurveys, setActiveSurveys] = useState(0);
+  const [activeResponses, setActiveResponses] = useState(0);
   const [surveyors, setSurveyors] = useState(0);
+  const [completionRate, setCompletionRate] = useState(0);
   
   // Efecto para cargar datos iniciales y configurar actualizaciones periódicas
   useEffect(() => {
@@ -40,23 +42,80 @@ export function DashboardOverview() {
   
   // Update metrics when data changes
   useEffect(() => {
-    setActiveSurveys(surveys.filter(s => s.isActive).length);
+    // Filtrar solo las encuestas activas
+    const activeSurveysList = surveys.filter(s => s.isActive);
+    const activeSurveyIds = activeSurveysList.map(s => s.id);
+    
+    // Contar las respuestas solo de encuestas activas
+    const activeResponsesList = responses ? 
+      responses.filter(r => activeSurveyIds.includes(r.surveyId)) : 
+      [];
+    
+    setActiveSurveys(activeSurveysList.length);
+    setActiveResponses(activeResponsesList.length);
     setSurveyors(users.filter(u => u.role === 'surveyor' && u.active).length);
-    setChartData(generateChartData());
-  }, [surveys, users]);
+    
+    // Calcular tasa de finalización con datos de encuestas activas
+    if (activeResponsesList.length > 0 && activeSurveysList.length > 0) {
+      // Esta es una fórmula genérica, ajustar según la lógica real de negocio
+      const rate = Math.min(
+        Math.round((activeResponsesList.length / (activeSurveysList.length * 3)) * 100),
+        100
+      );
+      setCompletionRate(rate);
+    } else {
+      setCompletionRate(0);
+    }
+    
+    setChartData(generateChartData(activeResponsesList));
+  }, [surveys, responses, users]);
   
-  function generateChartData() {
+  function generateChartData(activeResponses = []) {
     const today = new Date();
     const data = [];
     
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
+    // Usar datos reales si están disponibles
+    if (activeResponses.length > 0) {
+      // Agrupar respuestas por día para los últimos 7 días
+      const last7Days = {};
       
-      data.push({
-        date: formatDate(date),
-        responses: Math.floor(Math.random() * 10) + 1, // Random data for demo
+      // Inicializar los últimos 7 días
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = formatDate(date);
+        last7Days[dateStr] = 0;
+      }
+      
+      // Contar respuestas por día
+      activeResponses.forEach(response => {
+        const responseDate = new Date(response.completedAt);
+        const dateStr = formatDate(responseDate);
+        
+        // Solo contar si está dentro de los últimos 7 días
+        if (last7Days[dateStr] !== undefined) {
+          last7Days[dateStr]++;
+        }
       });
+      
+      // Convertir a formato de datos para el gráfico
+      Object.entries(last7Days).forEach(([date, value]) => {
+        data.push({
+          date,
+          responses: value
+        });
+      });
+    } else {
+      // Si no hay datos reales, usar datos de ejemplo
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        
+        data.push({
+          date: formatDate(date),
+          responses: Math.floor(Math.random() * 5), // Valores más pequeños para demo
+        });
+      }
     }
     
     return data;
@@ -118,9 +177,9 @@ export function DashboardOverview() {
             <BarChart3 className="h-4 w-4 text-admin" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">92%</div>
+            <div className="text-2xl font-bold">{completionRate}%</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Últimos 30 días
+              {activeResponses} respuestas de encuestas activas
             </p>
           </CardContent>
         </Card>
@@ -131,7 +190,7 @@ export function DashboardOverview() {
         <CardHeader>
           <CardTitle>Actividad de respuestas</CardTitle>
           <CardDescription>
-            Respuestas recibidas durante los últimos 7 días
+            Respuestas de encuestas activas durante los últimos 7 días
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -149,7 +208,7 @@ export function DashboardOverview() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip formatter={(value) => [`${value} respuestas`, 'Cantidad']} />
                 <Area 
                   type="monotone" 
                   dataKey="responses" 

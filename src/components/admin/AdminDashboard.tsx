@@ -21,7 +21,7 @@ export function AdminDashboard() {
   const [activeSurveys, setActiveSurveys] = useState(0);
   const [surveyors, setSurveyors] = useState(0);
   const [surveyCount, setSurveyCount] = useState(0);
-  const [responseCount, setResponseCount] = useState(0);
+  const [activeResponseCount, setActiveResponseCount] = useState(0);
   
   // Fetch data on component mount and when admin page is visited
   useEffect(() => {
@@ -43,9 +43,18 @@ export function AdminDashboard() {
   
   // Update counts whenever surveys, responses, or users change
   useEffect(() => {
+    // Filtrar solo las encuestas activas
+    const activeSurveysList = surveys.filter(s => s.isActive);
+    const activeSurveyIds = activeSurveysList.map(s => s.id);
+    
+    // Contar las respuestas solo de encuestas activas
+    const activeResponses = responses ? 
+      responses.filter(r => activeSurveyIds.includes(r.surveyId)) : 
+      [];
+    
     setSurveyCount(surveys.length);
-    setResponseCount(responses ? responses.length : 0);
-    setActiveSurveys(surveys.filter(s => s.isActive).length);
+    setActiveSurveys(activeSurveysList.length);
+    setActiveResponseCount(activeResponses.length);
     setSurveyors(users.filter(u => u.role === 'surveyor' && u.active).length);
   }, [surveys, responses, users]);
 
@@ -87,7 +96,7 @@ export function AdminDashboard() {
               Visualiza y analiza los resultados de todas las encuestas. Revisa las respuestas recopiladas.
             </p>
             <div className="flex justify-between items-center">
-              <span className="text-2xl font-bold">{responses ? responses.length : 0}</span>
+              <span className="text-2xl font-bold">{activeResponseCount}</span>
               <Button onClick={() => navigate('/admin/results')} className="bg-admin hover:bg-admin/90">
                 Ver Datos
               </Button>
@@ -143,7 +152,7 @@ export function AdminDashboard() {
             <div className="flex flex-col items-center">
               <BarChart3 className="h-8 w-8 text-admin mb-2" />
               <p className="text-sm font-medium text-muted-foreground">Respuestas</p>
-              <h3 className="text-2xl font-bold mt-1">{responses ? responses.length : 0}</h3>
+              <h3 className="text-2xl font-bold mt-1">{activeResponseCount}</h3>
             </div>
           </CardContent>
         </Card>
