@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSurveyStore, SurveyResponse } from '@/store/surveyStore';
 import { useUserStore } from '@/store/userStore';
@@ -8,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDate } from '@/utils/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Loader2, PieChart as PieChartIcon, BarChart as BarChartIcon, FileText } from 'lucide-react';
+import { Loader2, PieChartIcon, BarChartIcon, FileText, MapPin } from 'lucide-react';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface SurveyResultsProps {
   surveyId: string;
@@ -23,32 +23,27 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
   const responses = getSurveyResponses(surveyId);
   
   useEffect(() => {
-    // Set the first question as selected by default
     if (survey && survey.questions.length > 0 && !selectedQuestion) {
       setSelectedQuestion(survey.questions[0].id);
     }
   }, [survey, selectedQuestion]);
   
-  // Get the respondent name from their ID
   const getRespondentName = (id: string) => {
     const user = users.find(u => u.id === id);
     return user ? user.name : 'Usuario desconocido';
   };
   
-  // Process responses for charts
   const processChartData = () => {
     if (!survey || !selectedQuestion) return [];
     
     const question = survey.questions.find(q => q.id === selectedQuestion);
     if (!question) return [];
     
-    // Initialize counts for each option
     const counts: Record<string, number> = {};
     question.options.forEach(option => {
       counts[option] = 0;
     });
     
-    // Count responses for each option
     responses.forEach(response => {
       const answer = response.answers.find(a => a.questionId === selectedQuestion);
       if (answer) {
@@ -56,7 +51,6 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
       }
     });
     
-    // Convert to chart data format
     return Object.entries(counts).map(([option, count]) => ({
       name: option,
       value: count,
@@ -66,12 +60,18 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
   
   const chartData = processChartData();
   
-  // Colors for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC0CB', '#A569BD'];
   
   const getPercentage = (value: number) => {
     if (responses.length === 0) return '0%';
     return `${Math.round((value / responses.length) * 100)}%`;
+  };
+  
+  const formatLocation = (location: SurveyResponse['location']) => {
+    if (!location || location.latitude === null || location.longitude === null) {
+      return 'Ubicación no disponible';
+    }
+    return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
   };
   
   return (
@@ -116,7 +116,7 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
                   
                   {responses.length > 0 ? (
                     <Tabs defaultValue="bar">
-                      <TabsList className="grid w-full grid-cols-3">
+                      <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="bar" className="flex items-center">
                           <BarChartIcon className="h-4 w-4 mr-2" />
                           Gráfico de Barras
@@ -128,6 +128,10 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
                         <TabsTrigger value="table" className="flex items-center">
                           <FileText className="h-4 w-4 mr-2" />
                           Tabla
+                        </TabsTrigger>
+                        <TabsTrigger value="location" className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          Ubicaciones
                         </TabsTrigger>
                       </TabsList>
                       
@@ -193,6 +197,54 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
                           </table>
                         </div>
                       </TabsContent>
+                      
+                      <TabsContent value="location" className="pt-4">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">Ubicaciones de las Encuestas</CardTitle>
+                            <CardDescription>
+                              Donde fueron realizadas las encuestas
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Encuestador</TableHead>
+                                  <TableHead>Fecha</TableHead>
+                                  <TableHead>Coordenadas</TableHead>
+                                  <TableHead>Precisión</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {responses.map((response) => (
+                                  <TableRow key={response.id}>
+                                    <TableCell>{getRespondentName(response.respondentId)}</TableCell>
+                                    <TableCell>{formatDate(response.completedAt)}</TableCell>
+                                    <TableCell>
+                                      {response.location ? 
+                                        formatLocation(response.location) : 
+                                        'No disponible'}
+                                    </TableCell>
+                                    <TableCell>
+                                      {response.location && response.location.accuracy !== null ? 
+                                        `±${response.location.accuracy.toFixed(2)} metros` : 
+                                        'No disponible'}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                                {responses.length === 0 && (
+                                  <TableRow>
+                                    <TableCell colSpan={4} className="text-center py-4">
+                                      No hay ubicaciones disponibles
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+                      </TabsContent>
                     </Tabs>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
@@ -247,6 +299,24 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
                             );
                           })}
                         </ul>
+                        
+                        {response.location && (response.location.latitude !== null || response.location.longitude !== null) && (
+                          <div className="mt-3 border-t pt-3">
+                            <p className="font-medium flex items-center mb-2">
+                              <MapPin className="h-4 w-4 mr-2 text-admin" />
+                              Ubicación:
+                            </p>
+                            <p className="text-sm">
+                              Coordenadas: {formatLocation(response.location)}
+                              {response.location.accuracy !== null && 
+                                ` (Precisión: ±${response.location.accuracy.toFixed(2)} metros)`}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Registrada: {response.location.timestamp ? 
+                                formatDate(response.location.timestamp) : 'No disponible'}
+                            </p>
+                          </div>
+                        )}
                         
                         {response.audioRecording && (
                           <div className="mt-4">
