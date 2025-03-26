@@ -9,26 +9,30 @@ const Index = () => {
   const { isAuthenticated, user } = useAuthStore();
   
   useEffect(() => {
-    console.log('Index - Auth state:', { isAuthenticated, user });
-    
-    if (isAuthenticated && user) {
-      // Si ya está autenticado, redirigir al panel correspondiente
-      if (user.role === 'admin') {
-        console.log('Redireccionando a panel de administrador');
-        navigate('/admin');
-      } else if (user.role === 'surveyor') {
-        console.log('Redireccionando a panel de encuestador');
-        navigate('/surveyor');
+    const handleRedirect = () => {
+      if (isAuthenticated && user) {
+        console.log('Usuario autenticado:', user);
+        
+        switch (user.role) {
+          case 'admin':
+            console.log('Redirigiendo a panel de administrador');
+            navigate('/admin');
+            break;
+          case 'surveyor':
+            console.log('Redirigiendo a panel de encuestador');
+            navigate('/surveyor');
+            break;
+          default:
+            console.error('Rol no reconocido:', user.role);
+            toast.error('Error: Rol de usuario no reconocido');
+        }
       } else {
-        // Rol no reconocido
-        console.error('Rol de usuario no reconocido:', user.role);
-        toast.error('Error: Rol de usuario no reconocido');
+        console.log('Usuario no autenticado, redirigiendo a login');
+        navigate('/');
       }
-    } else {
-      // Si no está autenticado, redirigir a la página de login
-      console.log('No autenticado, redireccionando a login');
-      navigate('/');
-    }
+    };
+
+    handleRedirect();
   }, [navigate, isAuthenticated, user]);
   
   return (
