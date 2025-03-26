@@ -116,7 +116,7 @@ export function Navbar() {
                 <UserCircle className="h-6 w-6" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 bg-white shadow-md">
               <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled className="flex flex-col items-start">
@@ -151,7 +151,7 @@ export function Navbar() {
       {isMenuOpen && (
         <div className="md:hidden">
           <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" />
-          <div className="fixed inset-y-0 right-0 z-50 w-3/4 bg-background shadow-lg animate-slide-up">
+          <div className="fixed inset-y-0 right-0 z-50 w-3/4 bg-white shadow-lg animate-slide-up">
             <div className="flex flex-col p-6 space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium">Menú</h2>
