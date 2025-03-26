@@ -12,8 +12,9 @@ import AdminSurveys from "./pages/AdminSurveys";
 import AdminSurveyEditor from "./pages/AdminSurveyEditor";
 import AdminUsers from "./pages/AdminUsers";
 import AdminResults from "./pages/AdminResults";
-import AdminResultsList from "./pages/AdminResultsList"; // Add the new page
+import AdminResultsList from "./pages/AdminResultsList";
 import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
         <Routes>
           {/* Auth Routes */}
           <Route path="/" element={<Login />} />
+          <Route path="/index" element={<Index />} />
           
           {/* Surveyor Routes */}
           <Route path="/surveyor" element={<Surveyor />} />

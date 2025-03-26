@@ -36,28 +36,31 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // For debugging
-          console.info('Attempting login with:', username, 'password length:', password.length);
+          // Para depuración
+          console.info('Intentando iniciar sesión con:', username, 'longitud de contraseña:', password.length);
           
-          // Special check for admin user to ensure it always works
+          // Verificación especial para el administrador para asegurar que siempre funcione
           if (username === 'admin' && password === 'admin123') {
-            // Get the users from the userStore
+            console.info('Autenticación de administrador correcta');
+            
+            // Obtener los usuarios del userStore
             const { users, updateUser } = useUserStore.getState();
             
-            // Find the admin user
+            // Buscar el usuario administrador
             const adminUser = users.find(u => u.username === 'admin');
             
             if (!adminUser) {
+              console.error('Usuario administrador no encontrado');
               throw new Error('Usuario administrador no encontrado');
             }
             
-            // Ensure admin user is active before login attempt
+            // Asegurar que el usuario administrador esté activo antes del intento de inicio de sesión
             if (!adminUser.active) {
+              console.info('Activando usuario administrador');
               await updateUser(adminUser.id, { active: true });
-              console.info('Admin user activated');
             }
             
-            // Set admin user in auth state
+            // Establecer el usuario administrador en el estado de autenticación
             set({
               user: {
                 id: adminUser.id,
@@ -70,18 +73,19 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
             });
             
+            console.info('Inicio de sesión de administrador exitoso');
             return;
           }
           
-          // Standard login flow for non-admin users
-          // Simulate API call
+          // Flujo de inicio de sesión estándar para usuarios no administradores
+          // Simular llamada a API
           await new Promise(resolve => setTimeout(resolve, 800));
           
-          // Get the users from the userStore
+          // Obtener los usuarios del userStore
           const { users } = useUserStore.getState();
           
-          // Log available users for debugging
-          console.info('Available users:', users.map(u => ({
+          // Registrar usuarios disponibles para depuración
+          console.info('Usuarios disponibles:', users.map(u => ({
             id: u.id,
             username: u.username,
             password: u.password,
@@ -89,19 +93,19 @@ export const useAuthStore = create<AuthState>()(
             active: u.active
           })));
           
-          // Find the user with matching username and password
+          // Encontrar el usuario con nombre de usuario y contraseña coincidentes y que esté activo
           const user = users.find(
             u => u.username === username && u.password === password && u.active
           );
           
-          // Log whether user was found
-          console.info('User found?', user ? 'Yes' : 'No');
+          // Registrar si se encontró el usuario
+          console.info('¿Usuario encontrado?', user ? 'Sí' : 'No');
           
           if (!user) {
             throw new Error('Credenciales inválidas o usuario inactivo');
           }
           
-          // Remove password from user object before storing in state
+          // Eliminar la contraseña del objeto de usuario antes de almacenarlo en el estado
           const userWithoutPassword = {
             id: user.id,
             username: user.username,
@@ -116,7 +120,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error) {
-          console.error('Authentication error:', error);
+          console.error('Error de autenticación:', error);
           set({
             error: error instanceof Error ? error.message : 'Error desconocido',
             isLoading: false,

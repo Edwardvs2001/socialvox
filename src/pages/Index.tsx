@@ -2,21 +2,31 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { toast } from 'sonner';
 
 const Index = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
   
   useEffect(() => {
-    if (isAuthenticated) {
-      // If already authenticated, redirect to appropriate dashboard
-      if (user?.role === 'surveyor') {
-        navigate('/surveyor');
-      } else if (user?.role === 'admin') {
+    console.log('Index - Auth state:', { isAuthenticated, user });
+    
+    if (isAuthenticated && user) {
+      // Si ya está autenticado, redirigir al panel correspondiente
+      if (user.role === 'admin') {
+        console.log('Redireccionando a panel de administrador');
         navigate('/admin');
+      } else if (user.role === 'surveyor') {
+        console.log('Redireccionando a panel de encuestador');
+        navigate('/surveyor');
+      } else {
+        // Rol no reconocido
+        console.error('Rol de usuario no reconocido:', user.role);
+        toast.error('Error: Rol de usuario no reconocido');
       }
     } else {
-      // Redirect to login page if not authenticated
+      // Si no está autenticado, redirigir a la página de login
+      console.log('No autenticado, redireccionando a login');
       navigate('/');
     }
   }, [navigate, isAuthenticated, user]);
