@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSurveyStore, Survey } from '@/store/surveyStore';
@@ -169,6 +170,7 @@ export function SurveyManager() {
     
     try {
       await deleteSurvey(selectedSurvey.id);
+      // Directly update the local state after successful deletion
       setLocalSurveys(prev => prev.filter(s => s.id !== selectedSurvey.id));
       toast.success('Encuesta eliminada correctamente');
     } catch (error) {
@@ -214,6 +216,7 @@ export function SurveyManager() {
     
     try {
       await assignSurvey(selectedSurvey.id, selectedSurveyors);
+      // Update the local state after successful assignment
       setLocalSurveys(prev => 
         prev.map(s => s.id === selectedSurvey.id ? {...s, assignedTo: selectedSurveyors} : s)
       );
@@ -238,6 +241,7 @@ export function SurveyManager() {
     
     try {
       await assignSurveyToFolder(selectedSurvey.id, selectedFolderId);
+      // Update the local state after successful folder assignment
       setLocalSurveys(prev => 
         prev.map(s => s.id === selectedSurvey.id ? {...s, folderId: selectedFolderId} : s)
       );

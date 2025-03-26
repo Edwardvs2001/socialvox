@@ -43,11 +43,11 @@ export function AdminDashboard() {
   
   // Update counts whenever surveys, responses, or users change
   useEffect(() => {
-    // Filtrar solo las encuestas activas
+    // Filter only active surveys
     const activeSurveysList = surveys.filter(s => s.isActive);
     const activeSurveyIds = activeSurveysList.map(s => s.id);
     
-    // Contar las respuestas solo de encuestas activas
+    // Count responses only from active surveys
     const activeResponses = responses ? 
       responses.filter(r => activeSurveyIds.includes(r.surveyId)) : 
       [];

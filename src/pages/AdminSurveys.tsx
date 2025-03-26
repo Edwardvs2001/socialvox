@@ -24,6 +24,7 @@ export default function AdminSurveys() {
       loadingRef.current = true;
       
       try {
+        // Always fetch fresh data when the component mounts
         await fetchSurveys();
         clearError(); // Clear any previous errors
       } finally {
