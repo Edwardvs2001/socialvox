@@ -166,7 +166,7 @@ export function LoginForm() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-white font-medium bg-gray-900">Contraseña</Label>
+            <Label htmlFor="password" className="text-black font-medium bg-gray-50">Contraseña</Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <Lock className="h-4 w-4" />
