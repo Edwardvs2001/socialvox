@@ -49,6 +49,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button"
     const [isDisabled, setIsDisabled] = React.useState(false);
     
+    // Use a ref to track if the component is mounted to prevent state updates after unmount
+    const isMounted = React.useRef(true);
+    
+    React.useEffect(() => {
+      return () => {
+        isMounted.current = false;
+      };
+    }, []);
+    
     const handleClick = React.useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
         if (isDisabled) {
@@ -64,19 +73,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         }
         
         // Re-enable the button after a short delay
-        setTimeout(() => {
-          setIsDisabled(false);
-        }, 200);
+        const timer = setTimeout(() => {
+          if (isMounted.current) {
+            setIsDisabled(false);
+          }
+        }, 300);
+        
+        return () => {
+          clearTimeout(timer);
+        };
       },
       [onClick, isDisabled]
     );
-    
-    // Clean up on unmount
-    React.useEffect(() => {
-      return () => {
-        setIsDisabled(false);
-      };
-    }, []);
     
     return (
       <Comp

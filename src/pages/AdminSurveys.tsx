@@ -11,12 +11,16 @@ export default function AdminSurveys() {
   
   // Ensure surveys are loaded before mounting the component
   useEffect(() => {
+    let isMounted = true;
+    
     const loadSurveys = async () => {
       try {
         await fetchSurveys();
         clearError(); // Clear any previous errors
       } finally {
-        setIsLoaded(true);
+        if (isMounted) {
+          setIsLoaded(true);
+        }
       }
     };
     
@@ -24,6 +28,7 @@ export default function AdminSurveys() {
     
     // Make sure to clean up by clearing any errors when unmounting
     return () => {
+      isMounted = false;
       clearError();
     };
   }, [fetchSurveys, clearError]);
@@ -35,7 +40,7 @@ export default function AdminSurveys() {
         description="Crear, editar y administrar encuestas"
       >
         <Suspense fallback={<div>Cargando...</div>}>
-          {isLoaded && <SurveyManager key={`survey-manager-${Date.now()}`} />}
+          {isLoaded && <SurveyManager />}
         </Suspense>
       </AdminLayout>
     </AuthLayout>

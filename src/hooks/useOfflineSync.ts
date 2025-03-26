@@ -12,6 +12,7 @@ export function useOfflineSync() {
   const { isAuthenticated, checkSession } = useAuthStore();
   const syncInProgressRef = useRef(false);
   const setupListenersRef = useRef(false);
+  const isMountedRef = useRef(true);
   
   // Number of pending responses that need sync
   const pendingCount = responses.filter(r => !r.syncedToServer).length;
@@ -21,13 +22,17 @@ export function useOfflineSync() {
     if (setupListenersRef.current) return;
     
     const handleOnline = () => {
-      setIsOnline(true);
-      toast.success('Conexión reestablecida');
+      if (isMountedRef.current) {
+        setIsOnline(true);
+        toast.success('Conexión reestablecida');
+      }
     };
     
     const handleOffline = () => {
-      setIsOnline(false);
-      toast.warning('Conexión perdida. Los datos se guardarán localmente.');
+      if (isMountedRef.current) {
+        setIsOnline(false);
+        toast.warning('Conexión perdida. Los datos se guardarán localmente.');
+      }
     };
     
     window.addEventListener('online', handleOnline);
@@ -35,6 +40,7 @@ export function useOfflineSync() {
     setupListenersRef.current = true;
     
     return () => {
+      isMountedRef.current = false;
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       setupListenersRef.current = false;
@@ -90,21 +96,31 @@ export function useOfflineSync() {
     }
     
     syncInProgressRef.current = true;
-    setIsSyncing(true);
+    
+    if (isMountedRef.current) {
+      setIsSyncing(true);
+    }
     
     try {
       await syncResponses();
-      setLastSyncTime(new Date());
-      toast.success(`Sincronización completa: ${pendingCount} ${pendingCount === 1 ? 'encuesta' : 'encuestas'} sincronizada${pendingCount === 1 ? '' : 's'}`);
+      if (isMountedRef.current) {
+        setLastSyncTime(new Date());
+        toast.success(`Sincronización completa: ${pendingCount} ${pendingCount === 1 ? 'encuesta' : 'encuestas'} sincronizada${pendingCount === 1 ? '' : 's'}`);
+      }
     } catch (error) {
       console.error('Error syncing data:', error);
-      toast.error('Error al sincronizar datos. Intente nuevamente.');
+      if (isMountedRef.current) {
+        toast.error('Error al sincronizar datos. Intente nuevamente.');
+      }
     } finally {
-      setIsSyncing(false);
+      if (isMountedRef.current) {
+        setIsSyncing(false);
+      }
+      
       // Use setTimeout to ensure state updates are completed before changing the ref
       setTimeout(() => {
         syncInProgressRef.current = false;
-      }, 200);
+      }, 300);
     }
   }, [isOnline, pendingCount, isAuthenticated, checkSession, syncResponses]);
   
