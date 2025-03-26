@@ -1,5 +1,4 @@
-
-import { ReactNode, useEffect, useCallback } from 'react';
+import { ReactNode, useEffect, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -15,8 +14,9 @@ export function AuthLayout({
   requiresAuth = true,
   allowedRoles = [] 
 }: AuthLayoutProps) {
-  const { isAuthenticated, user, checkSession, refreshSession } = useAuthStore();
+  const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
   const navigate = useNavigate();
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   
   const checkAuth = useCallback(() => {
     console.log('AuthLayout - Checking auth:', { 
@@ -35,19 +35,23 @@ export function AuthLayout({
         console.log('Not authenticated or session expired, redirecting to login');
         // Not logged in or session expired, redirect to login
         if (isAuthenticated && !isSessionValid) {
+          // Handle session expiration 
+          logout(); // Safely log out the user
           toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
         }
         navigate('/');
         return;
       }
       
-      // Only refresh session when needed and not on every render
-      // This prevents infinite update loops
+      // Only refresh session when authenticated and have valid session
+      // Use setTimeout to prevent infinite update loops
       if (isAuthenticated && isSessionValid) {
-        // Using setTimeout to break the synchronous update cycle
-        setTimeout(() => {
-          refreshSession();
-        }, 0);
+        // Only schedule refresh if we haven't already checked auth
+        if (!hasCheckedAuth) {
+          setTimeout(() => {
+            refreshSession();
+          }, 100);
+        }
       }
       
       if (allowedRoles.length > 0 && user) {
@@ -74,10 +78,13 @@ export function AuthLayout({
       
       if (isAuthenticated && isSessionValid) {
         console.log('Already authenticated, redirecting to dashboard');
-        // Refresh the session timer but use setTimeout to break the synchronous cycle
-        setTimeout(() => {
-          refreshSession();
-        }, 0);
+        
+        // Only schedule refresh if we haven't already checked auth
+        if (!hasCheckedAuth) {
+          setTimeout(() => {
+            refreshSession();
+          }, 100);
+        }
         
         // Already logged in, redirect to appropriate dashboard
         if (user?.role === 'surveyor') {
@@ -87,11 +94,26 @@ export function AuthLayout({
         }
       }
     }
-  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession]);
+    
+    // Mark that we've checked authentication
+    setHasCheckedAuth(true);
+  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession, hasCheckedAuth]);
   
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    
+    // Set up a periodic refresh for the session (every 15 minutes)
+    // This keeps the session fresh while the user is active
+    const refreshInterval = setInterval(() => {
+      if (isAuthenticated && checkSession()) {
+        refreshSession();
+      }
+    }, 15 * 60 * 1000); // 15 minutes
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [checkAuth, isAuthenticated, checkSession, refreshSession]);
   
   return (
     <div className="min-h-screen bg-background flex flex-col">

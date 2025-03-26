@@ -1,15 +1,20 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 
 const Index = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user, checkSession, refreshSession } = useAuthStore();
+  const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   // Using useCallback to prevent unnecessary re-renders
   const handleRedirect = useCallback(() => {
+    // Prevent multiple redirects
+    if (isRedirecting) return;
+    setIsRedirecting(true);
+    
     // Check if session is still valid
     const isSessionValid = checkSession();
     
@@ -19,7 +24,7 @@ const Index = () => {
       // Refresh the session timer in an async way to prevent infinite loops
       setTimeout(() => {
         refreshSession();
-      }, 0);
+      }, 100);
       
       switch (user.role) {
         case 'admin':
@@ -34,15 +39,19 @@ const Index = () => {
         default:
           console.error('Rol no reconocido:', user.role);
           toast.error('Error: Rol de usuario no reconocido');
+          logout();
+          navigate('/');
       }
     } else {
       if (isAuthenticated && !isSessionValid) {
+        // Handle expired session 
+        logout();
         toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
       }
       console.log('Usuario no autenticado o sesión expirada, redirigiendo a login');
       navigate('/');
     }
-  }, [navigate, isAuthenticated, user, checkSession]);
+  }, [navigate, isAuthenticated, user, checkSession, logout, isRedirecting]);
 
   useEffect(() => {
     // Only run once when component mounts

@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -59,7 +58,8 @@ export const useAuthStore = create<AuthState>()(
         // If session has expired, log out and return false
         if (sessionExpiration && Date.now() > sessionExpiration) {
           console.info('Sesión expirada, cerrando sesión automáticamente');
-          logout();
+          // Don't call logout directly here to avoid state updates during render
+          // Instead, return false and let the component handle it
           return false;
         }
         
@@ -67,11 +67,20 @@ export const useAuthStore = create<AuthState>()(
       },
       
       refreshSession: () => {
+        // Only refresh if authenticated to avoid unnecessary state updates
         if (get().isAuthenticated) {
-          set({ 
-            sessionExpiration: Date.now() + SESSION_TIMEOUT,
-            error: null
-          });
+          // Use a stable timestamp for session expiration
+          const newExpiration = Date.now() + SESSION_TIMEOUT;
+          
+          // Only update if the session would be extended by at least 1 minute
+          // This helps reduce unnecessary state updates
+          const currentExpiration = get().sessionExpiration || 0;
+          if (newExpiration > currentExpiration + 60000) {
+            set({ 
+              sessionExpiration: newExpiration,
+              error: null
+            });
+          }
         }
       },
       

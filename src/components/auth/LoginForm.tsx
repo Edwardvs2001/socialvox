@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
+
 export function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -18,12 +19,32 @@ export function LoginForm() {
     isLoading,
     error,
     clearError,
-    failedLoginAttempts
+    failedLoginAttempts,
+    checkSession,
+    logout
   } = useAuthStore();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (isAuthenticated) {
+      const isSessionValid = checkSession();
+      if (!isSessionValid) {
+        logout();
+        toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
+      }
+    }
+  }, []);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    
+    if (!username || !password) {
+      toast.error('Por favor complete todos los campos');
+      return;
+    }
+    
     try {
       await login(username, password);
       const user = useAuthStore.getState().user;
@@ -36,20 +57,24 @@ export function LoginForm() {
       console.error('Login error:', err);
     }
   };
+  
   const handleLoginTypeSelect = (type: 'admin' | 'surveyor') => {
     setLoginType(type);
     clearError();
     setUsername('');
     setPassword('');
   };
+  
   const handleDirectAdminAccess = async () => {
     clearError();
+    
+    if (!password) {
+      toast.error('Por favor ingrese la contraseña de administrador');
+      return;
+    }
+    
     try {
       setUsername('admin');
-      if (!password) {
-        toast.error('Por favor ingrese la contraseña de administrador');
-        return;
-      }
       console.log('Attempting admin login with password:', password);
       await login('admin', password);
       const user = useAuthStore.getState().user;
@@ -59,13 +84,14 @@ export function LoginForm() {
         toast.error('Error al acceder: El usuario no tiene permisos de administrador');
       }
     } catch (err) {
-      toast.error('Error al iniciar sesión como administrador');
       console.error('Direct login error:', err);
     }
   };
+  
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+  
   if (loginType === null) {
     return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-red-500/5"></div>
@@ -96,6 +122,7 @@ export function LoginForm() {
         </CardContent>
       </Card>;
   }
+  
   if (loginType === 'admin') {
     return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-red-700/5"></div>
@@ -144,6 +171,7 @@ export function LoginForm() {
         </CardContent>
       </Card>;
   }
+  
   return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5"></div>
       <CardHeader className="space-y-1 relative z-10">
