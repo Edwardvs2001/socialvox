@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSurveyStore } from '@/store/surveyStore';
 import { useUserStore } from '@/store/userStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,11 +12,28 @@ export function DashboardOverview() {
   const { surveys, responses, fetchSurveys } = useSurveyStore();
   const { users, fetchUsers } = useUserStore();
   const [chartData, setChartData] = useState([]);
+  const updateTimerRef = useRef(null);
   
-  // Efecto para cargar datos iniciales
+  // Efecto para cargar datos iniciales y configurar actualizaciones periódicas
   useEffect(() => {
-    fetchSurveys();
-    fetchUsers();
+    // Immediate fetch on mount
+    const loadData = async () => {
+      await fetchSurveys();
+      await fetchUsers();
+    };
+    
+    loadData();
+    
+    // Set up periodic data refresh (every 10 seconds)
+    updateTimerRef.current = setInterval(() => {
+      loadData();
+    }, 10000);
+    
+    return () => {
+      if (updateTimerRef.current) {
+        clearInterval(updateTimerRef.current);
+      }
+    };
   }, [fetchSurveys, fetchUsers]);
   
   // Efecto para actualizar los datos del gráfico cuando cambian las respuestas

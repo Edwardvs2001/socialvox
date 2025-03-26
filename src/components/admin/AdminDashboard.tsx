@@ -21,14 +21,18 @@ export function AdminDashboard() {
   
   // Fetch data on component mount and when admin page is visited
   useEffect(() => {
-    fetchSurveys();
-    fetchUsers();
+    // Immediate data fetch
+    const fetchData = async () => {
+      await fetchSurveys();
+      await fetchUsers();
+    };
     
-    // Set up an interval to periodically refresh data (every 30 seconds)
+    fetchData();
+    
+    // Set up an interval to periodically refresh data (every 15 seconds)
     const refreshInterval = setInterval(() => {
-      fetchSurveys();
-      fetchUsers();
-    }, 30000);
+      fetchData();
+    }, 15000);
     
     return () => clearInterval(refreshInterval);
   }, [fetchSurveys, fetchUsers]);
