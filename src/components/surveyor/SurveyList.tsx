@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useSurveyStore, SurveyFolder } from '@/store/surveyStore';
 import { useAuthStore } from '@/store/authStore';
-import { ClipboardList, FolderOpen, Loader2, ArrowRight, FolderDown } from 'lucide-react';
+import { ClipboardList, FolderOpen, Loader2, ArrowRight, ArrowUp } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SurveyItem } from './SurveyItem';
@@ -134,7 +134,7 @@ export function SurveyList() {
           <div className="mb-4">
             {currentFolderId ? (
               <div className="space-y-2">
-                <div className="flex items-center text-sm mb-2">
+                <div className="flex flex-wrap items-center text-sm mb-2">
                   <Button 
                     variant="ghost" 
                     size="sm"
@@ -170,8 +170,8 @@ export function SurveyList() {
                     }}
                     className="mb-4"
                   >
-                    <FolderDown className="mr-2 h-4 w-4" />
-                    Subir
+                    <ArrowUp className="mr-2 h-4 w-4" />
+                    Subir al nivel superior
                   </Button>
                 )}
               </div>
