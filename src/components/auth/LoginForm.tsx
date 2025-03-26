@@ -103,7 +103,7 @@ export function LoginForm() {
           <CardTitle className="text-2xl font-bold text-center drop-shadow-md text-blue-600">
             Acceso de administrador
           </CardTitle>
-          <CardDescription className="text-center text-white/90 font-medium">
+          <CardDescription className="text-center font-medium text-gray-800">
             Ingrese la contraseña para acceder
           </CardDescription>
         </CardHeader>
