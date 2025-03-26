@@ -17,8 +17,9 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Plus, Save, Trash, AlertTriangle, Users } from 'lucide-react';
+import { Loader2, Plus, Save, Trash, AlertTriangle, Users, ListChecks, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const formSchema = z.object({
   title: z.string().min(3, {
@@ -45,6 +46,7 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedSurveyors, setSelectedSurveyors] = useState<string[]>([]);
+  const isMobile = useIsMobile();
   
   const existingSurvey = surveyId ? getSurveyById(surveyId) : null;
   const surveyors = users.filter(user => user.role === 'surveyor' && user.active);
@@ -61,16 +63,22 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
   // Initialize questions from existing survey
   useEffect(() => {
     if (existingSurvey) {
-      setQuestions(existingSurvey.questions);
+      // Make sure to add type if it doesn't exist in older surveys
+      const updatedQuestions = existingSurvey.questions.map(q => ({
+        ...q,
+        type: q.type || 'multiple-choice' as const
+      }));
+      setQuestions(updatedQuestions);
       setSelectedSurveyors(existingSurvey.assignedTo);
     }
   }, [existingSurvey]);
   
-  const addQuestion = () => {
+  const addQuestion = (type: 'multiple-choice' | 'free-text') => {
     const newQuestion: SurveyQuestion = {
       id: uuidv4(),
       text: "",
-      options: ["", ""]
+      type,
+      options: type === 'multiple-choice' ? ["", ""] : []
     };
     setQuestions([...questions, newQuestion]);
   };
@@ -165,15 +173,17 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
         return false;
       }
       
-      if (question.options.length < 2) {
-        toast.error(`La pregunta "${question.text}" debe tener al menos 2 opciones`);
-        return false;
-      }
-      
-      for (const option of question.options) {
-        if (!option.trim()) {
-          toast.error(`Todas las opciones de la pregunta "${question.text}" deben tener texto`);
+      if (question.type === 'multiple-choice') {
+        if (question.options.length < 2) {
+          toast.error(`La pregunta "${question.text}" debe tener al menos 2 opciones`);
           return false;
+        }
+        
+        for (const option of question.options) {
+          if (!option.trim()) {
+            toast.error(`Todas las opciones de la pregunta "${question.text}" deben tener texto`);
+            return false;
+          }
         }
       }
     }
@@ -313,22 +323,35 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
                 <CardTitle>Preguntas</CardTitle>
                 <CardDescription>Preguntas y opciones de respuesta</CardDescription>
               </div>
-              <Button 
-                type="button" 
-                onClick={addQuestion}
-                variant="outline"
-                className="btn-admin"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Pregunta
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button 
+                  type="button" 
+                  onClick={() => addQuestion('multiple-choice')}
+                  variant="outline"
+                  className="btn-admin"
+                  size={isMobile ? "sm" : "default"}
+                >
+                  <ListChecks className="mr-2 h-4 w-4" />
+                  <span className={isMobile ? "text-mobile-xs" : ""}>Opción Múltiple</span>
+                </Button>
+                <Button 
+                  type="button" 
+                  onClick={() => addQuestion('free-text')}
+                  variant="outline"
+                  className="btn-admin"
+                  size={isMobile ? "sm" : "default"}
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  <span className={isMobile ? "text-mobile-xs" : ""}>Respuesta Libre</span>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {questions.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
                   <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-2" />
                   <p>No has agregado preguntas a esta encuesta.</p>
-                  <p>Haz clic en "Agregar Pregunta" para comenzar.</p>
+                  <p>Haz clic en los botones de arriba para agregar una pregunta.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -336,9 +359,14 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
                     <Card key={question.id} className="border-admin/20">
                       <CardHeader className="pb-2 flex flex-row items-start justify-between">
                         <div className="space-y-1 w-full">
-                          <FormLabel htmlFor={`question-${question.id}`}>
-                            Pregunta {qIndex + 1}
-                          </FormLabel>
+                          <div className="flex items-center">
+                            <FormLabel htmlFor={`question-${question.id}`} className="mr-2">
+                              Pregunta {qIndex + 1}
+                            </FormLabel>
+                            <span className="text-xs bg-muted px-2 py-1 rounded-full">
+                              {question.type === 'multiple-choice' ? 'Opción Múltiple' : 'Respuesta Libre'}
+                            </span>
+                          </div>
                           <Input
                             id={`question-${question.id}`}
                             value={question.text}
@@ -356,43 +384,52 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
                           <Trash className="h-4 w-4" />
                         </Button>
                       </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="space-y-2">
-                          <FormLabel>Opciones de respuesta</FormLabel>
-                          {question.options.map((option, oIndex) => (
-                            <div key={oIndex} className="flex items-center gap-2">
-                              <Input
-                                value={option}
-                                placeholder={`Opción ${oIndex + 1}`}
-                                onChange={(e) => updateOptionText(question.id, oIndex, e.target.value)}
-                                className="flex-1"
-                              />
-                              {question.options.length > 2 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive shrink-0"
-                                  onClick={() => removeOption(question.id, oIndex)}
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addOption(question.id)}
-                        >
-                          <Plus className="mr-2 h-3 w-3" />
-                          Agregar Opción
-                        </Button>
-                      </CardFooter>
+                      {question.type === 'multiple-choice' ? (
+                        <CardContent className="pb-2">
+                          <div className="space-y-2">
+                            <FormLabel>Opciones de respuesta</FormLabel>
+                            {question.options.map((option, oIndex) => (
+                              <div key={oIndex} className="flex items-center gap-2">
+                                <Input
+                                  value={option}
+                                  placeholder={`Opción ${oIndex + 1}`}
+                                  onChange={(e) => updateOptionText(question.id, oIndex, e.target.value)}
+                                  className="flex-1"
+                                />
+                                {question.options.length > 2 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive shrink-0"
+                                    onClick={() => removeOption(question.id, oIndex)}
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <CardFooter className="px-0 pt-4 pb-0">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addOption(question.id)}
+                            >
+                              <Plus className="mr-2 h-3 w-3" />
+                              Agregar Opción
+                            </Button>
+                          </CardFooter>
+                        </CardContent>
+                      ) : (
+                        <CardContent className="pb-2">
+                          <div className="text-sm text-muted-foreground italic bg-muted/30 p-3 rounded-md">
+                            <MessageSquare className="inline-block mr-2 h-4 w-4" />
+                            Los encuestados podrán escribir una respuesta libre a esta pregunta.
+                          </div>
+                        </CardContent>
+                      )}
                     </Card>
                   ))}
                 </div>

@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 export interface SurveyQuestion {
   id: string;
   text: string;
+  type: 'multiple-choice' | 'free-text';
   options: string[];
 }
 
@@ -24,7 +25,7 @@ export interface SurveyResponse {
   id: string;
   surveyId: string;
   respondentId: string;
-  answers: { questionId: string; selectedOption: string }[];
+  answers: { questionId: string; selectedOption: string; textAnswer?: string }[];
   audioRecording: string | null;
   completedAt: string;
   syncedToServer: boolean;
