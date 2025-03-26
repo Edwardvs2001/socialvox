@@ -1,6 +1,109 @@
-
 import { SurveyResponse, Survey } from '@/store/surveyStore';
 import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
+
+/**
+ * Exports survey results as an Excel file with proper formatting
+ */
+export const exportResultsToExcel = (survey: Survey, responses: SurveyResponse[]): void => {
+  // Create workbook and worksheet
+  const workbook = XLSX.utils.book_new();
+  
+  // Format headers
+  const headers = ['ID', 'Respondent', 'Completed At'];
+  
+  // Add question headers
+  survey.questions.forEach(question => {
+    headers.push(question.text);
+  });
+  
+  // Add 'Has Audio' column
+  headers.push('Has Audio');
+  
+  // Create data rows
+  const rows = responses.map(response => {
+    const row = [
+      response.id,
+      response.respondentId,
+      new Date(response.completedAt).toLocaleString()
+    ];
+    
+    // Add answers for each question
+    survey.questions.forEach(question => {
+      const answer = response.answers.find(a => a.questionId === question.id);
+      if (answer) {
+        if (question.type === 'multiple-choice') {
+          row.push(answer.selectedOption);
+        } else if (question.type === 'free-text' && answer.textAnswer) {
+          row.push(answer.textAnswer);
+        } else {
+          row.push('');
+        }
+      } else {
+        row.push('');
+      }
+    });
+    
+    // Add whether there's audio
+    row.push(response.audioRecording ? 'Yes' : 'No');
+    
+    return row;
+  });
+  
+  // Create worksheet with data
+  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  
+  // Set column widths
+  const colWidths = [];
+  headers.forEach((header, i) => {
+    const maxLength = Math.max(
+      header.length,
+      ...rows.map(row => String(row[i] || '').length)
+    );
+    colWidths.push({ wch: Math.min(Math.max(10, maxLength + 2), 50) });
+  });
+  
+  worksheet['!cols'] = colWidths;
+  
+  // Apply styling to headers - make them bold with background color
+  const headerRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+  for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+    const address = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (!worksheet[address]) continue;
+    
+    worksheet[address].s = {
+      fill: { fgColor: { rgb: "DDEBF7" } },
+      font: { bold: true },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+  }
+  
+  // Add worksheet to workbook
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Survey Results");
+  
+  // Apply table style to the whole dataset
+  const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+  worksheet['!autofilter'] = { ref: worksheet['!ref'] || 'A1' };
+  
+  // Alternate row colors for better readability
+  for (let R = 1; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const address = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!worksheet[address]) continue;
+      
+      worksheet[address].s = {
+        fill: { fgColor: { rgb: R % 2 ? "FFFFFF" : "F5F5F5" } },
+        alignment: { vertical: "center" }
+      };
+    }
+  }
+  
+  // Generate filename based on survey title and current date
+  const fileName = `${survey.title.replace(/\s+/g, '_')}_results_${new Date().toISOString().split('T')[0]}.xlsx`;
+  
+  // Write and save the Excel file
+  XLSX.writeFile(workbook, fileName);
+};
 
 /**
  * Exports survey results as a CSV file
@@ -113,4 +216,3 @@ export const exportAudioRecordings = async (survey: Survey, responses: SurveyRes
   const zipFileName = `${survey.title.replace(/\s+/g, '_')}_recordings_${new Date().toISOString().split('T')[0]}.zip`;
   saveAs(zipBlob, zipFileName);
 };
-

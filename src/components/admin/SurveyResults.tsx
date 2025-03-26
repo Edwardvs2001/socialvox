@@ -1,382 +1,344 @@
 
-import { useState, useEffect } from 'react';
-import { useSurveyStore, SurveyResponse } from '@/store/surveyStore';
-import { useUserStore } from '@/store/userStore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { useMemo, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatDate } from '@/utils/api';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, PieChart, Pie } from 'recharts';
+import { useSurveyStore } from '@/store/surveyStore';
 import { Button } from '@/components/ui/button';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Loader2, PieChartIcon, BarChartIcon, FileText, Download, FileAudio } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { exportResultsToCSV, exportAudioRecordings } from '@/utils/exportUtils';
+import { DownloadIcon, Mic } from 'lucide-react';
+import { exportResultsToCSV, exportResultsToExcel, exportAudioRecordings } from '@/utils/exportUtils';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-interface SurveyResultsProps {
-  surveyId: string;
-  onLowAccuracy?: (hasLowAccuracy: boolean) => void;
-}
-
-export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
-  const { getSurveyById, getSurveyResponses, isLoading } = useSurveyStore();
-  const { users } = useUserStore();
-  const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
-  const isMobile = useIsMobile();
-  const { toast } = useToast();
-  
+export function SurveyResults({ surveyId }: { surveyId: string }) {
+  const { surveys, getSurveyById, getSurveyResponses } = useSurveyStore();
   const survey = getSurveyById(surveyId);
   const responses = getSurveyResponses(surveyId);
+  const [activeTab, setActiveTab] = useState('overview');
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
   
-  useEffect(() => {
-    // Set the first question as selected by default
-    if (survey && survey.questions.length > 0 && !selectedQuestion) {
-      setSelectedQuestion(survey.questions[0].id);
-    }
-  }, [survey, selectedQuestion]);
+  // Compute statistics and data
+  const statsData = useMemo(() => {
+    if (!survey) return { totalResponses: 0 };
+    
+    const totalResponses = responses.length;
+    const hasAudioCount = responses.filter(r => r.audioRecording).length;
+    
+    return {
+      totalResponses,
+      hasAudioCount,
+      audioPercentage: totalResponses ? Math.round((hasAudioCount / totalResponses) * 100) : 0
+    };
+  }, [survey, responses]);
   
-  // Get the respondent name from their ID
-  const getRespondentName = (id: string) => {
-    const user = users.find(u => u.id === id);
-    return user ? user.name : 'Usuario desconocido';
-  };
-  
-  // Process responses for charts
-  const processChartData = () => {
-    if (!survey || !selectedQuestion) return [];
+  // Generate charts data for each question
+  const questionsData = useMemo(() => {
+    if (!survey) return [];
     
-    const question = survey.questions.find(q => q.id === selectedQuestion);
-    if (!question) return [];
-    
-    // For free-text questions, we can't show charts
-    if (question.type === 'free-text') return [];
-    
-    // Initialize counts for each option
-    const counts: Record<string, number> = {};
-    question.options.forEach(option => {
-      counts[option] = 0;
-    });
-    
-    // Count responses for each option
-    responses.forEach(response => {
-      const answer = response.answers.find(a => a.questionId === selectedQuestion);
-      if (answer) {
-        counts[answer.selectedOption] = (counts[answer.selectedOption] || 0) + 1;
+    return survey.questions.map(question => {
+      if (question.type === 'multiple-choice') {
+        // For multiple choice, count occurrences of each option
+        const optionCounts = question.options.reduce((acc, option) => {
+          acc[option] = 0;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        responses.forEach(response => {
+          const answer = response.answers.find(a => a.questionId === question.id);
+          if (answer && answer.selectedOption) {
+            optionCounts[answer.selectedOption] = (optionCounts[answer.selectedOption] || 0) + 1;
+          }
+        });
+        
+        return {
+          id: question.id,
+          text: question.text,
+          type: question.type,
+          data: Object.entries(optionCounts).map(([name, value]) => ({ name, value }))
+        };
+      } else if (question.type === 'free-text') {
+        // For free-text, collect all answers
+        const textAnswers = responses
+          .map(response => {
+            const answer = response.answers.find(a => a.questionId === question.id);
+            return answer?.textAnswer || null;
+          })
+          .filter(Boolean) as string[];
+        
+        return {
+          id: question.id,
+          text: question.text,
+          type: question.type,
+          answers: textAnswers
+        };
       }
-    });
-    
-    // Convert to chart data format
-    return Object.entries(counts).map(([option, count]) => ({
-      name: option,
-      value: count,
-      count: count,
-    }));
-  };
+      
+      return null;
+    }).filter(Boolean);
+  }, [survey, responses]);
   
-  const chartData = processChartData();
-  
-  // Colors for pie chart
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC0CB', '#A569BD'];
-  
-  const getPercentage = (value: number) => {
-    if (responses.length === 0) return '0%';
-    return `${Math.round((value / responses.length) * 100)}%`;
-  };
-  
-  // Handle exporting survey results
-  const handleExportResults = () => {
+  const handleExportCSV = () => {
     if (!survey) return;
     
     try {
       exportResultsToCSV(survey, responses);
       toast({
         title: "Exportación exitosa",
-        description: "Los resultados se han descargado como un archivo CSV.",
+        description: "Los resultados se han exportado en formato CSV."
       });
     } catch (error) {
-      console.error('Error exporting results:', error);
       toast({
-        title: "Error al exportar",
-        description: "No se pudieron exportar los resultados. Intente nuevamente.",
-        variant: "destructive",
+        title: "Error en la exportación",
+        description: "No se pudieron exportar los resultados.",
+        variant: "destructive"
       });
+      console.error("Export error:", error);
     }
   };
   
-  // Handle exporting audio recordings
-  const handleExportAudio = async () => {
+  const handleExportExcel = () => {
     if (!survey) return;
     
-    // Check if there are any recordings to export
-    const hasRecordings = responses.some(r => r.audioRecording);
-    if (!hasRecordings) {
+    try {
+      exportResultsToExcel(survey, responses);
       toast({
-        title: "Sin grabaciones",
-        description: "No hay grabaciones de audio para exportar en esta encuesta.",
-        variant: "destructive",
+        title: "Exportación exitosa",
+        description: "Los resultados se han exportado en formato Excel."
       });
-      return;
+    } catch (error) {
+      toast({
+        title: "Error en la exportación",
+        description: "No se pudieron exportar los resultados.",
+        variant: "destructive"
+      });
+      console.error("Export error:", error);
     }
+  };
+  
+  const handleExportAudio = async () => {
+    if (!survey) return;
     
     try {
       await exportAudioRecordings(survey, responses);
       toast({
         title: "Exportación exitosa",
-        description: "Las grabaciones de audio se han descargado.",
+        description: "Las grabaciones de audio se han exportado."
       });
     } catch (error) {
-      console.error('Error exporting audio recordings:', error);
       toast({
-        title: "Error al exportar",
-        description: "No se pudieron exportar las grabaciones. Intente nuevamente.",
-        variant: "destructive",
+        title: "Error en la exportación",
+        description: "No se pudieron exportar las grabaciones de audio.",
+        variant: "destructive"
       });
+      console.error("Audio export error:", error);
     }
   };
   
-  // Call onLowAccuracy callback if needed
-  useEffect(() => {
-    if (onLowAccuracy) {
-      onLowAccuracy(false);
-    }
-  }, [onLowAccuracy]);
+  if (!survey) {
+    return <div>Encuesta no encontrada</div>;
+  }
   
-  // Check if the selected question is free-text
-  const isSelectedQuestionFreeText = () => {
-    if (!survey || !selectedQuestion) return false;
-    const question = survey.questions.find(q => q.id === selectedQuestion);
-    return question?.type === 'free-text';
-  };
+  const hasAudioRecordings = responses.some(r => r.audioRecording);
   
   return (
-    <div className="space-y-4 md:space-y-6">
-      {isLoading ? (
-        <div className="flex justify-center items-center py-6 md:py-12">
-          <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin text-admin" />
-        </div>
-      ) : (
-        <>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className={`${isMobile ? "text-lg" : "text-xl"} font-semibold`}>
-              {responses.length} {responses.length === 1 ? 'respuesta' : 'respuestas'} recibidas
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                variant="outline" 
-                size={isMobile ? "sm" : "default"}
-                onClick={handleExportResults}
-                className="flex items-center gap-1"
-              >
-                <Download className={`${isMobile ? "h-3 w-3" : "h-4 w-4"}`} />
-                <span>{isMobile ? "Exportar CSV" : "Exportar Resultados"}</span>
-              </Button>
-              <Button
-                variant="outline"
-                size={isMobile ? "sm" : "default"}
-                onClick={handleExportAudio}
-                className="flex items-center gap-1"
-              >
-                <FileAudio className={`${isMobile ? "h-3 w-3" : "h-4 w-4"}`} />
-                <span>{isMobile ? "Exportar Audio" : "Exportar Grabaciones"}</span>
-              </Button>
-            </div>
-          </div>
-          
-          <Card>
-            <CardHeader className={isMobile ? "py-3" : "py-4"}>
-              <CardTitle className={`flex items-center justify-between ${isMobile ? "text-lg" : "text-xl"}`}>
-                <span>Resumen</span>
-              </CardTitle>
-              <CardDescription className={isMobile ? "text-xs" : "text-sm"}>
-                Resultados generales de la encuesta
-              </CardDescription>
-            </CardHeader>
-            <CardContent className={isMobile ? "p-3" : "p-6"}>
-              {survey?.questions && survey.questions.length > 0 ? (
-                <div className="space-y-3 md:space-y-4">
-                  <div>
-                    <label className={`${isMobile ? "text-xs" : "text-sm"} font-medium`}>Seleccionar pregunta:</label>
-                    <Select
-                      value={selectedQuestion || ''}
-                      onValueChange={setSelectedQuestion}
-                    >
-                      <SelectTrigger className={`w-full ${isMobile ? "text-xs mt-1" : "text-sm mt-2"}`}>
-                        <SelectValue placeholder="Selecciona una pregunta" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {survey.questions.map(question => (
-                          <SelectItem key={question.id} value={question.id} className={isMobile ? "text-xs" : "text-sm"}>
-                            {question.text}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {responses.length > 0 ? (
-                    isSelectedQuestionFreeText() ? (
-                      <div className={`text-center py-4 md:py-8 ${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}>
-                        <p>Las preguntas de texto libre no se pueden visualizar en gráficos.</p>
-                      </div>
-                    ) : (
-                      <Tabs defaultValue="bar">
-                        <TabsList className={`grid w-full grid-cols-3 ${isMobile ? "text-xs" : "text-sm"}`}>
-                          <TabsTrigger value="bar" className="flex items-center">
-                            <BarChartIcon className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
-                            {isMobile ? "Barras" : "Gráfico de Barras"}
-                          </TabsTrigger>
-                          <TabsTrigger value="pie" className="flex items-center">
-                            <PieChartIcon className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
-                            {isMobile ? "Circular" : "Gráfico Circular"}
-                          </TabsTrigger>
-                          <TabsTrigger value="table" className="flex items-center">
-                            <FileText className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
-                            Tabla
-                          </TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="bar" className="pt-3 md:pt-4">
-                          <div className={`${isMobile ? "h-60" : "h-80"} w-full`}>
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={chartData} margin={isMobile ? { top: 5, right: 5, bottom: 5, left: 5 } : { top: 20, right: 30, bottom: 5, left: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" tick={{ fontSize: isMobile ? 10 : 12 }} />
-                                <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} />
-                                <Tooltip contentStyle={{ fontSize: isMobile ? 10 : 12 }} />
-                                <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12 }} />
-                                <Bar dataKey="count" fill="#8884d8" name="Respuestas" />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="pie" className="pt-3 md:pt-4">
-                          <div className={`${isMobile ? "h-60" : "h-80"} w-full`}>
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart margin={isMobile ? { top: 5, right: 5, bottom: 5, left: 5 } : { top: 20, right: 30, bottom: 5, left: 20 }}>
-                                <Pie
-                                  data={chartData}
-                                  cx="50%"
-                                  cy="50%"
-                                  labelLine={!isMobile}
-                                  label={isMobile ? undefined : ({ name, value }) => `${name}: ${value}`}
-                                  outerRadius={isMobile ? 60 : 80}
-                                  fill="#8884d8"
-                                  dataKey="value"
-                                >
-                                  {chartData.map((entry, index) =>
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                  )}
-                                </Pie>
-                                <Tooltip contentStyle={{ fontSize: isMobile ? 10 : 12 }} />
-                                <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12 }} />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="table" className="pt-3 md:pt-4">
-                          <div className="overflow-x-auto">
-                            <table className="w-full border-collapse">
-                              <thead>
-                                <tr className="bg-muted border-b">
-                                  <th className={`text-left py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Opción</th>
-                                  <th className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Respuestas</th>
-                                  <th className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Porcentaje</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {chartData.map((item, index) => (
-                                  <tr key={index} className="border-b">
-                                    <td className={`py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{item.name}</td>
-                                    <td className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{item.value}</td>
-                                    <td className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{getPercentage(item.value)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                    )
-                  ) : (
-                    <div className={`text-center py-4 md:py-8 ${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}>
-                      <p>No hay respuestas para esta encuesta.</p>
+    <div className="space-y-6">
+      <div className="flex flex-col lg:flex-row justify-between gap-4">
+        <Card className="w-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium">Resumen de Respuestas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{statsData.totalResponses}</div>
+            <p className="text-xs text-muted-foreground">Total de respuestas recopiladas</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="w-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium">Grabaciones de Audio</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{statsData.hasAudioCount}</div>
+            <p className="text-xs text-muted-foreground">
+              {statsData.audioPercentage}% de las respuestas incluyen audio
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="flex flex-wrap gap-2 justify-end">
+        <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700">
+          <DownloadIcon className="mr-2 h-4 w-4" />
+          Exportar Excel
+        </Button>
+        
+        <Button onClick={handleExportCSV} variant="outline">
+          <DownloadIcon className="mr-2 h-4 w-4" />
+          Exportar CSV
+        </Button>
+        
+        {hasAudioRecordings && (
+          <Button onClick={handleExportAudio} variant="outline" className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700">
+            <Mic className="mr-2 h-4 w-4" />
+            Exportar Audio
+          </Button>
+        )}
+      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Vista General</TabsTrigger>
+          <TabsTrigger value="detailed">Detallado</TabsTrigger>
+          {responses.some(r => r.audioRecording) && (
+            <TabsTrigger value="audio">Grabaciones</TabsTrigger>
+          )}
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-4">
+          {questionsData.map((question) => {
+            if (question?.type === 'multiple-choice') {
+              return (
+                <Card key={question.id}>
+                  <CardHeader>
+                    <CardTitle className="text-base">{question.text}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={isMobile ? "h-60" : "h-80"}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={question.data}
+                          margin={{ top: 10, right: 30, left: isMobile ? 0 : 20, bottom: isMobile ? 60 : 30 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={isMobile ? -45 : 0} 
+                            textAnchor={isMobile ? "end" : "middle"}
+                            height={isMobile ? 80 : 60}
+                            tick={{ fontSize: isMobile ? 10 : 12 }}
+                          />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="value" name="Respuestas" fill="#8884d8">
+                            {question.data.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className={`text-center py-4 md:py-8 ${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}>
-                  <p>Esta encuesta no tiene preguntas definidas.</p>
-                </div>
-              )}
+                  </CardContent>
+                </Card>
+              );
+            } else if (question?.type === 'free-text') {
+              return (
+                <Card key={question.id}>
+                  <CardHeader>
+                    <CardTitle className="text-base">{question.text}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {question.answers.length > 0 ? (
+                        question.answers.map((answer, idx) => (
+                          <div key={idx} className="p-3 bg-muted rounded-md text-sm">{answer}</div>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground">No hay respuestas para esta pregunta.</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
+            return null;
+          })}
+        </TabsContent>
+        
+        <TabsContent value="detailed">
+          <Card>
+            <CardHeader>
+              <CardTitle>Respuestas Detalladas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-muted text-left">
+                      <th className="p-2 border">ID</th>
+                      <th className="p-2 border">Encuestado</th>
+                      <th className="p-2 border">Fecha</th>
+                      {survey.questions.map((q) => (
+                        <th key={q.id} className="p-2 border">{q.text}</th>
+                      ))}
+                      <th className="p-2 border">Audio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {responses.map((response) => (
+                      <tr key={response.id} className="hover:bg-muted/50">
+                        <td className="p-2 border">{response.id.slice(0, 8)}</td>
+                        <td className="p-2 border">{response.respondentId}</td>
+                        <td className="p-2 border">{new Date(response.completedAt).toLocaleString()}</td>
+                        {survey.questions.map((question) => {
+                          const answer = response.answers.find(a => a.questionId === question.id);
+                          let displayValue = '';
+                          
+                          if (answer) {
+                            if (question.type === 'multiple-choice') {
+                              displayValue = answer.selectedOption;
+                            } else if (question.type === 'free-text' && answer.textAnswer) {
+                              displayValue = answer.textAnswer;
+                            }
+                          }
+                          
+                          return (
+                            <td key={question.id} className="p-2 border">
+                              {displayValue || '-'}
+                            </td>
+                          );
+                        })}
+                        <td className="p-2 border text-center">
+                          {response.audioRecording ? "✓" : "✗"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
-          
-          <Card>
-            <CardHeader className={isMobile ? "py-3" : "py-4"}>
-              <CardTitle className={isMobile ? "text-lg" : "text-xl"}>Respuestas Detalladas</CardTitle>
-              <CardDescription className={isMobile ? "text-xs" : "text-sm"}>
-                Lista de todas las respuestas recibidas
-              </CardDescription>
-            </CardHeader>
-            <CardContent className={isMobile ? "p-3" : "p-6"}>
-              {responses.length > 0 ? (
-                <div className="space-y-3 md:space-y-4">
-                  {responses.map((response, index) => (
-                    <Card key={response.id} className="border-admin/20">
-                      <CardHeader className={`${isMobile ? "py-2 px-3" : "py-3 px-4"}`}>
-                        <CardTitle className={`${isMobile ? "text-sm" : "text-base"} flex items-center justify-between`}>
-                          <span>Respuesta #{index + 1}</span>
-                          <Badge variant="outline" className={isMobile ? "text-xs" : "text-sm"}>
-                            {formatDate(response.completedAt)}
-                          </Badge>
-                        </CardTitle>
-                        <CardDescription className={isMobile ? "text-xs" : "text-sm"}>
-                          Encuestador: {getRespondentName(response.respondentId)}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className={`${isMobile ? "py-2 px-3" : "py-2 px-4"}`}>
-                        <ul className="space-y-2">
-                          {survey?.questions.map(question => {
-                            const answer = response.answers.find(
-                              a => a.questionId === question.id
-                            );
-                            return (
-                              <li key={question.id} className="border-b pb-2">
-                                <p className={`${isMobile ? "text-xs" : "text-sm"} font-medium`}>{question.text}</p>
-                                <p className={`${isMobile ? "text-xs" : "text-sm"} ${answer ? "mt-1" : "mt-1 text-muted-foreground italic"}`}>
-                                  {answer ? answer.selectedOption : 'Sin respuesta'}
-                                </p>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        
-                        {response.audioRecording && (
-                          <div className="mt-3 md:mt-4">
-                            <p className={`${isMobile ? "text-xs" : "text-sm"} font-medium mb-1 md:mb-2`}>Grabación de audio:</p>
-                            <audio controls className="w-full">
-                              <source src={response.audioRecording} type="audio/webm" />
-                              Tu navegador no soporta el elemento de audio.
-                            </audio>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+        </TabsContent>
+        
+        {responses.some(r => r.audioRecording) && (
+          <TabsContent value="audio">
+            <Card>
+              <CardHeader>
+                <CardTitle>Grabaciones de Audio</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {responses.filter(r => r.audioRecording).map((response) => (
+                    <div key={response.id} className="border rounded-md p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium">ID: {response.id.slice(0, 8)}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(response.completedAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <audio 
+                        controls 
+                        src={response.audioRecording || undefined} 
+                        className="w-full"
+                      />
+                    </div>
                   ))}
                 </div>
-              ) : (
-                <div className={`text-center py-4 md:py-8 ${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}>
-                  <p>No hay respuestas disponibles para esta encuesta.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
-
