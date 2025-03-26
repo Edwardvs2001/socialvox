@@ -41,11 +41,13 @@ export function useOfflineSync() {
     };
   }, []);
   
-  // Auto-sync when coming back online
-  const attemptSync = useCallback(() => {
-    if (isOnline && pendingCount > 0 && isAuthenticated && checkSession() && !syncInProgressRef.current) {
-      sync();
+  // Auto-sync when coming back online - using useCallback to memoize the function
+  const attemptSync = useCallback(async () => {
+    if (!isOnline || pendingCount === 0 || !isAuthenticated || !checkSession() || syncInProgressRef.current) {
+      return;
     }
+    
+    await sync();
   }, [isOnline, pendingCount, isAuthenticated, checkSession]);
   
   // Set up sync attempt when conditions change
@@ -99,7 +101,10 @@ export function useOfflineSync() {
       toast.error('Error al sincronizar datos. Intente nuevamente.');
     } finally {
       setIsSyncing(false);
-      syncInProgressRef.current = false;
+      // Use setTimeout to ensure state updates are completed before changing the ref
+      setTimeout(() => {
+        syncInProgressRef.current = false;
+      }, 100);
     }
   }, [isOnline, pendingCount, isAuthenticated, checkSession, syncResponses]);
   

@@ -38,7 +38,7 @@ export default function AdminSurveys() {
         description="Crear, editar y administrar encuestas"
       >
         <Suspense fallback={<div>Cargando...</div>}>
-          {isLoaded && <SurveyManager />}
+          {isLoaded && <SurveyManager key="survey-manager" />}
         </Suspense>
       </AdminLayout>
     </AuthLayout>

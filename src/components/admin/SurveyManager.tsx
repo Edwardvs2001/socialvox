@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSurveyStore, Survey } from '@/store/surveyStore';
 import { FolderManager } from '@/components/admin/FolderManager';
@@ -41,6 +40,11 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function SurveyManager() {
+  const deleteOperationRef = useRef(false);
+  const assignOperationRef = useRef(false);
+  const folderAssignOperationRef = useRef(false);
+  const dataFetchedRef = useRef(false);
+  
   const { 
     surveys, 
     folders, 
@@ -66,17 +70,27 @@ export function SurveyManager() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [localSurveys, setLocalSurveys] = useState<Survey[]>([]);
   
-  // Load surveys and users on component mount
   useEffect(() => {
     const loadData = async () => {
-      await fetchSurveys();
-      await fetchUsers();
+      if (dataFetchedRef.current) return;
+      
+      try {
+        await fetchSurveys();
+        await fetchUsers();
+        dataFetchedRef.current = true;
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast.error("Error al cargar datos");
+      }
     };
     
     loadData();
+    
+    return () => {
+      dataFetchedRef.current = false;
+    };
   }, [fetchSurveys, fetchUsers]);
   
-  // Update local surveys when the store changes
   useEffect(() => {
     setLocalSurveys(surveys);
   }, [surveys]);
@@ -138,26 +152,25 @@ export function SurveyManager() {
     }
   });
   
-  const toggleSort = (field: 'title' | 'folder' | 'date') => {
+  const toggleSort = useCallback((field: 'title' | 'folder' | 'date') => {
     if (sortBy === field) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
       setSortBy(field);
       setSortOrder('asc');
     }
-  };
+  }, [sortBy]);
   
-  const confirmDelete = async () => {
-    if (!selectedSurvey) return;
+  const confirmDelete = useCallback(async () => {
+    if (!selectedSurvey || deleteOperationRef.current) return;
     
+    deleteOperationRef.current = true;
     setIsDeleting(true);
     
     try {
       await deleteSurvey(selectedSurvey.id);
-      // Update local surveys immediately to reflect the deletion
       setLocalSurveys(prev => prev.filter(s => s.id !== selectedSurvey.id));
       toast.success('Encuesta eliminada correctamente');
-      await fetchSurveys(); // Refresh surveys from store
     } catch (error) {
       console.error('Error deleting survey:', error);
       toast.error('Error al eliminar la encuesta');
@@ -165,22 +178,25 @@ export function SurveyManager() {
       setIsDeleting(false);
       setShowDeleteDialog(false);
       setSelectedSurvey(null);
+      setTimeout(() => {
+        deleteOperationRef.current = false;
+      }, 100);
     }
-  };
+  }, [selectedSurvey, deleteSurvey]);
   
-  const handleOpenAssignDialog = (survey: Survey) => {
+  const handleOpenAssignDialog = useCallback((survey: Survey) => {
     setSelectedSurvey(survey);
     setSelectedSurveyors(survey.assignedTo);
     setShowAssignDialog(true);
-  };
+  }, []);
   
-  const handleOpenFolderDialog = (survey: Survey) => {
+  const handleOpenFolderDialog = useCallback((survey: Survey) => {
     setSelectedSurvey(survey);
     setSelectedFolderId(survey.folderId);
     setShowFolderDialog(true);
-  };
+  }, []);
   
-  const handleSurveyorSelection = (surveyorId: string) => {
+  const handleSurveyorSelection = useCallback((surveyorId: string) => {
     setSelectedSurveyors(prev => {
       if (prev.includes(surveyorId)) {
         return prev.filter(id => id !== surveyorId);
@@ -188,51 +204,60 @@ export function SurveyManager() {
         return [...prev, surveyorId];
       }
     });
-  };
+  }, []);
   
-  const handleSaveAssignments = async () => {
-    if (!selectedSurvey) return;
+  const handleSaveAssignments = useCallback(async () => {
+    if (!selectedSurvey || assignOperationRef.current) return;
     
+    assignOperationRef.current = true;
     setIsAssigning(true);
     
     try {
       await assignSurvey(selectedSurvey.id, selectedSurveyors);
-      // Update the local surveys immediately
       setLocalSurveys(prev => 
         prev.map(s => s.id === selectedSurvey.id ? {...s, assignedTo: selectedSurveyors} : s)
       );
       toast.success('Encuestadores asignados correctamente');
       setShowAssignDialog(false);
-      await fetchSurveys(); // Refresh surveys from store
     } catch (error) {
       console.error('Error assigning surveyors:', error);
       toast.error('Error al asignar encuestadores');
     } finally {
       setIsAssigning(false);
+      setTimeout(() => {
+        assignOperationRef.current = false;
+      }, 100);
     }
-  };
+  }, [selectedSurvey, selectedSurveyors, assignSurvey]);
   
-  const handleSaveFolderAssignment = async () => {
-    if (!selectedSurvey) return;
+  const handleSaveFolderAssignment = useCallback(async () => {
+    if (!selectedSurvey || folderAssignOperationRef.current) return;
     
+    folderAssignOperationRef.current = true;
     setIsAssigningFolder(true);
     
     try {
       await assignSurveyToFolder(selectedSurvey.id, selectedFolderId);
-      // Update the local surveys immediately
       setLocalSurveys(prev => 
         prev.map(s => s.id === selectedSurvey.id ? {...s, folderId: selectedFolderId} : s)
       );
       toast.success('Encuesta asignada a carpeta correctamente');
       setShowFolderDialog(false);
-      await fetchSurveys(); // Refresh surveys from store
     } catch (error) {
       console.error('Error assigning survey to folder:', error);
       toast.error('Error al asignar encuesta a carpeta');
     } finally {
       setIsAssigningFolder(false);
+      setTimeout(() => {
+        folderAssignOperationRef.current = false;
+      }, 100);
     }
-  };
+  }, [selectedSurvey, selectedFolderId, assignSurveyToFolder]);
+  
+  const handleOpenDeleteDialog = useCallback((survey: Survey) => {
+    setSelectedSurvey(survey);
+    setShowDeleteDialog(true);
+  }, []);
   
   return (
     <div className="space-y-6">
@@ -370,10 +395,7 @@ export function SurveyManager() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
-                              onClick={() => {
-                                setSelectedSurvey(survey);
-                                setShowDeleteDialog(true);
-                              }}
+                              onClick={() => handleOpenDeleteDialog(survey)}
                             >
                               <Trash className="mr-2 h-4 w-4" />
                               Eliminar
