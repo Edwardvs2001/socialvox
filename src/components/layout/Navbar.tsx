@@ -55,19 +55,24 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <Link 
             to={isAdmin ? '/admin' : '/surveyor'} 
-            className="flex items-center gap-2 font-bold text-xl"
+            className="flex flex-col items-center gap-1 font-bold text-xl"
           >
             {appLogo ? (
-              <Avatar className="h-8 w-8 rounded-md">
-                <AvatarImage src={appLogo} alt="Logo" className="object-contain" />
-                <AvatarFallback className="rounded-md">
-                  <ClipboardList className={`h-6 w-6 ${isAdmin ? 'text-admin' : 'text-surveyor'}`} />
-                </AvatarFallback>
-              </Avatar>
+              <div className="flex flex-col items-center">
+                <Avatar className="h-10 w-10 rounded-md mb-0.5">
+                  <AvatarImage src={appLogo} alt="Logo" className="object-contain" />
+                  <AvatarFallback className="rounded-md">
+                    <ClipboardList className={`h-6 w-6 ${isAdmin ? 'text-admin' : 'text-surveyor'}`} />
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-lg">Encuestas VA</span>
+              </div>
             ) : (
-              <ClipboardList className={`h-6 w-6 ${isAdmin ? 'text-admin' : 'text-surveyor'}`} />
+              <div className="flex flex-col items-center">
+                <ClipboardList className={`h-10 w-10 mb-0.5 ${isAdmin ? 'text-admin' : 'text-surveyor'}`} />
+                <span className="text-lg">Encuestas VA</span>
+              </div>
             )}
-            <span>Encuestas VA</span>
           </Link>
           
           <div className="hidden md:flex items-center gap-6 ml-6">

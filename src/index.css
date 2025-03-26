@@ -88,11 +88,11 @@
   }
 
   .btn-surveyor {
-    @apply bg-surveyor text-surveyor-foreground hover:bg-surveyor-hover;
+    @apply bg-blue-500 text-white hover:bg-blue-600;
   }
 
   .btn-admin {
-    @apply bg-admin text-admin-foreground hover:bg-admin-hover;
+    @apply bg-red-500 text-white hover:bg-red-600;
   }
 
   .page-transition {
@@ -109,6 +109,10 @@
 
   .scale-hover {
     @apply transition-transform duration-200 hover:scale-[1.02];
+  }
+  
+  .login-card {
+    @apply bg-white/90 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl overflow-hidden;
   }
 }
 

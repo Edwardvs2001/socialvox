@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -85,19 +86,19 @@ export function LoginForm() {
   // Show login type selection if no type is selected yet
   if (loginType === null) {
     return (
-      <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in survey-card">
+      <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in login-card">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Encuestas VA</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Seleccione su tipo de acceso</CardTitle>
           <CardDescription className="text-center">
-            Seleccione su tipo de acceso
+            Escoja el tipo de usuario para continuar
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Button 
               onClick={() => handleLoginTypeSelect('admin')}
-              variant="outline"
-              className="p-8 h-auto flex flex-col gap-4 hover:bg-secondary"
+              variant="red"
+              className="p-8 h-auto flex flex-col gap-4"
             >
               <Users className="h-12 w-12" />
               <span className="font-medium">Administrador</span>
@@ -105,8 +106,8 @@ export function LoginForm() {
             
             <Button 
               onClick={() => handleLoginTypeSelect('surveyor')}
-              variant="outline"
-              className="p-8 h-auto flex flex-col gap-4 hover:bg-secondary"
+              variant="blue"
+              className="p-8 h-auto flex flex-col gap-4"
             >
               <User className="h-12 w-12" />
               <span className="font-medium">Encuestador</span>
@@ -120,11 +121,11 @@ export function LoginForm() {
   // Admin Direct Access
   if (loginType === 'admin') {
     return (
-      <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in survey-card">
+      <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in login-card">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Encuestas VA</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Acceso de administrador</CardTitle>
           <CardDescription className="text-center">
-            Acceso de administrador
+            Ingrese la contraseña para acceder
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -170,8 +171,8 @@ export function LoginForm() {
           <div className="grid grid-cols-1 gap-4">
             <Button 
               onClick={handleDirectAdminAccess}
-              variant="default"
-              className="p-6 h-auto flex flex-col gap-3 hover:bg-primary/90"
+              variant="red"
+              className="p-6 h-auto flex flex-col gap-3"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -196,13 +197,13 @@ export function LoginForm() {
     );
   }
   
-  // Surveyor login (keep original form with password visibility toggle)
+  // Surveyor login
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in survey-card">
+    <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in login-card">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Encuestas VA</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">Acceso de encuestador</CardTitle>
         <CardDescription className="text-center">
-          Acceso de encuestador
+          Ingrese sus credenciales para continuar
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -262,6 +263,7 @@ export function LoginForm() {
           <Button 
             type="submit" 
             className="w-full mt-6"
+            variant="blue"
             disabled={isLoading}
           >
             {isLoading ? (
