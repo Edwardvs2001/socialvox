@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
 
@@ -13,6 +13,7 @@ export function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginType, setLoginType] = useState<'admin' | 'surveyor' | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading, error, clearError, failedLoginAttempts } = useAuthStore();
   const navigate = useNavigate();
   
@@ -77,6 +78,10 @@ export function LoginForm() {
     }
   };
   
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+  
   // Show login type selection if no type is selected yet
   if (loginType === null) {
     return (
@@ -125,16 +130,27 @@ export function LoginForm() {
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="admin-password">Contraseña de Administrador</Label>
-            <Input
-              id="admin-password"
-              type="password"
-              placeholder="Ingrese la contraseña de administrador"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-focus-ring"
-              autoComplete="current-password"
-            />
+            <div className="relative">
+              <Input
+                id="admin-password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Ingrese la contraseña de administrador"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-focus-ring pr-10"
+                autoComplete="current-password"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={togglePasswordVisibility}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
           
           {failedLoginAttempts > 0 && (
@@ -176,16 +192,11 @@ export function LoginForm() {
             Volver
           </Button>
         </CardContent>
-        <CardFooter className="flex flex-col">
-          <p className="text-xs text-center text-muted-foreground mt-4">
-            <span className="font-medium">Contraseña de administrador:</span> Admin@2024!
-          </p>
-        </CardFooter>
       </Card>
     );
   }
   
-  // Surveyor login (keep original form)
+  // Surveyor login (keep original form with password visibility toggle)
   return (
     <Card className="w-full max-w-md mx-auto shadow-lg animate-scale-in survey-card">
       <CardHeader className="space-y-1">
@@ -211,16 +222,27 @@ export function LoginForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Ingrese su contraseña"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-focus-ring"
-              autoComplete="current-password"
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Ingrese su contraseña"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-focus-ring pr-10"
+                autoComplete="current-password"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={togglePasswordVisibility}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
           
           {failedLoginAttempts > 0 && (

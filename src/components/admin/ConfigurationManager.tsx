@@ -11,7 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save, Globe, Bell, Shield, Database, Clock } from 'lucide-react';
+import { Loader2, Save, Globe, Bell, Shield, Database, Clock, Key } from 'lucide-react';
+import { PasswordSettings } from './PasswordSettings';
 
 const generalFormSchema = z.object({
   appName: z.string().min(2, {
@@ -158,6 +159,7 @@ export function ConfigurationManager() {
       case "email": return "Correo Electrónico";
       case "security": return "Seguridad";
       case "timezone": return "Fecha y Hora";
+      case "password": return "Contraseña"; 
       default: return "";
     }
   };
@@ -165,7 +167,7 @@ export function ConfigurationManager() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-4 w-full sm:w-auto">
+        <TabsList className="grid grid-cols-5 w-full sm:w-auto">
           <TabsTrigger value="general" className="flex items-center">
             <Globe className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">General</span>
@@ -181,6 +183,10 @@ export function ConfigurationManager() {
           <TabsTrigger value="timezone" className="flex items-center">
             <Clock className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Fecha/Hora</span>
+          </TabsTrigger>
+          <TabsTrigger value="password" className="flex items-center">
+            <Key className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Contraseña</span>
           </TabsTrigger>
         </TabsList>
         
@@ -680,6 +686,10 @@ export function ConfigurationManager() {
               </Form>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="password">
+          <PasswordSettings />
         </TabsContent>
       </Tabs>
       

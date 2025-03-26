@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -20,16 +19,18 @@ interface AuthState {
   error: string | null;
   failedLoginAttempts: number;
   lastLoginAttempt: number | null;
+  adminPassword: string;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   resetLoginAttempts: () => void;
+  changeAdminPassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 // Admin security constants
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_TIME = 10 * 60 * 1000; // 10 minutes in milliseconds
-const ADMIN_PASSWORD = 'Admin@2024!'; // Stronger admin password
+const DEFAULT_ADMIN_PASSWORD = 'Admin@2024!'; // Default admin password
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -41,13 +42,14 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       failedLoginAttempts: 0,
       lastLoginAttempt: null,
+      adminPassword: DEFAULT_ADMIN_PASSWORD,
       
       login: async (username, password) => {
         set({ isLoading: true, error: null });
         
         try {
           const currentTime = Date.now();
-          const { failedLoginAttempts, lastLoginAttempt } = get();
+          const { failedLoginAttempts, lastLoginAttempt, adminPassword } = get();
           
           // Check if account is locked out
           if (failedLoginAttempts >= MAX_LOGIN_ATTEMPTS && lastLoginAttempt) {
@@ -68,9 +70,9 @@ export const useAuthStore = create<AuthState>()(
           if (username.toLowerCase() === 'admin') {  // Make username check case-insensitive
             console.info('Verificando credenciales de administrador');
             
-            // Validate admin password against the secure password
-            if (password !== ADMIN_PASSWORD) {
-              console.error('Contraseña de administrador incorrecta. Ingresada:', password, 'Esperada:', ADMIN_PASSWORD);
+            // Validate admin password against the current stored admin password
+            if (password !== adminPassword) {
+              console.error('Contraseña de administrador incorrecta. Ingresada:', password, 'Esperada:', adminPassword);
               // Increment failed login attempts for admin account
               set((state) => ({ 
                 failedLoginAttempts: state.failedLoginAttempts + 1,
@@ -194,6 +196,72 @@ export const useAuthStore = create<AuthState>()(
       resetLoginAttempts: () => {
         set({ failedLoginAttempts: 0, lastLoginAttempt: null });
       },
+      
+      changeAdminPassword: async (currentPassword, newPassword) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          const { adminPassword } = get();
+          
+          // Verify current password
+          if (currentPassword !== adminPassword) {
+            set({ 
+              error: 'La contraseña actual es incorrecta',
+              isLoading: false 
+            });
+            throw new Error('La contraseña actual es incorrecta');
+          }
+          
+          // Validate new password
+          if (newPassword.length < 8) {
+            set({ 
+              error: 'La nueva contraseña debe tener al menos 8 caracteres',
+              isLoading: false 
+            });
+            throw new Error('La nueva contraseña debe tener al menos 8 caracteres');
+          }
+          
+          // Check for password strength (at least one uppercase, one lowercase, one number, one special char)
+          const hasUpperCase = /[A-Z]/.test(newPassword);
+          const hasLowerCase = /[a-z]/.test(newPassword);
+          const hasNumbers = /\d/.test(newPassword);
+          const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
+          
+          if (!(hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar)) {
+            set({ 
+              error: 'La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales',
+              isLoading: false 
+            });
+            throw new Error('La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales');
+          }
+          
+          // Update admin password
+          set({ 
+            adminPassword: newPassword,
+            isLoading: false 
+          });
+          
+          // Also update the password in userStore to keep them in sync
+          const { users, updateUser } = useUserStore.getState();
+          const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
+          
+          if (adminUser) {
+            await updateUser(adminUser.id, { password: newPassword });
+          }
+          
+          console.info('Contraseña de administrador actualizada con éxito');
+          return;
+        } catch (error) {
+          console.error('Error al cambiar la contraseña:', error);
+          if (!get().error) {
+            set({ 
+              error: error instanceof Error ? error.message : 'Error al cambiar la contraseña',
+              isLoading: false 
+            });
+          }
+          throw error;
+        }
+      },
     }),
     {
       name: 'encuestas-va-auth',
@@ -203,7 +271,9 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         // Include these in persisted state to maintain lockout between sessions
         failedLoginAttempts: state.failedLoginAttempts,
-        lastLoginAttempt: state.lastLoginAttempt, 
+        lastLoginAttempt: state.lastLoginAttempt,
+        // Include admin password in persisted state
+        adminPassword: state.adminPassword, 
       }),
     }
   )
