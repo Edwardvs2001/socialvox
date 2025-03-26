@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -7,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, LogIn, User, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUserStore } from '@/store/userStore';
 
 export function LoginForm() {
   const [username, setUsername] = useState('');
@@ -48,12 +50,29 @@ export function LoginForm() {
   // Handle direct admin access
   const handleDirectAdminAccess = async (adminType: 'main' | 'secondary') => {
     clearError();
+    
+    // Get users directly from the userStore
+    const { users } = useUserStore.getState();
+    
     try {
-      if (adminType === 'main') {
-        await login('amazonas2020', 'amazonas123');
-      } else {
-        await login('admin', 'admin123');
+      // Find the admin user
+      const credentials = adminType === 'main' 
+        ? { username: 'amazonas2020', password: 'amazonas123' }
+        : { username: 'admin', password: 'admin123' };
+      
+      // Check if user exists in store
+      const userExists = users.some(
+        u => u.username === credentials.username && 
+             u.password === credentials.password && 
+             u.active
+      );
+      
+      if (!userExists) {
+        toast.error('Usuario administrador no encontrado o inactivo');
+        return;
       }
+      
+      await login(credentials.username, credentials.password);
       navigate('/admin');
     } catch (err) {
       toast.error('Error al iniciar sesión automáticamente');
