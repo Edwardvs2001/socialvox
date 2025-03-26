@@ -31,7 +31,7 @@ const userFormSchema = z.object({
   password: z.string().min(6, {
     message: "La contraseña debe tener al menos 6 caracteres",
   }),
-  role: z.enum(['admin', 'surveyor'], {
+  role: z.enum(['admin', 'admin-manager', 'surveyor'] as const, {
     message: "Debe seleccionar un rol válido",
   }),
   active: z.boolean().default(true),
@@ -157,6 +157,8 @@ export function UserManager() {
     switch (role) {
       case 'admin':
         return <Badge className="bg-blue-500">Administrador</Badge>;
+      case 'admin-manager':
+        return <Badge className="bg-purple-500">Admin Manager</Badge>;
       case 'surveyor':
         return <Badge className="bg-green-500">Encuestador</Badge>;
       default:
@@ -373,6 +375,7 @@ export function UserManager() {
                         <SelectContent>
                           <SelectItem value="surveyor">Encuestador</SelectItem>
                           <SelectItem value="admin">Administrador</SelectItem>
+                          <SelectItem value="admin-manager">Admin Manager</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>

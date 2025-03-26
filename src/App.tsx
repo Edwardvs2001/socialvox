@@ -13,6 +13,7 @@ import AdminSurveyEditor from "./pages/AdminSurveyEditor";
 import AdminUsers from "./pages/AdminUsers";
 import AdminResults from "./pages/AdminResults";
 import AdminResultsList from "./pages/AdminResultsList";
+import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
 
@@ -49,6 +50,7 @@ const App = () => (
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/results" element={<AdminResultsList />} />
           <Route path="/admin/results/:id" element={<AdminResults />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
           
           {/* 404 Route */}
           <Route path="*" element={<NotFound />} />
