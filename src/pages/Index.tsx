@@ -8,6 +8,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [hasRefreshed, setHasRefreshed] = useState(false);
   
   // Using useCallback to prevent unnecessary re-renders
   const handleRedirect = useCallback(() => {
@@ -22,9 +23,12 @@ const Index = () => {
       console.log('Usuario autenticado:', user);
       
       // Refresh the session timer in an async way to prevent infinite loops
-      setTimeout(() => {
-        refreshSession();
-      }, 100);
+      if (!hasRefreshed) {
+        setTimeout(() => {
+          refreshSession();
+          setHasRefreshed(true);
+        }, 100);
+      }
       
       switch (user.role) {
         case 'admin':
@@ -51,7 +55,7 @@ const Index = () => {
       console.log('Usuario no autenticado o sesión expirada, redirigiendo a login');
       navigate('/');
     }
-  }, [navigate, isAuthenticated, user, checkSession, logout, isRedirecting]);
+  }, [navigate, isAuthenticated, user, checkSession, logout, isRedirecting, hasRefreshed]);
 
   useEffect(() => {
     // Only run once when component mounts

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useCallback, useState } from 'react';
+import { ReactNode, useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -17,8 +17,14 @@ export function AuthLayout({
   const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
   const navigate = useNavigate();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const initialCheckRef = useRef(false);
   
   const checkAuth = useCallback(() => {
+    // Prevent multiple checks on the same render cycle
+    if (initialCheckRef.current) return;
+    initialCheckRef.current = true;
+    
     console.log('AuthLayout - Checking auth:', { 
       isAuthenticated, 
       user, 
@@ -45,13 +51,11 @@ export function AuthLayout({
       
       // Only refresh session when authenticated and have valid session
       // Use setTimeout to prevent infinite update loops
-      if (isAuthenticated && isSessionValid) {
-        // Only schedule refresh if we haven't already checked auth
-        if (!hasCheckedAuth) {
-          setTimeout(() => {
-            refreshSession();
-          }, 100);
-        }
+      if (isAuthenticated && isSessionValid && !hasCheckedAuth) {
+        setHasCheckedAuth(true);
+        setTimeout(() => {
+          refreshSession();
+        }, 100);
       }
       
       if (allowedRoles.length > 0 && user) {
@@ -81,6 +85,7 @@ export function AuthLayout({
         
         // Only schedule refresh if we haven't already checked auth
         if (!hasCheckedAuth) {
+          setHasCheckedAuth(true);
           setTimeout(() => {
             refreshSession();
           }, 100);
@@ -94,9 +99,6 @@ export function AuthLayout({
         }
       }
     }
-    
-    // Mark that we've checked authentication
-    setHasCheckedAuth(true);
   }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession, hasCheckedAuth]);
   
   useEffect(() => {
@@ -104,14 +106,20 @@ export function AuthLayout({
     
     // Set up a periodic refresh for the session (every 15 minutes)
     // This keeps the session fresh while the user is active
-    const refreshInterval = setInterval(() => {
+    if (refreshTimerRef.current) {
+      clearInterval(refreshTimerRef.current);
+    }
+    
+    refreshTimerRef.current = setInterval(() => {
       if (isAuthenticated && checkSession()) {
         refreshSession();
       }
     }, 15 * 60 * 1000); // 15 minutes
     
     return () => {
-      clearInterval(refreshInterval);
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+      }
     };
   }, [checkAuth, isAuthenticated, checkSession, refreshSession]);
   

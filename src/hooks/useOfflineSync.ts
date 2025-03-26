@@ -1,13 +1,16 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSurveyStore } from '@/store/surveyStore';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/store/authStore';
 
 export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const { responses, syncResponses } = useSurveyStore();
+  const { isAuthenticated, checkSession } = useAuthStore();
+  const syncInProgressRef = useRef(false);
   
   // Number of pending responses that need sync
   const pendingCount = responses.filter(r => !r.syncedToServer).length;
@@ -35,10 +38,10 @@ export function useOfflineSync() {
   
   // Auto-sync when coming back online
   useEffect(() => {
-    if (isOnline && pendingCount > 0) {
+    if (isOnline && pendingCount > 0 && isAuthenticated && checkSession() && !syncInProgressRef.current) {
       sync();
     }
-  }, [isOnline, pendingCount]);
+  }, [isOnline, pendingCount, isAuthenticated]);
   
   // Manual sync function
   const sync = async () => {
@@ -52,6 +55,17 @@ export function useOfflineSync() {
       return;
     }
     
+    if (!isAuthenticated || !checkSession()) {
+      toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
+      return;
+    }
+    
+    // Prevent multiple syncs from running simultaneously
+    if (syncInProgressRef.current) {
+      return;
+    }
+    
+    syncInProgressRef.current = true;
     setIsSyncing(true);
     
     try {
@@ -63,6 +77,7 @@ export function useOfflineSync() {
       toast.error('Error al sincronizar datos. Intente nuevamente.');
     } finally {
       setIsSyncing(false);
+      syncInProgressRef.current = false;
     }
   };
   
