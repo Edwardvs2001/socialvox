@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSurveyStore, SurveyResponse } from '@/store/surveyStore';
 import { useUserStore } from '@/store/userStore';
@@ -8,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDate } from '@/utils/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Loader2, PieChartIcon, BarChartIcon, FileText } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SurveyResultsProps {
   surveyId: string;
@@ -18,6 +20,7 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
   const { getSurveyById, getSurveyResponses, isLoading } = useSurveyStore();
   const { users } = useUserStore();
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
+  const isMobile = useIsMobile();
   
   const survey = getSurveyById(surveyId);
   const responses = getSurveyResponses(surveyId);
@@ -82,38 +85,38 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
   }, [onLowAccuracy]);
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {isLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-admin" />
+        <div className="flex justify-center items-center py-6 md:py-12">
+          <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin text-admin" />
         </div>
       ) : (
         <>
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+            <CardHeader className={isMobile ? "py-3" : "py-4"}>
+              <CardTitle className={`flex items-center justify-between ${isMobile ? "text-lg" : "text-xl"}`}>
                 <span>Resumen</span>
                 <Badge>{responses.length} respuestas</Badge>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className={isMobile ? "text-xs" : "text-sm"}>
                 Resultados generales de la encuesta
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className={isMobile ? "p-3" : "p-6"}>
               {survey?.questions && survey.questions.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   <div>
-                    <label className="text-sm font-medium">Seleccionar pregunta:</label>
+                    <label className={`${isMobile ? "text-xs" : "text-sm"} font-medium`}>Seleccionar pregunta:</label>
                     <Select
                       value={selectedQuestion || ''}
                       onValueChange={setSelectedQuestion}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className={`w-full ${isMobile ? "text-xs mt-1" : "text-sm mt-2"}`}>
                         <SelectValue placeholder="Selecciona una pregunta" />
                       </SelectTrigger>
                       <SelectContent>
                         {survey.questions.map(question => (
-                          <SelectItem key={question.id} value={question.id}>
+                          <SelectItem key={question.id} value={question.id} className={isMobile ? "text-xs" : "text-sm"}>
                             {question.text}
                           </SelectItem>
                         ))}
@@ -123,47 +126,47 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
                   
                   {responses.length > 0 ? (
                     <Tabs defaultValue="bar">
-                      <TabsList className="grid w-full grid-cols-3">
+                      <TabsList className={`grid w-full grid-cols-3 ${isMobile ? "text-xs" : "text-sm"}`}>
                         <TabsTrigger value="bar" className="flex items-center">
-                          <BarChartIcon className="h-4 w-4 mr-2" />
-                          Gráfico de Barras
+                          <BarChartIcon className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
+                          {isMobile ? "Barras" : "Gráfico de Barras"}
                         </TabsTrigger>
                         <TabsTrigger value="pie" className="flex items-center">
-                          <PieChartIcon className="h-4 w-4 mr-2" />
-                          Gráfico Circular
+                          <PieChartIcon className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
+                          {isMobile ? "Circular" : "Gráfico Circular"}
                         </TabsTrigger>
                         <TabsTrigger value="table" className="flex items-center">
-                          <FileText className="h-4 w-4 mr-2" />
+                          <FileText className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} />
                           Tabla
                         </TabsTrigger>
                       </TabsList>
                       
-                      <TabsContent value="bar" className="pt-4">
-                        <div className="h-80 w-full">
+                      <TabsContent value="bar" className="pt-3 md:pt-4">
+                        <div className={`${isMobile ? "h-60" : "h-80"} w-full`}>
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData}>
+                            <BarChart data={chartData} margin={isMobile ? { top: 5, right: 5, bottom: 5, left: 5 } : { top: 20, right: 30, bottom: 5, left: 20 }}>
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" />
-                              <YAxis />
-                              <Tooltip />
-                              <Legend />
+                              <XAxis dataKey="name" tick={{ fontSize: isMobile ? 10 : 12 }} />
+                              <YAxis tick={{ fontSize: isMobile ? 10 : 12 }} />
+                              <Tooltip contentStyle={{ fontSize: isMobile ? 10 : 12 }} />
+                              <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12 }} />
                               <Bar dataKey="count" fill="#8884d8" name="Respuestas" />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
                       </TabsContent>
                       
-                      <TabsContent value="pie" className="pt-4">
-                        <div className="h-80 w-full">
+                      <TabsContent value="pie" className="pt-3 md:pt-4">
+                        <div className={`${isMobile ? "h-60" : "h-80"} w-full`}>
                           <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            <PieChart margin={isMobile ? { top: 5, right: 5, bottom: 5, left: 5 } : { top: 20, right: 30, bottom: 5, left: 20 }}>
                               <Pie
                                 data={chartData}
                                 cx="50%"
                                 cy="50%"
-                                labelLine={true}
-                                label={({ name, value }) => `${name}: ${value}`}
-                                outerRadius={80}
+                                labelLine={!isMobile}
+                                label={isMobile ? undefined : ({ name, value }) => `${name}: ${value}`}
+                                outerRadius={isMobile ? 60 : 80}
                                 fill="#8884d8"
                                 dataKey="value"
                               >
@@ -171,29 +174,29 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
                                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                               </Pie>
-                              <Tooltip />
-                              <Legend />
+                              <Tooltip contentStyle={{ fontSize: isMobile ? 10 : 12 }} />
+                              <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12 }} />
                             </PieChart>
                           </ResponsiveContainer>
                         </div>
                       </TabsContent>
                       
-                      <TabsContent value="table" className="pt-4">
+                      <TabsContent value="table" className="pt-3 md:pt-4">
                         <div className="overflow-x-auto">
                           <table className="w-full border-collapse">
                             <thead>
                               <tr className="bg-muted border-b">
-                                <th className="text-left py-2 px-3">Opción</th>
-                                <th className="text-center py-2 px-3">Respuestas</th>
-                                <th className="text-center py-2 px-3">Porcentaje</th>
+                                <th className={`text-left py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Opción</th>
+                                <th className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Respuestas</th>
+                                <th className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>Porcentaje</th>
                               </tr>
                             </thead>
                             <tbody>
                               {chartData.map((item, index) => (
                                 <tr key={index} className="border-b">
-                                  <td className="py-2 px-3">{item.name}</td>
-                                  <td className="text-center py-2 px-3">{item.value}</td>
-                                  <td className="text-center py-2 px-3">{getPercentage(item.value)}</td>
+                                  <td className={`py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{item.name}</td>
+                                  <td className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{item.value}</td>
+                                  <td className={`text-center py-1 px-2 md:py-2 md:px-3 ${isMobile ? "text-xs" : "text-sm"}`}>{getPercentage(item.value)}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -202,13 +205,13 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
                       </TabsContent>
                     </Tabs>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
+                    <div className={`text-center py-4 md:py-8 ${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}>
                       <p>No hay respuestas para esta encuesta.</p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className={`text-center py-4 md:py-8 ${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}>
                   <p>Esta encuesta no tiene preguntas definidas.</p>
                 </div>
               )}
@@ -216,29 +219,29 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
           </Card>
           
           <Card>
-            <CardHeader>
-              <CardTitle>Respuestas Detalladas</CardTitle>
-              <CardDescription>
+            <CardHeader className={isMobile ? "py-3" : "py-4"}>
+              <CardTitle className={isMobile ? "text-lg" : "text-xl"}>Respuestas Detalladas</CardTitle>
+              <CardDescription className={isMobile ? "text-xs" : "text-sm"}>
                 Lista de todas las respuestas recibidas
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className={isMobile ? "p-3" : "p-6"}>
               {responses.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   {responses.map((response, index) => (
                     <Card key={response.id} className="border-admin/20">
-                      <CardHeader className="py-3">
-                        <CardTitle className="text-base flex items-center justify-between">
+                      <CardHeader className={`${isMobile ? "py-2 px-3" : "py-3 px-4"}`}>
+                        <CardTitle className={`${isMobile ? "text-sm" : "text-base"} flex items-center justify-between`}>
                           <span>Respuesta #{index + 1}</span>
-                          <Badge variant="outline">
+                          <Badge variant="outline" className={isMobile ? "text-xs" : "text-sm"}>
                             {formatDate(response.completedAt)}
                           </Badge>
                         </CardTitle>
-                        <CardDescription>
+                        <CardDescription className={isMobile ? "text-xs" : "text-sm"}>
                           Encuestador: {getRespondentName(response.respondentId)}
                         </CardDescription>
                       </CardHeader>
-                      <CardContent className="py-2">
+                      <CardContent className={`${isMobile ? "py-2 px-3" : "py-2 px-4"}`}>
                         <ul className="space-y-2">
                           {survey?.questions.map(question => {
                             const answer = response.answers.find(
@@ -246,8 +249,8 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
                             );
                             return (
                               <li key={question.id} className="border-b pb-2">
-                                <p className="font-medium">{question.text}</p>
-                                <p className={answer ? "mt-1" : "mt-1 text-muted-foreground italic"}>
+                                <p className={`${isMobile ? "text-xs" : "text-sm"} font-medium`}>{question.text}</p>
+                                <p className={`${isMobile ? "text-xs" : "text-sm"} ${answer ? "mt-1" : "mt-1 text-muted-foreground italic"}`}>
                                   {answer ? answer.selectedOption : 'Sin respuesta'}
                                 </p>
                               </li>
@@ -256,8 +259,8 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
                         </ul>
                         
                         {response.audioRecording && (
-                          <div className="mt-4">
-                            <p className="font-medium mb-2">Grabación de audio:</p>
+                          <div className="mt-3 md:mt-4">
+                            <p className={`${isMobile ? "text-xs" : "text-sm"} font-medium mb-1 md:mb-2`}>Grabación de audio:</p>
                             <audio controls className="w-full">
                               <source src={response.audioRecording} type="audio/webm" />
                               Tu navegador no soporta el elemento de audio.
@@ -269,7 +272,7 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className={`text-center py-4 md:py-8 ${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}>
                   <p>No hay respuestas disponibles para esta encuesta.</p>
                 </div>
               )}

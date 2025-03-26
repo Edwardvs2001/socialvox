@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -119,6 +120,29 @@
 
   .login-form-container .login-card {
     @apply rounded-t-none border-t-0;
+  }
+  
+  /* Mobile optimization classes */
+  @media (max-width: 768px) {
+    .text-mobile-xs {
+      @apply text-xs;
+    }
+    
+    .text-mobile-sm {
+      @apply text-sm;
+    }
+    
+    .text-mobile-base {
+      @apply text-base;
+    }
+    
+    .spacing-mobile-tight {
+      @apply p-2 space-y-2;
+    }
+    
+    .spacing-mobile-normal {
+      @apply p-3 space-y-3;
+    }
   }
 }
 

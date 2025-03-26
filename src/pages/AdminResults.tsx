@@ -1,16 +1,18 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { SurveyResults } from '@/components/admin/SurveyResults';
 import { useSurveyStore } from '@/store/surveyStore';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function AdminResults() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getSurveyById } = useSurveyStore();
   const survey = id ? getSurveyById(id) : null;
+  const isMobile = useIsMobile();
   
   // Redirect if survey doesn't exist
   useEffect(() => {
