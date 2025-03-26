@@ -8,6 +8,7 @@ export interface SurveyFolder {
   description: string;
   createdAt: string;
   createdBy: string;
+  parentId: string | null;
 }
 
 export interface SurveyQuestion {
@@ -46,53 +47,57 @@ interface SurveyState {
   isLoading: boolean;
   error: string | null;
   
-  // Survey CRUD operations
   fetchSurveys: () => Promise<void>;
   getSurveyById: (id: string) => Survey | undefined;
   createSurvey: (survey: Omit<Survey, 'id' | 'createdAt'>) => Promise<Survey>;
   updateSurvey: (id: string, updates: Partial<Survey>) => Promise<void>;
   deleteSurvey: (id: string) => Promise<void>;
   
-  // Response operations
   submitResponse: (response: Omit<SurveyResponse, 'id' | 'completedAt' | 'syncedToServer'>) => Promise<void>;
   getSurveyResponses: (surveyId: string) => SurveyResponse[];
   getSurveyorResponses: (surveyorId: string) => SurveyResponse[];
   syncResponses: () => Promise<void>;
   
-  // Assign surveys
   assignSurvey: (surveyId: string, surveyorIds: string[]) => Promise<void>;
   
-  // Folder operations
   createFolder: (folder: Omit<SurveyFolder, 'id' | 'createdAt'>) => Promise<SurveyFolder>;
   updateFolder: (id: string, updates: Partial<SurveyFolder>) => Promise<void>;
   deleteFolder: (id: string) => Promise<void>;
   getFolderById: (id: string) => SurveyFolder | undefined;
+  getSubfolders: (parentId: string | null) => SurveyFolder[];
   assignSurveyToFolder: (surveyId: string, folderId: string | null) => Promise<void>;
   assignFolderToSurveyors: (folderId: string, surveyorIds: string[]) => Promise<void>;
   
-  // Utility
   clearError: () => void;
 }
 
-// Mock data for folders
 const mockFolders: SurveyFolder[] = [
   {
     id: 'folder-1',
     name: 'Satisfacción del Cliente',
     description: 'Encuestas relacionadas con la satisfacción de nuestros clientes',
     createdAt: '2023-09-01T10:00:00Z',
-    createdBy: '1', // admin ID
+    createdBy: '1',
+    parentId: null
   },
   {
     id: 'folder-2',
     name: 'Evaluación de Productos',
     description: 'Encuestas para evaluar nuestros productos',
     createdAt: '2023-09-05T14:00:00Z',
-    createdBy: '1', // admin ID
+    createdBy: '1',
+    parentId: null
+  },
+  {
+    id: 'folder-3',
+    name: 'Productos Electrónicos',
+    description: 'Subcarpeta para evaluación de productos electrónicos',
+    createdAt: '2023-09-06T10:00:00Z',
+    createdBy: '1',
+    parentId: 'folder-2'
   }
 ];
 
-// Mock data for surveys with folder assignments
 const mockSurveys: Survey[] = [
   {
     id: '1',
@@ -126,8 +131,8 @@ const mockSurveys: Survey[] = [
     ],
     isActive: true,
     createdAt: '2023-09-15T10:30:00Z',
-    createdBy: '1', // admin ID
-    assignedTo: ['2'], // surveyor ID
+    createdBy: '1',
+    assignedTo: ['2'],
     folderId: 'folder-1'
   },
   {
@@ -243,8 +248,26 @@ export const useSurveyStore = create<SurveyState>()(
           // Simulate API call delay
           await new Promise(resolve => setTimeout(resolve, 800));
           
+          // Get all subfolders recursively
+          const allSubfolderIds = new Set<string>();
+          
+          const getAllSubfolderIds = (folderId: string) => {
+            const subfolders = get().folders.filter(f => f.parentId === folderId);
+            subfolders.forEach(folder => {
+              allSubfolderIds.add(folder.id);
+              getAllSubfolderIds(folder.id);
+            });
+          };
+          
+          getAllSubfolderIds(id);
+          const foldersToDelete = [id, ...Array.from(allSubfolderIds)];
+          
+          // When deleting a folder, remove folder assignment from associated surveys
           set(state => ({
-            surveys: state.surveys.filter(survey => survey.id !== id),
+            folders: state.folders.filter(folder => !foldersToDelete.includes(folder.id)),
+            surveys: state.surveys.map(survey => 
+              foldersToDelete.includes(survey.folderId || '') ? { ...survey, folderId: null } : survey
+            ),
             isLoading: false,
           }));
         } catch (error) {
@@ -267,7 +290,7 @@ export const useSurveyStore = create<SurveyState>()(
             ...responseData,
             id: uuidv4(),
             completedAt: new Date().toISOString(),
-            syncedToServer: navigator.onLine, // Mark as synced if online
+            syncedToServer: navigator.onLine,
           };
           
           set(state => ({
@@ -403,11 +426,25 @@ export const useSurveyStore = create<SurveyState>()(
           // Simulate API call delay
           await new Promise(resolve => setTimeout(resolve, 800));
           
+          // Get all subfolders recursively
+          const allSubfolderIds = new Set<string>();
+          
+          const getAllSubfolderIds = (folderId: string) => {
+            const subfolders = get().folders.filter(f => f.parentId === folderId);
+            subfolders.forEach(folder => {
+              allSubfolderIds.add(folder.id);
+              getAllSubfolderIds(folder.id);
+            });
+          };
+          
+          getAllSubfolderIds(id);
+          const foldersToDelete = [id, ...Array.from(allSubfolderIds)];
+          
           // When deleting a folder, remove folder assignment from associated surveys
           set(state => ({
-            folders: state.folders.filter(folder => folder.id !== id),
+            folders: state.folders.filter(folder => !foldersToDelete.includes(folder.id)),
             surveys: state.surveys.map(survey => 
-              survey.folderId === id ? { ...survey, folderId: null } : survey
+              foldersToDelete.includes(survey.folderId || '') ? { ...survey, folderId: null } : survey
             ),
             isLoading: false,
           }));
@@ -422,6 +459,10 @@ export const useSurveyStore = create<SurveyState>()(
       
       getFolderById: (id) => {
         return get().folders.find(folder => folder.id === id);
+      },
+      
+      getSubfolders: (parentId) => {
+        return get().folders.filter(folder => folder.parentId === parentId);
       },
       
       assignSurveyToFolder: async (surveyId, folderId) => {

@@ -32,6 +32,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Folder, 
   FolderPlus, 
@@ -39,13 +40,23 @@ import {
   Pencil, 
   Trash, 
   Users, 
-  Loader2
+  Loader2,
+  FolderDown,
+  ArrowRight
 } from 'lucide-react';
 import { formatDate } from '@/utils/api';
 import { toast } from 'sonner';
 
 export function FolderManager() {
-  const { folders, createFolder, updateFolder, deleteFolder, assignFolderToSurveyors, isLoading } = useSurveyStore();
+  const { 
+    folders, 
+    createFolder, 
+    updateFolder, 
+    deleteFolder, 
+    assignFolderToSurveyors, 
+    getSubfolders, 
+    isLoading 
+  } = useSurveyStore();
   const { users, fetchUsers } = useUserStore();
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
@@ -54,10 +65,37 @@ export function FolderManager() {
   const [selectedFolder, setSelectedFolder] = useState<SurveyFolder | null>(null);
   const [folderName, setFolderName] = useState('');
   const [folderDescription, setFolderDescription] = useState('');
+  const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [selectedSurveyors, setSelectedSurveyors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [currentParentId, setCurrentParentId] = useState<string | null>(null);
   
   const surveyors = users.filter(user => user.role === 'surveyor' && user.active);
+  
+  // Filtrar carpetas según el nivel actual
+  const currentFolders = folders.filter(folder => folder.parentId === currentParentId);
+  
+  // Obtener la ruta de navegación (breadcrumb)
+  const getBreadcrumb = () => {
+    const breadcrumb: SurveyFolder[] = [];
+    let currentId = currentParentId;
+    
+    while (currentId) {
+      const folder = folders.find(f => f.id === currentId);
+      if (folder) {
+        breadcrumb.unshift(folder);
+        currentId = folder.parentId;
+      } else {
+        break;
+      }
+    }
+    
+    return breadcrumb;
+  };
+  
+  const navigateTo = (folderId: string | null) => {
+    setCurrentParentId(folderId);
+  };
   
   const handleCreateFolder = async () => {
     if (!folderName.trim()) {
@@ -72,6 +110,7 @@ export function FolderManager() {
         name: folderName,
         description: folderDescription,
         createdBy: '1', // Current admin user ID
+        parentId: parentFolderId
       });
       
       toast.success('Carpeta creada correctamente');
@@ -98,6 +137,7 @@ export function FolderManager() {
       await updateFolder(selectedFolder.id, {
         name: folderName,
         description: folderDescription,
+        parentId: parentFolderId
       });
       
       toast.success('Carpeta actualizada correctamente');
@@ -130,15 +170,20 @@ export function FolderManager() {
     }
   };
   
+  const handleOpenNewFolderDialog = () => {
+    setParentFolderId(currentParentId);
+    setShowNewFolderDialog(true);
+  };
+  
   const handleOpenEditDialog = (folder: SurveyFolder) => {
     setSelectedFolder(folder);
     setFolderName(folder.name);
     setFolderDescription(folder.description);
+    setParentFolderId(folder.parentId);
     setShowEditFolderDialog(true);
   };
   
   const handleOpenAssignDialog = (folder: SurveyFolder) => {
-    // Find surveys in this folder and get assigned surveyors
     setSelectedFolder(folder);
     setSelectedSurveyors([]);
     setShowAssignDialog(true);
@@ -172,103 +217,209 @@ export function FolderManager() {
     }
   };
   
+  const handleEnterFolder = (folder: SurveyFolder) => {
+    navigateTo(folder.id);
+  };
+  
   const resetForm = () => {
     setFolderName('');
     setFolderDescription('');
     setSelectedFolder(null);
+    setParentFolderId(null);
   };
+  
+  // Obtener todas las carpetas para el selector de carpeta padre
+  const availableParentFolders = folders.filter(folder => {
+    // No permitir circular references
+    if (selectedFolder && folder.id === selectedFolder.id) {
+      return false;
+    }
+    
+    // No permitir que una carpeta se asigne a un subfolder suyo
+    if (selectedFolder) {
+      let currentFolder = folder;
+      while (currentFolder.parentId) {
+        if (currentFolder.parentId === selectedFolder.id) {
+          return false;
+        }
+        const parentFolder = folders.find(f => f.id === currentFolder.parentId);
+        if (!parentFolder) break;
+        currentFolder = parentFolder;
+      }
+    }
+    
+    return true;
+  });
+  
+  const breadcrumb = getBreadcrumb();
   
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Carpetas de Encuestas</h2>
-        <Button onClick={() => setShowNewFolderDialog(true)} className="btn-admin">
-          <FolderPlus className="mr-2 h-4 w-4" />
-          Nueva Carpeta
-        </Button>
+        <div className="flex flex-col space-y-2">
+          <h2 className="text-2xl font-bold">Carpetas de Encuestas</h2>
+          
+          {/* Breadcrumb navigation */}
+          {currentParentId && (
+            <div className="flex items-center text-sm">
+              <Button 
+                variant="link" 
+                className="p-0 h-auto text-muted-foreground" 
+                onClick={() => navigateTo(null)}
+              >
+                Raíz
+              </Button>
+              
+              {breadcrumb.map((folder, index) => (
+                <div key={folder.id} className="flex items-center">
+                  <ArrowRight className="mx-1 h-3 w-3 text-muted-foreground" />
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto text-muted-foreground"
+                    onClick={() => navigateTo(index === breadcrumb.length - 1 ? folder.id : folder.parentId)}
+                  >
+                    {folder.name}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex space-x-2">
+          {currentParentId && (
+            <Button 
+              variant="outline" 
+              onClick={() => navigateTo(folders.find(f => f.id === currentParentId)?.parentId || null)}
+              className="gap-2"
+            >
+              <FolderDown className="h-4 w-4" />
+              Subir
+            </Button>
+          )}
+          
+          <Button onClick={handleOpenNewFolderDialog} className="btn-admin">
+            <FolderPlus className="mr-2 h-4 w-4" />
+            Nueva Carpeta
+          </Button>
+        </div>
       </div>
       
-      {folders.length === 0 ? (
+      {currentFolders.length === 0 ? (
         <Card className="bg-muted/50">
           <CardContent className="flex flex-col items-center justify-center pt-10 pb-10">
             <Folder className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground text-center">
-              No hay carpetas disponibles. Crea una nueva carpeta para organizar tus encuestas.
+              {currentParentId 
+                ? "Esta carpeta está vacía. Crea subcarpetas para organizar tus encuestas."
+                : "No hay carpetas disponibles. Crea una nueva carpeta para organizar tus encuestas."}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {folders.map(folder => (
-            <Card key={folder.id} className="admin-card hover:border-admin/30 transition-all duration-300 hover:shadow-md">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-start space-x-2">
-                    <Folder className="h-5 w-5 text-admin mt-1" />
-                    <div>
-                      <CardTitle>{folder.name}</CardTitle>
-                      <CardDescription className="mt-1 line-clamp-2">
-                        {folder.description}
-                      </CardDescription>
+          {currentFolders.map(folder => {
+            const hasSubfolders = folders.some(f => f.parentId === folder.id);
+            
+            return (
+              <Card 
+                key={folder.id} 
+                className="admin-card hover:border-admin/30 transition-all duration-300 hover:shadow-md cursor-pointer"
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-start space-x-2">
+                      <Folder className="h-5 w-5 text-admin mt-1" />
+                      <div>
+                        <CardTitle>{folder.name}</CardTitle>
+                        <CardDescription className="mt-1 line-clamp-2">
+                          {folder.description}
+                        </CardDescription>
+                      </div>
                     </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={e => e.stopPropagation()}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenEditDialog(folder)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenAssignDialog(folder)}>
+                          <Users className="mr-2 h-4 w-4" />
+                          Asignar a Encuestadores
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFolder(folder);
+                            setShowDeleteDialog(true);
+                          }}
+                        >
+                          <Trash className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleOpenEditDialog(folder)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleOpenAssignDialog(folder)}>
-                        <Users className="mr-2 h-4 w-4" />
-                        Asignar a Encuestadores
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => {
-                          setSelectedFolder(folder);
-                          setShowDeleteDialog(true);
-                        }}
-                      >
-                        <Trash className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-2">
-                <div className="text-sm">
-                  <p className="text-muted-foreground">Fecha de creación</p>
-                  <p>{formatDate(folder.createdAt)}</p>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-4 pb-4 border-t justify-between">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleOpenAssignDialog(folder)}
-                  className="gap-1"
-                >
-                  <Users className="h-4 w-4" />
-                  Asignar
-                </Button>
-                
-                <Button 
-                  className="btn-admin" 
-                  size="sm"
-                  onClick={() => handleOpenEditDialog(folder)}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Editar
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent className="pb-2" onClick={() => handleEnterFolder(folder)}>
+                  <div className="text-sm">
+                    <p className="text-muted-foreground">Fecha de creación</p>
+                    <p>{formatDate(folder.createdAt)}</p>
+                    
+                    {hasSubfolders && (
+                      <p className="mt-2 text-xs text-blue-600">
+                        Contiene subcarpetas
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+                <CardFooter className="pt-4 pb-4 border-t justify-between">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenAssignDialog(folder);
+                    }}
+                    className="gap-1"
+                  >
+                    <Users className="h-4 w-4" />
+                    Asignar
+                  </Button>
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEnterFolder(folder)}
+                      className="gap-1"
+                    >
+                      <Folder className="h-4 w-4" />
+                      Abrir
+                    </Button>
+                    
+                    <Button 
+                      className="btn-admin" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditDialog(folder);
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Editar
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       )}
       
@@ -306,6 +457,28 @@ export function FolderManager() {
                 onChange={(e) => setFolderDescription(e.target.value)}
                 rows={3}
               />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="parent-folder" className="text-sm font-medium">
+                Carpeta padre (opcional)
+              </label>
+              <Select 
+                value={parentFolderId || "null"}
+                onValueChange={(value) => setParentFolderId(value === "null" ? null : value)}
+              >
+                <SelectTrigger id="parent-folder">
+                  <SelectValue placeholder="Selecciona una carpeta padre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">Raíz (sin carpeta padre)</SelectItem>
+                  {availableParentFolders.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
@@ -373,6 +546,28 @@ export function FolderManager() {
                 rows={3}
               />
             </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="edit-parent-folder" className="text-sm font-medium">
+                Carpeta padre (opcional)
+              </label>
+              <Select 
+                value={parentFolderId || "null"}
+                onValueChange={(value) => setParentFolderId(value === "null" ? null : value)}
+              >
+                <SelectTrigger id="edit-parent-folder">
+                  <SelectValue placeholder="Selecciona una carpeta padre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">Raíz (sin carpeta padre)</SelectItem>
+                  {availableParentFolders.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <DialogFooter>
@@ -411,7 +606,7 @@ export function FolderManager() {
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción eliminará permanentemente la carpeta "{selectedFolder?.name}" 
-              y todas las encuestas serán desasignadas de esta carpeta.
+              y todas sus subcarpetas. Las encuestas serán desasignadas de estas carpetas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
