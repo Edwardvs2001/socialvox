@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSurveyStore } from '@/store/surveyStore';
 import { useUserStore } from '@/store/userStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,20 +11,24 @@ import { BarChart3, ClipboardList, FileText, Users, Plus } from 'lucide-react';
 export function DashboardOverview() {
   const { surveys, responses, fetchSurveys } = useSurveyStore();
   const { users, fetchUsers } = useUserStore();
+  const [chartData, setChartData] = useState([]);
   
+  // Efecto para cargar datos iniciales
   useEffect(() => {
     fetchSurveys();
     fetchUsers();
   }, [fetchSurveys, fetchUsers]);
+  
+  // Efecto para actualizar los datos del gráfico cuando cambian las respuestas
+  useEffect(() => {
+    setChartData(generateChartData());
+  }, [responses]);
   
   // Count active surveys
   const activeSurveys = surveys.filter(s => s.isActive).length;
   
   // Count surveyors
   const surveyors = users.filter(u => u.role === 'surveyor' && u.active).length;
-  
-  // Generate mock chart data (last 7 days)
-  const chartData = generateChartData();
   
   function generateChartData() {
     const today = new Date();

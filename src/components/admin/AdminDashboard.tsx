@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,13 +19,21 @@ export function AdminDashboard() {
   const { surveys, responses, fetchSurveys } = useSurveyStore();
   const { users, fetchUsers } = useUserStore();
   
-  // Fetch data on component mount
+  // Fetch data on component mount and when admin page is visited
   useEffect(() => {
     fetchSurveys();
     fetchUsers();
+    
+    // Set up an interval to periodically refresh data (every 30 seconds)
+    const refreshInterval = setInterval(() => {
+      fetchSurveys();
+      fetchUsers();
+    }, 30000);
+    
+    return () => clearInterval(refreshInterval);
   }, [fetchSurveys, fetchUsers]);
   
-  // Count active surveys and surveyors
+  // Count active surveys and surveyors - calculated on every render
   const activeSurveys = surveys.filter(s => s.isActive).length;
   const surveyors = users.filter(u => u.role === 'surveyor' && u.active).length;
 
