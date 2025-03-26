@@ -18,7 +18,6 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [loginType, setLoginType] = useState<'admin' | 'surveyor' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [recoveryMode, setRecoveryMode] = useState(false);
   const {
     login,
     isLoading,
@@ -83,7 +82,6 @@ export function LoginForm() {
     clearError();
     setUsername('');
     setPassword('');
-    setRecoveryMode(false);
   };
   
   const handleDirectAdminAccess = async () => {
@@ -113,13 +111,6 @@ export function LoginForm() {
       console.error('Direct login error:', err);
       // The error message is already set in the auth store
     }
-  };
-  
-  const handleRecoveryMode = () => {
-    setRecoveryMode(true);
-    // Use default admin password for recovery - display it visibly
-    setPassword(DEFAULT_ADMIN_PASSWORD);
-    toast.info('Contraseña de administrador por defecto cargada. Intente acceder ahora.');
   };
   
   const togglePasswordVisibility = () => {
@@ -194,12 +185,10 @@ export function LoginForm() {
               <span>{error}</span>
             </div>}
           
-          {recoveryMode && (
-            <div className="p-3 rounded-md bg-green-900/50 border border-green-600/30 text-green-100 text-sm flex items-center font-medium">
-              <KeyRound className="h-4 w-4 mr-2 flex-shrink-0" />
-              <span>Contraseña por defecto: <strong>{DEFAULT_ADMIN_PASSWORD}</strong></span>
-            </div>
-          )}
+          <div className="p-3 rounded-md bg-green-900/50 border border-green-600/30 text-green-100 text-sm flex items-center font-medium">
+            <KeyRound className="h-4 w-4 mr-2 flex-shrink-0" />
+            <span>Contraseña por defecto: <strong>{DEFAULT_ADMIN_PASSWORD}</strong></span>
+          </div>
           
           <div className="grid grid-cols-1 gap-4">
             <Button onClick={handleDirectAdminAccess} variant="red" className="p-6 h-auto flex flex-col gap-3 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 transition-all duration-300" disabled={isLoading}>
@@ -207,18 +196,6 @@ export function LoginForm() {
               <span className="font-medium text-white">Ingresar como Administrador</span>
             </Button>
           </div>
-          
-          {failedLoginAttempts > 0 && !recoveryMode && (
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleRecoveryMode} 
-              className="w-full mt-2 text-amber-600 border-amber-300 hover:bg-amber-50"
-            >
-              <KeyRound className="h-4 w-4 mr-2" />
-              Usar contraseña por defecto
-            </Button>
-          )}
           
           <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-white hover:text-white bg-black">
             Volver

@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -169,11 +170,16 @@ export const useUserStore = create<UserState>()(
             }
           }
           
+          // Sincronizar contraseña de admin
           const user = get().users.find(u => u.id === id);
           if (user && user.username.toLowerCase() === 'admin' && updates.password) {
-            const authStore = require('./authStore').useAuthStore;
-            if (updates.password !== authStore.getState().adminPassword) {
-              authStore.setState({ adminPassword: updates.password });
+            try {
+              const authStore = require('./authStore').useAuthStore;
+              if (updates.password !== authStore.getState().adminPassword) {
+                authStore.setState({ adminPassword: updates.password });
+              }
+            } catch (e) {
+              console.error('Error al sincronizar contraseña con authStore:', e);
             }
           }
           
@@ -198,6 +204,12 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
+          // Prevenir eliminación del usuario admin
+          const user = get().users.find(u => u.id === id);
+          if (user && user.username.toLowerCase() === 'admin') {
+            throw new Error('No se puede eliminar el usuario administrador');
+          }
+          
           await new Promise(resolve => setTimeout(resolve, 800));
           
           set(state => ({
@@ -225,6 +237,7 @@ export const useUserStore = create<UserState>()(
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {
+            // Asegurar que admin siempre esté activo
             const adminUser = state.users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
             
             if (adminUser) {
@@ -234,12 +247,19 @@ export const useUserStore = create<UserState>()(
                 );
               }
               
-              const authStore = require('./authStore').useAuthStore;
-              if (authStore.getState().adminPassword === DEFAULT_ADMIN_PASSWORD && 
-                  adminUser.password !== DEFAULT_ADMIN_PASSWORD) {
-                state.users = state.users.map(user => 
-                  user.id === adminUser.id ? { ...user, password: DEFAULT_ADMIN_PASSWORD } : user
-                );
+              try {
+                // Sincronizar contraseña admin con authStore
+                const authStore = require('./authStore').useAuthStore;
+                const authPassword = authStore.getState().adminPassword;
+                
+                // Asegurar que las contraseñas estén sincronizadas
+                if (adminUser.password !== authPassword) {
+                  state.users = state.users.map(user => 
+                    user.id === adminUser.id ? { ...user, password: authPassword } : user
+                  );
+                }
+              } catch (e) {
+                console.error('Error al sincronizar contraseña con authStore en rehidratación:', e);
               }
             }
           }

@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -89,7 +88,7 @@ export const useAuthStore = create<AuthState>()(
         
         try {
           const currentTime = Date.now();
-          const { failedLoginAttempts, lastLoginAttempt, adminPassword } = get();
+          const { failedLoginAttempts, lastLoginAttempt } = get();
           
           // Check if account is locked out
           if (failedLoginAttempts >= MAX_LOGIN_ATTEMPTS && lastLoginAttempt) {
@@ -103,27 +102,13 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           
-          // Debug logs for troubleshooting
-          console.info('Intentando iniciar sesión con:', username, 'longitud de contraseña:', password.length);
-          
-          // Special admin check - case insensitive username comparison
+          // Admin login handling - always case insensitive
           if (username.toLowerCase() === 'admin') {
-            console.info('Verificando credenciales de administrador');
+            // Simplify admin password check - always use adminPassword from state
+            const adminPasswordFromState = get().adminPassword;
             
-            // Simplified admin password check to ensure consistency
-            const storedAdminPassword = get().adminPassword;
-            
-            // If admin password is set to default, use the constant value for comparison to avoid issues
-            const passwordToCheck = storedAdminPassword === DEFAULT_ADMIN_PASSWORD 
-              ? DEFAULT_ADMIN_PASSWORD 
-              : storedAdminPassword;
-            
-            console.info('Admin password check:', password === passwordToCheck ? 'Correcto' : 'Incorrecto');
-            
-            if (password !== passwordToCheck) {
-              console.error('Contraseña de administrador incorrecta');
-              
-              // Increment failed login attempts for admin account
+            if (password !== adminPasswordFromState) {
+              // Increment failed login attempts and throw error
               set((state) => ({ 
                 failedLoginAttempts: state.failedLoginAttempts + 1,
                 lastLoginAttempt: currentTime,
@@ -133,8 +118,6 @@ export const useAuthStore = create<AuthState>()(
               throw new Error('Credenciales inválidas');
             }
             
-            console.info('Autenticación de administrador correcta');
-            
             // Get users from userStore
             const { users, createUser, updateUser } = useUserStore.getState();
             
@@ -142,12 +125,10 @@ export const useAuthStore = create<AuthState>()(
             const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
             
             if (!adminUser) {
-              console.info('Usuario administrador no encontrado, creando uno nuevo');
-              
               // Create admin user if not found
               const newAdminUser = await createUser({
                 username: 'admin',
-                password: passwordToCheck, // Use the verified password
+                password: adminPasswordFromState,
                 name: 'Admin Principal',
                 role: 'admin',
                 active: true,
@@ -169,14 +150,13 @@ export const useAuthStore = create<AuthState>()(
                 sessionExpiration: currentTime + SESSION_TIMEOUT,
               });
               
-              console.info('Usuario administrador creado y sesión iniciada');
               return;
             }
             
             // Ensure admin user is active and password is synced
             await updateUser(adminUser.id, { 
               active: true,
-              password: passwordToCheck // Keep passwords in sync between stores
+              password: adminPasswordFromState
             });
             
             // Set admin user in auth state
@@ -194,15 +174,10 @@ export const useAuthStore = create<AuthState>()(
               sessionExpiration: currentTime + SESSION_TIMEOUT,
             });
             
-            console.info('Inicio de sesión de administrador exitoso');
             return;
           }
           
           // Standard login flow for non-admin users
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
-          // Get users from userStore
           const { users } = useUserStore.getState();
           
           // Find user with matching username, password and active status
@@ -212,9 +187,6 @@ export const useAuthStore = create<AuthState>()(
                  u.password === password && 
                  u.active
           );
-          
-          // Log if user was found
-          console.info('¿Usuario encontrado?', user ? 'Sí' : 'No');
           
           if (!user) {
             // Increment failed attempts on login failure
@@ -245,11 +217,12 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (error) {
           console.error('Error de autenticación:', error);
-          set((state) => ({
-            error: error instanceof Error ? error.message : 'Error desconocido',
-            isLoading: false,
-            // Note: failedLoginAttempts is updated in the specific error cases above
-          }));
+          if (!get().error) {
+            set({
+              error: error instanceof Error ? error.message : 'Error desconocido',
+              isLoading: false,
+            });
+          }
           throw error;
         }
       },
@@ -295,7 +268,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('La nueva contraseña debe tener al menos 8 caracteres');
           }
           
-          // Check for password strength (at least one uppercase, one lowercase, one number, one special char)
+          // Check for password strength
           const hasUpperCase = /[A-Z]/.test(newPassword);
           const hasLowerCase = /[a-z]/.test(newPassword);
           const hasNumbers = /\d/.test(newPassword);
@@ -323,7 +296,6 @@ export const useAuthStore = create<AuthState>()(
             await updateUser(adminUser.id, { password: newPassword });
           }
           
-          console.info('Contraseña de administrador actualizada con éxito');
           return;
         } catch (error) {
           console.error('Error al cambiar la contraseña:', error);
@@ -343,12 +315,9 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
-        // Include these in persisted state to maintain lockout between sessions
         failedLoginAttempts: state.failedLoginAttempts,
         lastLoginAttempt: state.lastLoginAttempt,
-        // Include admin password in persisted state
         adminPassword: state.adminPassword,
-        // Include session expiration
         sessionExpiration: state.sessionExpiration,
       }),
     }
