@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSurveyStore, SurveyResponse } from '@/store/surveyStore';
 import { useUserStore } from '@/store/userStore';
@@ -75,18 +74,12 @@ export function SurveyResults({ surveyId, onLowAccuracy }: SurveyResultsProps) {
     return `${Math.round((value / responses.length) * 100)}%`;
   };
   
-  // Call onLowAccuracy callback if any location has low accuracy
+  // Call onLowAccuracy callback if needed - simplified to just pass false since we're removing location
   useEffect(() => {
-    if (!onLowAccuracy) return;
-    
-    const hasLowAccuracyLocation = responses.some(response => 
-      response.location && 
-      response.location.accuracy !== null && 
-      response.location.accuracy > 100 // Consider > 100 meters as low accuracy
-    );
-    
-    onLowAccuracy(hasLowAccuracyLocation);
-  }, [responses, onLowAccuracy]);
+    if (onLowAccuracy) {
+      onLowAccuracy(false);
+    }
+  }, [onLowAccuracy]);
   
   return (
     <div className="space-y-6">
