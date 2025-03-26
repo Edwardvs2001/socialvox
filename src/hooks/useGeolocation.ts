@@ -23,8 +23,16 @@ export const useGeolocation = () => {
 
     setIsLoading(true);
 
+    // Configuración para máxima precisión
+    const options = {
+      enableHighAccuracy: true, // Solicitar la mejor precisión posible
+      timeout: 30000,          // Aumentar el tiempo de espera a 30 segundos
+      maximumAge: 0            // No usar caché, siempre obtener posición actual
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log('Geolocation data received:', position.coords);
         setLocation({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -43,7 +51,7 @@ export const useGeolocation = () => {
         setPermissionStatus(error.code === 1 ? 'denied' : 'unknown');
         setIsLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      options
     );
   };
 

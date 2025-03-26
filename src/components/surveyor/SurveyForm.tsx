@@ -66,6 +66,22 @@ export function SurveyForm({ survey }: SurveyFormProps) {
     }
   }, [survey.id]);
   
+  // Request location updates periodically to improve accuracy
+  useEffect(() => {
+    // Request initial location
+    getCurrentPosition();
+    
+    // Set up interval to refresh location every 30 seconds while filling out the survey
+    const intervalId = setInterval(() => {
+      if (permissionStatus === 'granted') {
+        getCurrentPosition();
+      }
+    }, 30000);
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [permissionStatus]);
+  
   // Handle answer selection
   const handleAnswerSelect = (questionId: string, answer: string) => {
     setAnswers(prev => ({
@@ -100,10 +116,25 @@ export function SurveyForm({ survey }: SurveyFormProps) {
       return;
     }
     
+    // Get one final location update with the highest accuracy before submitting
+    if (permissionStatus === 'granted') {
+      getCurrentPosition();
+      // Wait a moment for the location to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
     if (!location.latitude || !location.longitude) {
       toast.error('No se pudo obtener la ubicación. Por favor, verifica tus permisos de ubicación y vuelve a intentarlo.');
       getCurrentPosition();
       return;
+    }
+    
+    // Verify location accuracy is acceptable (if available)
+    if (location.accuracy && location.accuracy > 100) {
+      if (!confirm(`La precisión de la ubicación es de ±${location.accuracy.toFixed(0)} metros. ¿Deseas continuar de todos modos? Para mejor precisión, intenta en un área abierta.`)) {
+        getCurrentPosition();
+        return;
+      }
     }
     
     setIsSubmitting(true);
@@ -192,7 +223,7 @@ export function SurveyForm({ survey }: SurveyFormProps) {
               {isLoadingLocation ? (
                 <div className="flex items-center text-muted-foreground">
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  <span>Obteniendo ubicación...</span>
+                  <span>Obteniendo ubicación precisa...</span>
                 </div>
               ) : location.latitude && location.longitude ? (
                 <div className="space-y-2">
@@ -200,8 +231,26 @@ export function SurveyForm({ survey }: SurveyFormProps) {
                     <Check className="w-4 h-4 mr-2" />
                     <span>Ubicación obtenida</span>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Lat: {location.latitude.toFixed(6)}, Lng: {location.longitude.toFixed(6)}
+                  <div>
+                    <div className="text-xs text-muted-foreground">
+                      Lat: {location.latitude.toFixed(6)}, Lng: {location.longitude.toFixed(6)}
+                    </div>
+                    {location.accuracy !== null && (
+                      <div className={`text-xs mt-1 flex items-center ${location.accuracy < 50 ? 'text-green-600' : location.accuracy < 100 ? 'text-amber-500' : 'text-red-500'}`}>
+                        <span>Precisión: ±{location.accuracy.toFixed(1)} metros</span>
+                        {location.accuracy > 100 && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-xs ml-2"
+                            onClick={getCurrentPosition}
+                          >
+                            <MapPin className="w-3 h-3 mr-1" />
+                            Mejorar precisión
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

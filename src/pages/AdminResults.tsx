@@ -6,7 +6,7 @@ import { AuthLayout } from '@/components/layout/AuthLayout';
 import { SurveyResults } from '@/components/admin/SurveyResults';
 import { useSurveyStore } from '@/store/surveyStore';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { MapPin } from 'lucide-react';
+import { MapPin, AlertCircle } from 'lucide-react';
 
 export default function AdminResults() {
   const { id } = useParams();
@@ -21,6 +21,13 @@ export default function AdminResults() {
     response.location.latitude !== null && 
     response.location.longitude !== null
   );
+  
+  // Check for responses with low accuracy
+  const lowPrecisionResponses = responses.filter(
+    response => response.location && 
+    response.location.accuracy !== null && 
+    response.location.accuracy > 100
+  ).length;
   
   // Redirect if survey doesn't exist
   useEffect(() => {
@@ -46,6 +53,17 @@ export default function AdminResults() {
             <AlertDescription>
               Esta encuesta no tiene datos de ubicación disponibles. Esto puede deberse a que las encuestas fueron 
               realizadas sin acceso a la ubicación o con versiones anteriores de la aplicación.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {lowPrecisionResponses > 0 && (
+          <Alert className="mb-6" variant="warning">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Precisión de ubicación limitada</AlertTitle>
+            <AlertDescription>
+              {lowPrecisionResponses} {lowPrecisionResponses === 1 ? 'respuesta tiene' : 'respuestas tienen'} una precisión 
+              de ubicación superior a 100 metros. Esto puede afectar la exactitud de los análisis basados en ubicación.
             </AlertDescription>
           </Alert>
         )}
