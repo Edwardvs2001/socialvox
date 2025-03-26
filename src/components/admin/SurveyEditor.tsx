@@ -358,7 +358,7 @@ export function SurveyEditor({
                   <ListChecks className="mr-2 h-4 w-4" />
                   <span className={isMobile ? "text-mobile-xs" : ""}>Opción Múltiple</span>
                 </Button>
-                <Button type="button" onClick={() => addQuestion('free-text')} variant="outline" className="btn-admin" size={isMobile ? "sm" : "default"}>
+                <Button type="button" onClick={() => addQuestion('free-text')} variant="outline" size={isMobile ? "sm" : "default"} className="btn-admin text-zinc-950">
                   <MessageSquare className="mr-2 h-4 w-4" />
                   <span className={isMobile ? "text-mobile-xs" : ""}>Respuesta Libre</span>
                 </Button>
