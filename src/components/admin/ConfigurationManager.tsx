@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Save, Globe, Bell, Shield, Database } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Save, Globe, Bell, Shield, Database, Clock } from 'lucide-react';
 
 const generalFormSchema = z.object({
   appName: z.string().min(2, {
@@ -54,7 +54,19 @@ const securityFormSchema = z.object({
   enableTwoFactorAuth: z.boolean().default(false),
 });
 
-// Simulated stored config - in a real app, this would come from a database or API
+const timezoneFormSchema = z.object({
+  timezone: z.string().min(1, {
+    message: "La zona horaria es requerida",
+  }),
+  dateFormat: z.string().min(1, {
+    message: "El formato de fecha es requerido",
+  }),
+  timeFormat: z.string().min(1, {
+    message: "El formato de hora es requerido",
+  }),
+  useLocalTime: z.boolean().default(true),
+});
+
 const initialConfig = {
   general: {
     appName: "Encuestas VA",
@@ -75,6 +87,12 @@ const initialConfig = {
     maxLoginAttempts: "5",
     enforceStrongPasswords: true,
     enableTwoFactorAuth: false,
+  },
+  timezone: {
+    timezone: "America/Lima",
+    dateFormat: "dd/MM/yyyy",
+    timeFormat: "HH:mm:ss",
+    useLocalTime: true,
   }
 };
 
@@ -97,6 +115,11 @@ export function ConfigurationManager() {
     defaultValues: initialConfig.security,
   });
   
+  const timezoneForm = useForm<z.infer<typeof timezoneFormSchema>>({
+    resolver: zodResolver(timezoneFormSchema),
+    defaultValues: initialConfig.timezone,
+  });
+  
   const onSubmitGeneral = async (values: z.infer<typeof generalFormSchema>) => {
     handleSubmit(values, "general");
   };
@@ -109,11 +132,14 @@ export function ConfigurationManager() {
     handleSubmit(values, "security");
   };
   
+  const onSubmitTimezone = async (values: z.infer<typeof timezoneFormSchema>) => {
+    handleSubmit(values, "timezone");
+  };
+  
   const handleSubmit = async (values: any, section: string) => {
     setIsSubmitting(true);
     
     try {
-      // Simulated API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       console.log(`Saving ${section} settings:`, values);
       
@@ -131,6 +157,7 @@ export function ConfigurationManager() {
       case "general": return "General";
       case "email": return "Correo Electrónico";
       case "security": return "Seguridad";
+      case "timezone": return "Fecha y Hora";
       default: return "";
     }
   };
@@ -138,7 +165,7 @@ export function ConfigurationManager() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 w-full sm:w-auto">
+        <TabsList className="grid grid-cols-4 w-full sm:w-auto">
           <TabsTrigger value="general" className="flex items-center">
             <Globe className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">General</span>
@@ -150,6 +177,10 @@ export function ConfigurationManager() {
           <TabsTrigger value="security" className="flex items-center">
             <Shield className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Seguridad</span>
+          </TabsTrigger>
+          <TabsTrigger value="timezone" className="flex items-center">
+            <Clock className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Fecha/Hora</span>
           </TabsTrigger>
         </TabsList>
         
@@ -471,6 +502,150 @@ export function ConfigurationManager() {
                           <FormLabel>Autenticación de Dos Factores</FormLabel>
                           <FormDescription>
                             Activar verificación adicional al iniciar sesión.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Button
+                    type="submit"
+                    className="btn-admin w-full sm:w-auto"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Guardar Configuración
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="timezone">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuración de Fecha y Hora</CardTitle>
+              <CardDescription>
+                Configura la zona horaria y el formato de fecha y hora.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...timezoneForm}>
+                <form onSubmit={timezoneForm.handleSubmit(onSubmitTimezone)} className="space-y-4">
+                  <FormField
+                    control={timezoneForm.control}
+                    name="timezone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Zona Horaria</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona una zona horaria" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="America/Lima">Perú (Lima) GMT-5</SelectItem>
+                            <SelectItem value="America/Bogota">Colombia (Bogotá) GMT-5</SelectItem>
+                            <SelectItem value="America/Santiago">Chile (Santiago) GMT-4</SelectItem>
+                            <SelectItem value="America/Argentina/Buenos_Aires">Argentina (Buenos Aires) GMT-3</SelectItem>
+                            <SelectItem value="America/Mexico_City">México (Ciudad de México) GMT-6</SelectItem>
+                            <SelectItem value="Europe/Madrid">España (Madrid) GMT+1</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Configura la zona horaria predeterminada del sistema.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={timezoneForm.control}
+                      name="dateFormat"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Formato de Fecha</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona un formato de fecha" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="dd/MM/yyyy">DD/MM/AAAA (31/12/2023)</SelectItem>
+                              <SelectItem value="MM/dd/yyyy">MM/DD/AAAA (12/31/2023)</SelectItem>
+                              <SelectItem value="yyyy-MM-dd">AAAA-MM-DD (2023-12-31)</SelectItem>
+                              <SelectItem value="dd 'de' MMMM 'de' yyyy">DD de Mes de AAAA (31 de Diciembre de 2023)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={timezoneForm.control}
+                      name="timeFormat"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Formato de Hora</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona un formato de hora" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="HH:mm:ss">24 horas (14:30:00)</SelectItem>
+                              <SelectItem value="hh:mm:ss a">12 horas (02:30:00 PM)</SelectItem>
+                              <SelectItem value="HH:mm">24 horas sin segundos (14:30)</SelectItem>
+                              <SelectItem value="hh:mm a">12 horas sin segundos (02:30 PM)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={timezoneForm.control}
+                    name="useLocalTime"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Usar Hora Local de Lima (GMT-5)</FormLabel>
+                          <FormDescription>
+                            Todos los registros y visualizaciones usarán la hora oficial de Perú (Lima).
                           </FormDescription>
                         </div>
                         <FormControl>

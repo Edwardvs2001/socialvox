@@ -1,5 +1,10 @@
 
 // Mock API utility functions
+import { format, parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
+
+// Default timezone (Lima, Peru)
+export const DEFAULT_TIMEZONE = "America/Lima";
 
 // Simulate network latency
 export const simulateNetworkDelay = async (minMs = 300, maxMs = 1200): Promise<void> => {
@@ -47,24 +52,38 @@ export const base64ToBlob = (base64: string, mimeType: string): Blob => {
   return new Blob(byteArrays, { type: mimeType });
 };
 
-// Format date
-export const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('es-ES', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date);
+// Format date with timezone support
+export const formatDate = (dateString: string, timezone = DEFAULT_TIMEZONE): string => {
+  const date = parseISO(dateString);
+  return formatInTimeZone(
+    date,
+    timezone,
+    "d 'de' MMMM 'de' yyyy, HH:mm"
+  );
 };
 
-// Format date short
-export const formatDateShort = (dateString: string): string => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('es-ES', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
+// Format date short with timezone support
+export const formatDateShort = (dateString: string, timezone = DEFAULT_TIMEZONE): string => {
+  const date = parseISO(dateString);
+  return formatInTimeZone(
+    date,
+    timezone,
+    "dd/MM/yyyy"
+  );
+};
+
+// Get current date and time in Lima timezone
+export const getCurrentLimaDateTime = (): Date => {
+  const now = new Date();
+  return new Date(formatInTimeZone(now, DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"));
+};
+
+// Format date with custom format and timezone
+export const formatDateWithFormat = (
+  dateString: string, 
+  formatStr: string = "PPP", 
+  timezone = DEFAULT_TIMEZONE
+): string => {
+  const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+  return formatInTimeZone(date, timezone, formatStr);
 };
