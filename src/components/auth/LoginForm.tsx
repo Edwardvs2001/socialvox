@@ -50,30 +50,20 @@ export function LoginForm() {
   const handleDirectAdminAccess = async () => {
     clearError();
     
-    // Get users directly from the userStore
-    const { users } = useUserStore.getState();
-    
     try {
-      // Use admin credentials
-      const credentials = { username: 'admin', password: 'admin123' };
+      // Use admin credentials directly
+      await login('admin', 'admin123');
       
-      // Check if user exists in store
-      const userExists = users.some(
-        u => u.username === credentials.username && 
-             u.password === credentials.password && 
-             u.active &&
-             u.role === 'admin'
-      );
+      // Get user after login
+      const user = useAuthStore.getState().user;
       
-      if (!userExists) {
-        toast.error('Usuario administrador no encontrado o inactivo');
-        return;
+      if (user?.role === 'admin') {
+        navigate('/admin');
+      } else {
+        toast.error('Error al acceder: El usuario no tiene permisos de administrador');
       }
-      
-      await login(credentials.username, credentials.password);
-      navigate('/admin');
     } catch (err) {
-      toast.error('Error al iniciar sesión automáticamente');
+      toast.error('Error al iniciar sesión como administrador');
       console.error('Direct login error:', err);
     }
   };

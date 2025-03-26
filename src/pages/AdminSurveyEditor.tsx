@@ -23,7 +23,7 @@ export default function AdminSurveyEditor() {
   }, [isNewSurvey, survey, navigate]);
   
   return (
-    <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
+    <AuthLayout requiresAuth={true} allowedRoles={['admin']}>
       <AdminLayout
         title={isNewSurvey ? "Crear Nueva Encuesta" : "Editar Encuesta"}
         description={isNewSurvey 

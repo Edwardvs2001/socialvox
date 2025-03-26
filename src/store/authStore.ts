@@ -66,6 +66,21 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Credenciales inválidas o usuario inactivo');
           }
           
+          // Special check for admin user to ensure it's always active
+          if (username === 'admin' && password === 'admin123') {
+            // Ensure the admin user is always available and active
+            const adminUser = users.find(u => u.username === 'admin');
+            
+            if (!adminUser) {
+              throw new Error('Usuario administrador no encontrado');
+            }
+            
+            if (!adminUser.active) {
+              // Update the admin user to be active
+              useUserStore.getState().updateUser(adminUser.id, { active: true });
+            }
+          }
+          
           // Remove password from user object before storing in state
           const userWithoutPassword = {
             id: user.id,

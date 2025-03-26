@@ -20,7 +20,7 @@ export default function AdminResults() {
   }, [survey, navigate]);
   
   return (
-    <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
+    <AuthLayout requiresAuth={true} allowedRoles={['admin']}>
       <AdminLayout
         title={`Resultados: ${survey?.title || ''}`}
         description="Visualización de los resultados de la encuesta"

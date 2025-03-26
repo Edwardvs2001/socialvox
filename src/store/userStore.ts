@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -35,7 +36,7 @@ const mockUsers: User[] = [
     name: 'Administrador',
     email: 'admin@encuestasva.com',
     role: 'admin',
-    active: true,
+    active: true, // Ensure admin is always active
     createdAt: '2023-01-10T08:00:00Z',
     password: 'admin123',
   },
@@ -65,7 +66,19 @@ export const useUserStore = create<UserState>()(
           // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // We're already using mock data
+          // Make sure admin user is always active
+          const users = get().users;
+          const adminUser = users.find(u => u.username === 'admin' && u.role === 'admin');
+          
+          if (adminUser && !adminUser.active) {
+            // Activate admin user if it's inactive
+            set(state => ({
+              users: state.users.map(user => 
+                user.id === adminUser.id ? { ...user, active: true } : user
+              )
+            }));
+          }
+          
           set({ isLoading: false });
         } catch (error) {
           set({
