@@ -1,8 +1,9 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { UserRole } from './authStore';
+
+const DEFAULT_ADMIN_PASSWORD = 'Admin@2024!';
 
 export interface User {
   id: string;
@@ -12,7 +13,7 @@ export interface User {
   role: UserRole;
   active: boolean;
   createdAt: string;
-  password?: string; // Added password field, optional in interface for security
+  password?: string;
 }
 
 interface UserState {
@@ -28,7 +29,6 @@ interface UserState {
   clearError: () => void;
 }
 
-// Initial mock data with admin always active and secure password
 const mockUsers: User[] = [
   {
     id: '1',
@@ -36,9 +36,9 @@ const mockUsers: User[] = [
     name: 'Administrador',
     email: 'admin@encuestasva.com',
     role: 'admin',
-    active: true, // Ensure admin is always active
+    active: true,
     createdAt: '2023-01-10T08:00:00Z',
-    password: 'Admin@2024!', // Updated secure password
+    password: DEFAULT_ADMIN_PASSWORD,
   },
   {
     id: '2',
@@ -63,20 +63,27 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Make sure admin user is always active
           const users = get().users;
-          const adminUser = users.find(u => u.username === 'admin' && u.role === 'admin');
+          const adminUser = users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
           
-          if (adminUser && !adminUser.active) {
-            // Activate admin user if it's inactive
-            set(state => ({
-              users: state.users.map(user => 
-                user.id === adminUser.id ? { ...user, active: true } : user
-              )
-            }));
+          if (adminUser) {
+            const updates: Partial<User> = {};
+            let needsUpdate = false;
+            
+            if (!adminUser.active) {
+              updates.active = true;
+              needsUpdate = true;
+            }
+            
+            if (needsUpdate) {
+              set(state => ({
+                users: state.users.map(user => 
+                  user.id === adminUser.id ? { ...user, ...updates } : user
+                )
+              }));
+            }
           }
           
           set({ isLoading: false });
@@ -89,9 +96,8 @@ export const useUserStore = create<UserState>()(
       },
       
       getUserById: (id) => {
-        // Before returning any user, ensure admin is active
         const users = get().users;
-        const adminUser = users.find(u => u.username === 'admin' && u.role === 'admin');
+        const adminUser = users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
         
         if (adminUser && !adminUser.active) {
           set(state => ({
@@ -108,17 +114,14 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Check if username already exists
           if (get().users.some(user => user.username === userData.username)) {
             throw new Error('El nombre de usuario ya existe');
           }
           
-          // Check if email already exists
           if (get().users.some(user => user.email === userData.email)) {
             throw new Error('El correo electrónico ya está registrado');
           }
           
-          // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 800));
           
           const newUser: User = {
@@ -146,7 +149,6 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // If username is being updated, check it doesn't conflict
           if (updates.username) {
             const existingUser = get().users.find(
               user => user.username === updates.username && user.id !== id
@@ -157,7 +159,6 @@ export const useUserStore = create<UserState>()(
             }
           }
           
-          // If email is being updated, check it doesn't conflict
           if (updates.email) {
             const existingUser = get().users.find(
               user => user.email === updates.email && user.id !== id
@@ -168,7 +169,14 @@ export const useUserStore = create<UserState>()(
             }
           }
           
-          // Simulate API call
+          const user = get().users.find(u => u.id === id);
+          if (user && user.username.toLowerCase() === 'admin' && updates.password) {
+            const authStore = require('./authStore').useAuthStore;
+            if (updates.password !== authStore.getState().adminPassword) {
+              authStore.setState({ adminPassword: updates.password });
+            }
+          }
+          
           await new Promise(resolve => setTimeout(resolve, 800));
           
           set(state => ({
@@ -190,7 +198,6 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 800));
           
           set(state => ({
@@ -215,18 +222,25 @@ export const useUserStore = create<UserState>()(
       partialize: (state) => ({
         users: state.users,
       }),
-      // Add migration to ensure admin is always active
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {
-            // Check if admin exists and is active
-            const adminUser = state.users.find(u => u.username === 'admin' && u.role === 'admin');
+            const adminUser = state.users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
             
-            if (adminUser && !adminUser.active) {
-              // Activate admin user
-              state.users = state.users.map(user => 
-                user.id === adminUser.id ? { ...user, active: true } : user
-              );
+            if (adminUser) {
+              if (!adminUser.active) {
+                state.users = state.users.map(user => 
+                  user.id === adminUser.id ? { ...user, active: true } : user
+                );
+              }
+              
+              const authStore = require('./authStore').useAuthStore;
+              if (authStore.getState().adminPassword === DEFAULT_ADMIN_PASSWORD && 
+                  adminUser.password !== DEFAULT_ADMIN_PASSWORD) {
+                state.users = state.users.map(user => 
+                  user.id === adminUser.id ? { ...user, password: DEFAULT_ADMIN_PASSWORD } : user
+                );
+              }
             }
           }
         };

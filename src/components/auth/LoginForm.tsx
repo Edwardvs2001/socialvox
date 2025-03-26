@@ -10,6 +10,9 @@ import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, L
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
 
+// Default admin password constant to ensure consistency
+const DEFAULT_ADMIN_PASSWORD = 'Admin@2024!';
+
 export function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -94,9 +97,10 @@ export function LoginForm() {
     try {
       // Always use 'admin' username for admin login
       setUsername('admin');
-      console.log('Attempting admin login with password:', password.length, 'characters');
-      // Log comparison for debugging
-      console.log('Default admin password:', adminPassword === 'Admin@2024!' ? 'is default' : 'is changed');
+      
+      // Log login attempt for debugging
+      console.info('Attempting admin login with password:', password.length, 'characters');
+      console.info('Default admin password:', adminPassword === DEFAULT_ADMIN_PASSWORD ? 'is default' : 'is changed');
       
       await login('admin', password);
       const user = useAuthStore.getState().user;
@@ -113,8 +117,8 @@ export function LoginForm() {
   
   const handleRecoveryMode = () => {
     setRecoveryMode(true);
-    // Use default admin password for recovery
-    setPassword('Admin@2024!');
+    // Use default admin password for recovery - display it visibly
+    setPassword(DEFAULT_ADMIN_PASSWORD);
     toast.info('Contraseña de administrador por defecto cargada. Intente acceder ahora.');
   };
   
@@ -190,6 +194,13 @@ export function LoginForm() {
               <span>{error}</span>
             </div>}
           
+          {recoveryMode && (
+            <div className="p-3 rounded-md bg-green-900/50 border border-green-600/30 text-green-100 text-sm flex items-center font-medium">
+              <KeyRound className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>Contraseña por defecto: <strong>{DEFAULT_ADMIN_PASSWORD}</strong></span>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 gap-4">
             <Button onClick={handleDirectAdminAccess} variant="red" className="p-6 h-auto flex flex-col gap-3 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 transition-all duration-300" disabled={isLoading}>
               {isLoading ? <Loader2 className="h-8 w-8 animate-spin text-white" /> : <Users className="h-8 w-8 text-white drop-shadow-md" />}
@@ -197,7 +208,7 @@ export function LoginForm() {
             </Button>
           </div>
           
-          {failedLoginAttempts > 1 && !recoveryMode && (
+          {failedLoginAttempts > 0 && !recoveryMode && (
             <Button 
               type="button" 
               variant="outline" 

@@ -103,18 +103,24 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           
-          // Para depuración
+          // Debug logs for troubleshooting
           console.info('Intentando iniciar sesión con:', username, 'longitud de contraseña:', password.length);
           
           // Special admin check - case insensitive username comparison
           if (username.toLowerCase() === 'admin') {
             console.info('Verificando credenciales de administrador');
             
-            // Log password length for debugging
-            console.info('Admin password length:', adminPassword.length, 'Entered password length:', password.length);
+            // Simplified admin password check to ensure consistency
+            const storedAdminPassword = get().adminPassword;
             
-            // Direct comparison for admin login
-            if (password !== adminPassword) {
+            // If admin password is set to default, use the constant value for comparison to avoid issues
+            const passwordToCheck = storedAdminPassword === DEFAULT_ADMIN_PASSWORD 
+              ? DEFAULT_ADMIN_PASSWORD 
+              : storedAdminPassword;
+            
+            console.info('Admin password check:', password === passwordToCheck ? 'Correcto' : 'Incorrecto');
+            
+            if (password !== passwordToCheck) {
               console.error('Contraseña de administrador incorrecta');
               
               // Increment failed login attempts for admin account
@@ -130,7 +136,7 @@ export const useAuthStore = create<AuthState>()(
             console.info('Autenticación de administrador correcta');
             
             // Get users from userStore
-            const { users, createUser } = useUserStore.getState();
+            const { users, createUser, updateUser } = useUserStore.getState();
             
             // Find admin user (case-insensitive)
             const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
@@ -141,7 +147,7 @@ export const useAuthStore = create<AuthState>()(
               // Create admin user if not found
               const newAdminUser = await createUser({
                 username: 'admin',
-                password: adminPassword,
+                password: passwordToCheck, // Use the verified password
                 name: 'Admin Principal',
                 role: 'admin',
                 active: true,
@@ -167,11 +173,11 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
             
-            // Ensure admin user is active before login attempt
-            if (!adminUser.active) {
-              console.info('Activando usuario administrador');
-              await useUserStore.getState().updateUser(adminUser.id, { active: true });
-            }
+            // Ensure admin user is active and password is synced
+            await updateUser(adminUser.id, { 
+              active: true,
+              password: passwordToCheck // Keep passwords in sync between stores
+            });
             
             // Set admin user in auth state
             set({
