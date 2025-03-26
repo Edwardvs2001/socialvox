@@ -13,9 +13,27 @@ interface SurveyItemProps {
 export function SurveyItem({ survey }: SurveyItemProps) {
   const { folders } = useSurveyStore();
   
-  const folderName = survey.folderId 
-    ? folders.find(f => f.id === survey.folderId)?.name || 'Carpeta desconocida'
-    : null;
+  // Get full folder path to display folder hierarchy
+  const getFolderPath = (folderId: string | null): string => {
+    if (!folderId) return '';
+    
+    const breadcrumb: string[] = [];
+    let currentId = folderId;
+    
+    while (currentId) {
+      const folder = folders.find(f => f.id === currentId);
+      if (folder) {
+        breadcrumb.unshift(folder.name);
+        currentId = folder.parentId;
+      } else {
+        break;
+      }
+    }
+    
+    return breadcrumb.join(' > ');
+  };
+  
+  const folderPath = getFolderPath(survey.folderId);
   
   return (
     <Card className="overflow-hidden surveyor-card hover:border-surveyor/30 transition-all duration-300 hover:shadow-md scale-hover">
@@ -26,10 +44,10 @@ export function SurveyItem({ survey }: SurveyItemProps) {
             <CardDescription className="mt-1 line-clamp-2">
               {survey.description}
             </CardDescription>
-            {folderName && (
+            {folderPath && (
               <div className="mt-2 flex items-center">
                 <FolderOpen className="h-3.5 w-3.5 text-surveyor mr-1" />
-                <span className="text-xs text-muted-foreground">{folderName}</span>
+                <span className="text-xs text-surveyor font-medium">{folderPath}</span>
               </div>
             )}
           </div>

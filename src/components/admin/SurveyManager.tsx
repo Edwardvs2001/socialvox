@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSurveyStore, Survey } from '@/store/surveyStore';
@@ -33,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate } from '@/utils/api';
-import { ClipboardList, Edit, FolderOpen, Loader2, MoreHorizontal, Plus, Search, Trash, Users } from 'lucide-react';
+import { ClipboardList, Edit, FolderOpen, Loader2, MoreHorizontal, Plus, Search, Trash, Users, ArrowDownUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useUserStore } from '@/store/userStore';
 import { toast } from 'sonner';
@@ -61,6 +62,8 @@ export function SurveyManager() {
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [isAssigningFolder, setIsAssigningFolder] = useState(false);
+  const [sortBy, setSortBy] = useState<'title' | 'folder' | 'date'>('title');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
   useEffect(() => {
     fetchSurveys();
@@ -85,6 +88,52 @@ export function SurveyManager() {
     if (!folderId) return 'Sin carpeta';
     const folder = folders.find(f => f.id === folderId);
     return folder ? folder.name : 'Carpeta desconocida';
+  };
+  
+  const getFolderPath = (folderId: string | null): string => {
+    if (!folderId) return 'Sin carpeta';
+    
+    const breadcrumb: string[] = [];
+    let currentId = folderId;
+    
+    while (currentId) {
+      const folder = folders.find(f => f.id === currentId);
+      if (folder) {
+        breadcrumb.unshift(folder.name);
+        currentId = folder.parentId;
+      } else {
+        break;
+      }
+    }
+    
+    return breadcrumb.join(' > ');
+  };
+  
+  const sortedSurveys = [...filteredSurveys].sort((a, b) => {
+    if (sortBy === 'title') {
+      return sortOrder === 'asc' 
+        ? a.title.localeCompare(b.title)
+        : b.title.localeCompare(a.title);
+    } else if (sortBy === 'folder') {
+      const folderA = getFolderPath(a.folderId);
+      const folderB = getFolderPath(b.folderId);
+      return sortOrder === 'asc'
+        ? folderA.localeCompare(folderB)
+        : folderB.localeCompare(folderA);
+    } else { // date
+      return sortOrder === 'asc'
+        ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+  });
+  
+  const toggleSort = (field: 'title' | 'folder' | 'date') => {
+    if (sortBy === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
   };
   
   const confirmDelete = async () => {
@@ -181,19 +230,50 @@ export function SurveyManager() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button asChild className="btn-admin shrink-0 w-full sm:w-auto">
-              <Link to="/admin/surveys/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Nueva Encuesta
-              </Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toggleSort('title')} 
+                  className="text-xs h-9 w-full sm:w-auto"
+                >
+                  Título
+                  <ArrowDownUp className={`ml-1 h-3 w-3 ${sortBy === 'title' ? 'text-foreground' : 'text-muted-foreground'}`} />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toggleSort('folder')} 
+                  className="text-xs h-9 w-full sm:w-auto"
+                >
+                  Carpeta
+                  <ArrowDownUp className={`ml-1 h-3 w-3 ${sortBy === 'folder' ? 'text-foreground' : 'text-muted-foreground'}`} />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toggleSort('date')} 
+                  className="text-xs h-9 w-full sm:w-auto"
+                >
+                  Fecha
+                  <ArrowDownUp className={`ml-1 h-3 w-3 ${sortBy === 'date' ? 'text-foreground' : 'text-muted-foreground'}`} />
+                </Button>
+              </div>
+              <Button asChild className="btn-admin shrink-0 w-full sm:w-auto">
+                <Link to="/admin/surveys/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nueva Encuesta
+                </Link>
+              </Button>
+            </div>
           </div>
           
           {isLoading ? (
             <div className="flex justify-center items-center h-40">
               <Loader2 className="w-8 h-8 animate-spin text-admin" />
             </div>
-          ) : filteredSurveys.length === 0 ? (
+          ) : sortedSurveys.length === 0 ? (
             <Card className="bg-muted/50">
               <CardContent className="flex flex-col items-center justify-center pt-10 pb-10">
                 <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
@@ -210,9 +290,10 @@ export function SurveyManager() {
             </Card>
           ) : (
             <div className="grid gap-6">
-              {filteredSurveys.map(survey => {
+              {sortedSurveys.map(survey => {
                 const surveyorNames = getSurveyorNames(survey.assignedTo);
                 const folderName = getFolderName(survey.folderId);
+                const folderPath = getFolderPath(survey.folderId);
                 
                 return (
                   <Card key={survey.id} className="admin-card hover:border-admin/30 transition-all duration-300 hover:shadow-md">
@@ -287,11 +368,11 @@ export function SurveyManager() {
                           <p className="text-muted-foreground">Fecha de creación</p>
                           <p>{formatDate(survey.createdAt)}</p>
                         </div>
-                        <div>
+                        <div className="sm:col-span-2">
                           <p className="text-muted-foreground">Carpeta</p>
                           <div className="flex items-center gap-1">
-                            <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                            <p>{folderName}</p>
+                            <FolderOpen className="h-3.5 w-3.5 text-admin" />
+                            <p className="text-admin font-medium">{folderPath}</p>
                           </div>
                         </div>
                         <div className="sm:col-span-2">
