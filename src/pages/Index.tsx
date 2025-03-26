@@ -12,14 +12,14 @@ const Index = () => {
   const hasRefreshedRef = useRef(false);
   
   // Using useCallback to prevent unnecessary re-renders
-  const handleRedirect = useCallback(() => {
+  const handleRedirect = useCallback(async () => {
     // Use ref to prevent multiple redirects including during the function execution
     if (redirectingRef.current) return;
     redirectingRef.current = true;
     setIsRedirecting(true);
     
     // Check if session is still valid
-    const isSessionValid = checkSession();
+    const isSessionValid = await checkSession();
     
     if (isAuthenticated && isSessionValid && user) {
       console.log('Usuario autenticado:', user);

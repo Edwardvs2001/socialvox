@@ -59,7 +59,7 @@ export function useOfflineSync() {
   const attemptSync = useCallback(async () => {
     // Don't try to sync if we're offline, there's nothing to sync, we're not authenticated,
     // the session is invalid, or we're already syncing
-    if (!isOnline || pendingCount === 0 || !isAuthenticated || !checkSession() || syncInProgressRef.current) {
+    if (!isOnline || pendingCount === 0 || !isAuthenticated || !(await checkSession()) || syncInProgressRef.current) {
       return;
     }
     
@@ -103,7 +103,7 @@ export function useOfflineSync() {
       return;
     }
     
-    if (!isAuthenticated || !checkSession()) {
+    if (!isAuthenticated || !(await checkSession())) {
       toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
       return;
     }

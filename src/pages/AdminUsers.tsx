@@ -25,8 +25,8 @@ export default function AdminUsers() {
           .eq('role', 'admin');
         
         if (!data || data.length === 0) {
-          // Create admin user
-          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          // Create admin user through the API
+          const { error } = await supabase.auth.admin.createUser({
             email: 'admin@encuestasva.com',
             password: 'Admin@2024!',
             email_confirm: true,
@@ -37,8 +37,8 @@ export default function AdminUsers() {
             }
           });
           
-          if (authError) {
-            console.error('Error creating admin user:', authError);
+          if (error) {
+            console.error('Error creating admin user:', error);
             return;
           }
           

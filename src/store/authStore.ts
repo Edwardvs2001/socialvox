@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +28,7 @@ interface AuthState {
   logout: () => Promise<void>;
   clearError: () => void;
   resetLoginAttempts: () => void;
-  checkSession: () => boolean;
+  checkSession: () => Promise<boolean>;
   refreshSession: () => void;
   changeAdminPassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
@@ -53,12 +52,10 @@ export const useAuthStore = create<AuthState>()(
       adminPassword: DEFAULT_ADMIN_PASSWORD,
       sessionExpiration: null,
       
-      checkSession: () => {
-        // Always check with supabase if session is valid
-        const session = supabase.auth.session();
-        if (!session) return false;
-        
-        return true;
+      checkSession: async () => {
+        // Updated to use the current Supabase API
+        const { data } = await supabase.auth.getSession();
+        return !!data.session;
       },
       
       refreshSession: () => {

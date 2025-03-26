@@ -22,7 +22,7 @@ export function AuthLayout({
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initialCheckRef = useRef(false);
   
-  const checkAuth = useCallback(() => {
+  const checkAuth = useCallback(async () => {
     // Prevent multiple checks on the same render cycle
     if (initialCheckRef.current) return;
     initialCheckRef.current = true;
@@ -37,7 +37,7 @@ export function AuthLayout({
     // Logic for pages that require authentication
     if (requiresAuth) {
       // First check if session is valid
-      const isSessionValid = checkSession();
+      const isSessionValid = await checkSession();
       
       if (!isAuthenticated || !isSessionValid) {
         console.log('Not authenticated or session expired, redirecting to login');
@@ -80,7 +80,7 @@ export function AuthLayout({
     } else {
       // Logic for pages that don't require authentication (like login)
       // Check if session is valid for already authenticated users
-      const isSessionValid = isAuthenticated ? checkSession() : false;
+      const isSessionValid = isAuthenticated ? await checkSession() : false;
       
       if (isAuthenticated && isSessionValid) {
         console.log('Already authenticated, redirecting to dashboard');
