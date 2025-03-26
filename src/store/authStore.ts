@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -88,7 +89,7 @@ export const useAuthStore = create<AuthState>()(
         
         try {
           const currentTime = Date.now();
-          const { failedLoginAttempts, lastLoginAttempt } = get();
+          const { failedLoginAttempts, lastLoginAttempt, adminPassword } = get();
           
           // Check if account is locked out
           if (failedLoginAttempts >= MAX_LOGIN_ATTEMPTS && lastLoginAttempt) {
@@ -102,12 +103,13 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           
+          // Normalize username for case-insensitive comparison
+          const normalizedUsername = username.toLowerCase().trim();
+          
           // Admin login handling - always case insensitive
-          if (username.toLowerCase() === 'admin') {
-            // Simplify admin password check - always use adminPassword from state
-            const adminPasswordFromState = get().adminPassword;
-            
-            if (password !== adminPasswordFromState) {
+          if (normalizedUsername === 'admin') {
+            // Use adminPassword from state for verification
+            if (password !== adminPassword) {
               // Increment failed login attempts and throw error
               set((state) => ({ 
                 failedLoginAttempts: state.failedLoginAttempts + 1,
@@ -128,7 +130,7 @@ export const useAuthStore = create<AuthState>()(
               // Create admin user if not found
               const newAdminUser = await createUser({
                 username: 'admin',
-                password: adminPasswordFromState,
+                password: adminPassword,
                 name: 'Admin Principal',
                 role: 'admin',
                 active: true,
@@ -156,7 +158,7 @@ export const useAuthStore = create<AuthState>()(
             // Ensure admin user is active and password is synced
             await updateUser(adminUser.id, { 
               active: true,
-              password: adminPasswordFromState
+              password: adminPassword
             });
             
             // Set admin user in auth state
@@ -183,7 +185,7 @@ export const useAuthStore = create<AuthState>()(
           // Find user with matching username, password and active status
           // Case-insensitive username comparison for better user experience
           const user = users.find(
-            u => u.username.toLowerCase() === username.toLowerCase() && 
+            u => u.username.toLowerCase() === normalizedUsername && 
                  u.password === password && 
                  u.active
           );
@@ -320,6 +322,27 @@ export const useAuthStore = create<AuthState>()(
         adminPassword: state.adminPassword,
         sessionExpiration: state.sessionExpiration,
       }),
+      onRehydrateStorage: () => {
+        return (state) => {
+          if (state) {
+            // Ensure admin password is synchronized with userStore on app load
+            try {
+              const userStore = useUserStore.getState();
+              const adminUser = userStore.users.find(u => u.username.toLowerCase() === 'admin');
+              
+              if (adminUser && adminUser.password && adminUser.password !== state.adminPassword) {
+                // If passwords don't match, update userStore to match authStore
+                userStore.updateUser(adminUser.id, { 
+                  password: state.adminPassword,
+                  active: true
+                }).catch(e => console.error('Error syncing admin password:', e));
+              }
+            } catch (e) {
+              console.error('Error during auth store rehydration:', e);
+            }
+          }
+        };
+      }
     }
   )
 );
