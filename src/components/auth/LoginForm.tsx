@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
 
@@ -77,31 +78,38 @@ export function LoginForm() {
   
   if (loginType === null) {
     return (
-      <Card className="w-full max-w-md mx-auto shadow-lg animate-fade-in login-card">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Seleccione su tipo de acceso</CardTitle>
-          <CardDescription className="text-center">
+      <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-red-500/5"></div>
+        <CardHeader className="space-y-1 relative z-10">
+          <CardTitle className="text-2xl font-bold text-center text-white drop-shadow-md">
+            Seleccione su tipo de acceso
+          </CardTitle>
+          <CardDescription className="text-center text-gray-200">
             Escoja el tipo de usuario para continuar
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 relative z-10">
           <div className="grid grid-cols-2 gap-4">
             <Button 
               onClick={() => handleLoginTypeSelect('admin')}
               variant="red"
-              className="p-8 h-auto flex flex-col gap-4"
+              className="p-8 h-auto flex flex-col gap-4 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 hover:-translate-y-1 transition-all duration-300"
             >
-              <Users className="h-12 w-12" />
-              <span className="font-medium">Administrador</span>
+              <div className="bg-red-500/30 p-4 rounded-full">
+                <Users className="h-10 w-10 text-white drop-shadow-md" />
+              </div>
+              <span className="font-medium text-white">Administrador</span>
             </Button>
             
             <Button 
               onClick={() => handleLoginTypeSelect('surveyor')}
               variant="blue"
-              className="p-8 h-auto flex flex-col gap-4"
+              className="p-8 h-auto flex flex-col gap-4 bg-gradient-to-br from-blue-500/80 to-blue-600/80 border border-white/10 shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all duration-300"
             >
-              <User className="h-12 w-12" />
-              <span className="font-medium">Encuestador</span>
+              <div className="bg-blue-500/30 p-4 rounded-full">
+                <User className="h-10 w-10 text-white drop-shadow-md" />
+              </div>
+              <span className="font-medium text-white">Encuestador</span>
             </Button>
           </div>
         </CardContent>
@@ -111,17 +119,23 @@ export function LoginForm() {
 
   if (loginType === 'admin') {
     return (
-      <Card className="w-full max-w-md mx-auto shadow-lg animate-fade-in login-card">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Acceso de administrador</CardTitle>
-          <CardDescription className="text-center">
+      <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-red-700/5"></div>
+        <CardHeader className="space-y-1 relative z-10">
+          <CardTitle className="text-2xl font-bold text-center text-white drop-shadow-md">
+            Acceso de administrador
+          </CardTitle>
+          <CardDescription className="text-center text-gray-200">
             Ingrese la contraseña para acceder
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 relative z-10">
           <div className="space-y-2">
-            <Label htmlFor="admin-password">Contraseña de Administrador</Label>
+            <Label htmlFor="admin-password" className="text-gray-200">Contraseña de Administrador</Label>
             <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <Lock className="h-4 w-4" />
+              </div>
               <Input
                 id="admin-password"
                 type={showPassword ? "text" : "password"}
@@ -129,14 +143,14 @@ export function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-focus-ring pr-10"
+                className="input-focus-ring pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                 autoComplete="current-password"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-0 top-0 h-full px-3"
+                className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-white"
                 onClick={togglePasswordVisibility}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -145,14 +159,14 @@ export function LoginForm() {
           </div>
           
           {failedLoginAttempts > 0 && (
-            <div className="p-3 rounded-md bg-amber-100 border border-amber-200 text-amber-800 text-sm flex items-center">
+            <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-200 text-sm flex items-center">
               <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
             </div>
           )}
           
           {error && (
-            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm flex items-center">
+            <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-200 text-sm flex items-center">
               <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -162,22 +176,22 @@ export function LoginForm() {
             <Button 
               onClick={handleDirectAdminAccess}
               variant="red"
-              className="p-6 h-auto flex flex-col gap-3"
+              className="p-6 h-auto flex flex-col gap-3 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 transition-all duration-300"
               disabled={isLoading}
             >
               {isLoading ? (
-                <Loader2 className="h-8 w-8 animate-spin" />
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
               ) : (
-                <Users className="h-8 w-8" />
+                <Users className="h-8 w-8 text-white drop-shadow-md" />
               )}
-              <span className="font-medium">Ingresar como Administrador</span>
+              <span className="font-medium text-white">Ingresar como Administrador</span>
             </Button>
           </div>
           
           <Button 
             type="button" 
             variant="ghost" 
-            className="w-full mt-2"
+            className="w-full mt-2 text-gray-300 hover:text-white hover:bg-white/10"
             onClick={() => setLoginType(null)}
           >
             Volver
@@ -188,31 +202,42 @@ export function LoginForm() {
   }
   
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg animate-fade-in login-card">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Acceso de encuestador</CardTitle>
-        <CardDescription className="text-center">
+    <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5"></div>
+      <CardHeader className="space-y-1 relative z-10">
+        <CardTitle className="text-2xl font-bold text-center text-white drop-shadow-md">
+          Acceso de encuestador
+        </CardTitle>
+        <CardDescription className="text-center text-gray-200">
           Ingrese sus credenciales para continuar
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative z-10">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Usuario</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="Ingrese su nombre de usuario"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="input-focus-ring"
-              autoComplete="username"
-            />
+            <Label htmlFor="username" className="text-gray-200">Usuario</Label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <User className="h-4 w-4" />
+              </div>
+              <Input
+                id="username"
+                type="text"
+                placeholder="Ingrese su nombre de usuario"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input-focus-ring pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                autoComplete="username"
+              />
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <Label htmlFor="password" className="text-gray-200">Contraseña</Label>
             <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <Lock className="h-4 w-4" />
+              </div>
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -220,14 +245,14 @@ export function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-focus-ring pr-10"
+                className="input-focus-ring pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                 autoComplete="current-password"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-0 top-0 h-full px-3"
+                className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-white"
                 onClick={togglePasswordVisibility}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -236,14 +261,14 @@ export function LoginForm() {
           </div>
           
           {failedLoginAttempts > 0 && (
-            <div className="p-3 rounded-md bg-amber-100 border border-amber-200 text-amber-800 text-sm flex items-center">
+            <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-200 text-sm flex items-center">
               <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
             </div>
           )}
           
           {error && (
-            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm flex items-center">
+            <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-200 text-sm flex items-center">
               <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -251,7 +276,7 @@ export function LoginForm() {
           
           <Button 
             type="submit" 
-            className="w-full mt-6"
+            className="w-full mt-6 bg-gradient-to-br from-blue-500 to-blue-600 border border-white/10 shadow-lg hover:shadow-blue-500/20 transition-all duration-300"
             variant="blue"
             disabled={isLoading}
           >
@@ -271,7 +296,7 @@ export function LoginForm() {
           <Button 
             type="button" 
             variant="ghost" 
-            className="w-full mt-2"
+            className="w-full mt-2 text-gray-300 hover:text-white hover:bg-white/10"
             onClick={() => setLoginType(null)}
           >
             Volver
