@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,17 +27,17 @@ interface UserState {
   clearError: () => void;
 }
 
-// Mock data with confirmed working admin user
+// Mock data with only one admin
 const mockUsers: User[] = [
   {
     id: '1',
-    username: 'amazonas2020',
-    name: 'Administrador Amazonas',
-    email: 'admin@amazonas.com',
-    role: 'admin-manager',
+    username: 'admin',
+    name: 'Administrador',
+    email: 'admin@encuestasva.com',
+    role: 'admin',
     active: true,
     createdAt: '2023-01-10T08:00:00Z',
-    password: 'amazonas123',
+    password: 'admin123',
   },
   {
     id: '2',
@@ -49,16 +48,6 @@ const mockUsers: User[] = [
     active: true,
     createdAt: '2023-01-15T10:30:00Z',
     password: 'surveyor123',
-  },
-  {
-    id: '3',
-    username: 'admin',
-    name: 'Admin Principal',
-    email: 'admin@encuestasva.com',
-    role: 'admin',
-    active: true,
-    createdAt: '2023-01-05T09:00:00Z',
-    password: 'admin123',
   }
 ];
 

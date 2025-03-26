@@ -5,10 +5,10 @@ import { UserManager } from '@/components/admin/UserManager';
 
 export default function AdminUsers() {
   return (
-    <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
+    <AuthLayout requiresAuth={true} allowedRoles={['admin']}>
       <AdminLayout
         title="Gestión de Usuarios"
-        description="Crear y administrar usuarios encuestadores y administradores"
+        description="Crear y administrar usuarios encuestadores"
       >
         <UserManager />
       </AdminLayout>

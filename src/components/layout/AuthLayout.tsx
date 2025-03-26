@@ -30,7 +30,7 @@ export function AuthLayout({
         // User doesn't have the required role
         if (user.role === 'surveyor') {
           navigate('/surveyor');
-        } else if (user.role === 'admin' || user.role === 'admin-manager') {
+        } else if (user.role === 'admin') {
           navigate('/admin');
         } else {
           navigate('/');

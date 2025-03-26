@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -29,7 +28,7 @@ export function LoginForm() {
       
       if (user?.role === 'surveyor') {
         navigate('/surveyor');
-      } else if (user?.role === 'admin' || user?.role === 'admin-manager') {
+      } else if (user?.role === 'admin') {
         navigate('/admin');
       }
     } catch (err) {
@@ -48,17 +47,15 @@ export function LoginForm() {
   };
 
   // Handle direct admin access
-  const handleDirectAdminAccess = async (adminType: 'main' | 'secondary') => {
+  const handleDirectAdminAccess = async () => {
     clearError();
     
     // Get users directly from the userStore
     const { users } = useUserStore.getState();
     
     try {
-      // Find the admin user
-      const credentials = adminType === 'main' 
-        ? { username: 'amazonas2020', password: 'amazonas123' }
-        : { username: 'admin', password: 'admin123' };
+      // Use admin credentials
+      const credentials = { username: 'admin', password: 'admin123' };
       
       // Check if user exists in store
       const userExists = users.some(
@@ -128,7 +125,7 @@ export function LoginForm() {
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 gap-4">
             <Button 
-              onClick={() => handleDirectAdminAccess('main')}
+              onClick={handleDirectAdminAccess}
               variant="default"
               className="p-6 h-auto flex flex-col gap-3 hover:bg-primary/90"
               disabled={isLoading}
@@ -138,21 +135,7 @@ export function LoginForm() {
               ) : (
                 <Users className="h-8 w-8" />
               )}
-              <span className="font-medium">Administrador Principal</span>
-            </Button>
-            
-            <Button 
-              onClick={() => handleDirectAdminAccess('secondary')}
-              variant="secondary"
-              className="p-6 h-auto flex flex-col gap-3 hover:bg-secondary/90"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="h-8 w-8 animate-spin" />
-              ) : (
-                <User className="h-8 w-8" />
-              )}
-              <span className="font-medium">Administrador Regular</span>
+              <span className="font-medium">Ingresar como Administrador</span>
             </Button>
           </div>
           

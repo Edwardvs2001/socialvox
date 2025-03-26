@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Search, BarChart3, ExternalLink } from 'lucide-react';
+import { Search, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/utils/api';
 
@@ -22,7 +22,7 @@ export default function AdminResultsList() {
   );
   
   return (
-    <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
+    <AuthLayout requiresAuth={true} allowedRoles={['admin']}>
       <AdminLayout
         title="Resultados de Encuestas"
         description="Visualiza y analiza los datos recopilados"

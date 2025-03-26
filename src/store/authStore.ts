@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
 
-export type UserRole = 'admin' | 'surveyor' | 'admin-manager';
+export type UserRole = 'admin' | 'surveyor';
 
 interface User {
   id: string;
