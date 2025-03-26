@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -10,8 +11,9 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { UserCircle, LogOut, ClipboardList, User, BarChart, Menu, X } from 'lucide-react';
+import { UserCircle, LogOut, ClipboardList, User, BarChart, Menu, X, Image } from 'lucide-react';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export function Navbar() {
   const { user, logout } = useAuthStore();
@@ -19,6 +21,15 @@ export function Navbar() {
   const location = useLocation();
   const { isOnline, pendingCount } = useOfflineSync();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [appLogo, setAppLogo] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Try to get the logo from localStorage if it exists
+    const storedLogo = localStorage.getItem('appLogo');
+    if (storedLogo) {
+      setAppLogo(storedLogo);
+    }
+  }, []);
   
   const handleLogout = () => {
     logout();
@@ -46,7 +57,16 @@ export function Navbar() {
             to={isAdmin ? '/admin' : '/surveyor'} 
             className="flex items-center gap-2 font-bold text-xl"
           >
-            <ClipboardList className={`h-6 w-6 ${isAdmin ? 'text-admin' : 'text-surveyor'}`} />
+            {appLogo ? (
+              <Avatar className="h-8 w-8 rounded-md">
+                <AvatarImage src={appLogo} alt="Logo" className="object-contain" />
+                <AvatarFallback className="rounded-md">
+                  <ClipboardList className={`h-6 w-6 ${isAdmin ? 'text-admin' : 'text-surveyor'}`} />
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <ClipboardList className={`h-6 w-6 ${isAdmin ? 'text-admin' : 'text-surveyor'}`} />
+            )}
             <span>Encuestas VA</span>
           </Link>
           

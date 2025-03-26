@@ -185,6 +185,8 @@ export function ConfigurationManager() {
         const result = e.target?.result as string;
         setLogoPreview(result);
         generalForm.setValue('logoUrl', result);
+        
+        localStorage.setItem('appLogo', result);
       };
       reader.readAsDataURL(file);
     }
@@ -193,6 +195,7 @@ export function ConfigurationManager() {
   const handleRemoveLogo = () => {
     setLogoPreview("");
     generalForm.setValue('logoUrl', "");
+    localStorage.removeItem('appLogo');
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
