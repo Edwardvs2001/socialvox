@@ -349,7 +349,7 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {responses.map((response) => {
+                                {responses.map((response, index) => {
                                   const answer = response.answers.find(a => a.questionId === question.id);
                                   const displayValue = 
                                     question.type === 'multiple-choice' 
@@ -359,7 +359,7 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
                                   return (
                                     <TableRow key={response.id}>
                                       <TableCell className="font-medium">
-                                        {response.respondentId}
+                                        Encuestado {index + 1}
                                       </TableCell>
                                       <TableCell>
                                         {new Date(response.completedAt).toLocaleDateString()}
@@ -405,10 +405,10 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {responses.map((response) => (
+                    {responses.map((response, index) => (
                       <TableRow key={response.id}>
-                        <TableCell className="font-medium">{response.id.slice(0, 8)}</TableCell>
-                        <TableCell>{response.respondentId}</TableCell>
+                        <TableCell className="font-medium">{index + 1}</TableCell>
+                        <TableCell>Encuestado {index + 1}</TableCell>
                         <TableCell>{new Date(response.completedAt).toLocaleString()}</TableCell>
                         {survey.questions.map((question) => {
                           const answer = response.answers.find(a => a.questionId === question.id);
@@ -456,10 +456,10 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {responses.filter(r => r.audioRecording).map((response) => (
+                  {responses.filter(r => r.audioRecording).map((response, index) => (
                     <div key={response.id} className="border rounded-md p-4">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium">ID: {response.id.slice(0, 8)}</span>
+                        <span className="font-medium">Encuestado {index + 1}</span>
                         <span className="text-sm text-muted-foreground">
                           {new Date(response.completedAt).toLocaleString()}
                         </span>

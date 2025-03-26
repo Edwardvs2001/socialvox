@@ -1,3 +1,4 @@
+
 import { SurveyResponse, Survey } from '@/store/surveyStore';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -21,10 +22,10 @@ export const exportResultsToExcel = (survey: Survey, responses: SurveyResponse[]
   headers.push('Has Audio');
   
   // Create data rows
-  const rows = responses.map(response => {
+  const rows = responses.map((response, index) => {
     const row = [
-      response.id,
-      response.respondentId,
+      (index + 1).toString(),
+      `Encuestado ${index + 1}`,
       new Date(response.completedAt).toLocaleString()
     ];
     
@@ -121,10 +122,10 @@ export const exportResultsToCSV = (survey: Survey, responses: SurveyResponse[]):
   headers.push('Has Audio');
   
   // Create CSV rows
-  const rows = responses.map(response => {
+  const rows = responses.map((response, index) => {
     const row = [
-      response.id,
-      response.respondentId,
+      (index + 1).toString(),
+      `Encuestado ${index + 1}`,
       response.completedAt
     ];
     
@@ -180,7 +181,7 @@ export const exportAudioRecordings = async (survey: Survey, responses: SurveyRes
     if (response.audioRecording) {
       // Extract file extension (usually webm)
       const extension = response.audioRecording.split(';')[0].split('/')[1];
-      const fileName = `recording_${response.id}.${extension || 'webm'}`;
+      const fileName = `recording_1.${extension || 'webm'}`;
       
       // Convert Data URL to Blob and download
       const blob = await fetch(response.audioRecording).then(r => r.blob());
@@ -197,7 +198,7 @@ export const exportAudioRecordings = async (survey: Survey, responses: SurveyRes
   const promises = recordingsResponses.map(async (response, index) => {
     if (response.audioRecording) {
       const extension = response.audioRecording.split(';')[0].split('/')[1] || 'webm';
-      const fileName = `recording_${response.id}.${extension}`;
+      const fileName = `recording_${index + 1}.${extension}`;
       
       try {
         const blob = await fetch(response.audioRecording).then(r => r.blob());
