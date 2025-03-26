@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSurveyStore, SurveyResponse, GeoLocation } from '@/store/surveyStore';
 import { useUserStore } from '@/store/userStore';
@@ -132,7 +131,7 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
     return `${Math.round((value / responses.length) * 100)}%`;
   };
   
-  const formatLocation = (location: SurveyResponse['location']) => {
+  const formatLocation = (location: GeoLocation | null) => {
     if (!location || location.latitude === null || location.longitude === null) {
       return 'Ubicación no disponible';
     }
@@ -425,4 +424,3 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
     </div>
   );
 }
-
