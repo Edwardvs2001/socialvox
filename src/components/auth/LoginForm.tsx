@@ -24,7 +24,6 @@ export function LoginForm() {
     try {
       await login(username, password);
       
-      // Get user role and redirect accordingly
       const user = useAuthStore.getState().user;
       
       if (user?.role === 'surveyor') {
@@ -33,7 +32,6 @@ export function LoginForm() {
         navigate('/admin');
       }
     } catch (err) {
-      // Error is handled in the store
       console.error('Login error:', err);
     }
   };
@@ -41,7 +39,6 @@ export function LoginForm() {
   const handleLoginTypeSelect = (type: 'admin' | 'surveyor') => {
     setLoginType(type);
     clearError();
-    // Clear credentials when switching login type
     setUsername('');
     setPassword('');
   };
@@ -50,7 +47,6 @@ export function LoginForm() {
     clearError();
     
     try {
-      // Set admin username
       setUsername('admin');
       
       if (!password) {
@@ -62,7 +58,6 @@ export function LoginForm() {
       
       await login('admin', password);
       
-      // Get user after login
       const user = useAuthStore.getState().user;
       
       if (user?.role === 'admin' || user?.role === 'admin-manager') {
@@ -283,14 +278,6 @@ export function LoginForm() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex flex-col">
-        {loginType === 'surveyor' && (
-          <p className="text-xs text-center text-muted-foreground mt-4">
-            Credenciales de encuestador: <br />
-            <span className="font-medium">Encuestador:</span> surveyor / surveyor123
-          </p>
-        )}
-      </CardFooter>
     </Card>
   );
 }
