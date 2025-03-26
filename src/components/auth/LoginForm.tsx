@@ -87,7 +87,7 @@ export function LoginForm() {
             </Button>
             
             <Button onClick={() => handleLoginTypeSelect('surveyor')} variant="blue" className="p-8 h-auto flex flex-col gap-4 bg-gradient-to-br from-blue-500/80 to-blue-600/80 border border-white/10 shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all duration-300">
-              <div className="bg-blue-500/30 p-4 rounded-full">
+              <div className="p-4 rounded-full bg-neutral-100">
                 <User className="h-10 w-10 text-white drop-shadow-md" />
               </div>
               <span className="font-medium text-white">Encuestador</span>
