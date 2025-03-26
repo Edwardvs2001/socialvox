@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSurveyStore, Survey } from '@/store/surveyStore';
@@ -465,14 +464,14 @@ export function SurveyManager() {
           
           <div className="py-4">
             <Select 
-              value={selectedFolderId || ""}
-              onValueChange={(value) => setSelectedFolderId(value === "" ? null : value)}
+              value={selectedFolderId || "null"}
+              onValueChange={(value) => setSelectedFolderId(value === "null" ? null : value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona una carpeta" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sin carpeta</SelectItem>
+                <SelectItem value="null">Sin carpeta</SelectItem>
                 {folders.map(folder => (
                   <SelectItem key={folder.id} value={folder.id}>
                     {folder.name}
