@@ -47,39 +47,34 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
-    const clickTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-    const isClickingRef = React.useRef(false);
+    const [isDisabled, setIsDisabled] = React.useState(false);
     
     const handleClick = React.useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
-        if (isClickingRef.current) {
+        if (isDisabled) {
           e.preventDefault();
+          e.stopPropagation();
           return;
         }
         
-        isClickingRef.current = true;
+        setIsDisabled(true);
         
         if (onClick) {
           onClick(e);
         }
         
-        // Reset clicking state after a short delay
-        if (clickTimeoutRef.current) {
-          clearTimeout(clickTimeoutRef.current);
-        }
-        
-        clickTimeoutRef.current = setTimeout(() => {
-          isClickingRef.current = false;
-        }, 100);
+        // Re-enable the button after a short delay
+        setTimeout(() => {
+          setIsDisabled(false);
+        }, 200);
       },
-      [onClick]
+      [onClick, isDisabled]
     );
     
+    // Clean up on unmount
     React.useEffect(() => {
       return () => {
-        if (clickTimeoutRef.current) {
-          clearTimeout(clickTimeoutRef.current);
-        }
+        setIsDisabled(false);
       };
     }, []);
     
@@ -88,6 +83,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         onClick={handleClick}
+        disabled={props.disabled || isDisabled}
         {...props}
       />
     )

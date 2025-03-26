@@ -248,26 +248,8 @@ export const useSurveyStore = create<SurveyState>()(
           // Simulate API call delay
           await new Promise(resolve => setTimeout(resolve, 800));
           
-          // Get all subfolders recursively
-          const allSubfolderIds = new Set<string>();
-          
-          const getAllSubfolderIds = (folderId: string) => {
-            const subfolders = get().folders.filter(f => f.parentId === folderId);
-            subfolders.forEach(folder => {
-              allSubfolderIds.add(folder.id);
-              getAllSubfolderIds(folder.id);
-            });
-          };
-          
-          getAllSubfolderIds(id);
-          const foldersToDelete = [id, ...Array.from(allSubfolderIds)];
-          
-          // When deleting a folder, remove folder assignment from associated surveys
           set(state => ({
-            folders: state.folders.filter(folder => !foldersToDelete.includes(folder.id)),
-            surveys: state.surveys.map(survey => 
-              foldersToDelete.includes(survey.folderId || '') ? { ...survey, folderId: null } : survey
-            ),
+            surveys: state.surveys.filter(survey => survey.id !== id),
             isLoading: false,
           }));
         } catch (error) {

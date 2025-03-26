@@ -52,7 +52,7 @@ export function useOfflineSync() {
   
   // Set up sync attempt when conditions change
   useEffect(() => {
-    let syncTimeoutId: number | undefined;
+    let syncTimeoutId: number;
     
     if (isOnline && pendingCount > 0 && isAuthenticated && !syncInProgressRef.current) {
       syncTimeoutId = window.setTimeout(() => {
@@ -104,7 +104,7 @@ export function useOfflineSync() {
       // Use setTimeout to ensure state updates are completed before changing the ref
       setTimeout(() => {
         syncInProgressRef.current = false;
-      }, 100);
+      }, 200);
     }
   }, [isOnline, pendingCount, isAuthenticated, checkSession, syncResponses]);
   

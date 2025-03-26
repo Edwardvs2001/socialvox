@@ -2,34 +2,31 @@
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { SurveyManager } from '@/components/admin/SurveyManager';
-import { Suspense, useEffect, useState, useRef } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSurveyStore } from '@/store/surveyStore';
 
 export default function AdminSurveys() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const { fetchSurveys } = useSurveyStore();
-  const hasLoadedRef = useRef(false);
+  const { fetchSurveys, clearError } = useSurveyStore();
   
   // Ensure surveys are loaded before mounting the component
   useEffect(() => {
     const loadSurveys = async () => {
-      if (hasLoadedRef.current) return;
-      
       try {
         await fetchSurveys();
+        clearError(); // Clear any previous errors
       } finally {
         setIsLoaded(true);
-        hasLoadedRef.current = true;
       }
     };
     
     loadSurveys();
     
-    // Clear the ref on unmount to ensure proper reloading if the component is revisited
+    // Make sure to clean up by clearing any errors when unmounting
     return () => {
-      hasLoadedRef.current = false;
+      clearError();
     };
-  }, [fetchSurveys]);
+  }, [fetchSurveys, clearError]);
   
   return (
     <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
@@ -38,7 +35,7 @@ export default function AdminSurveys() {
         description="Crear, editar y administrar encuestas"
       >
         <Suspense fallback={<div>Cargando...</div>}>
-          {isLoaded && <SurveyManager key="survey-manager" />}
+          {isLoaded && <SurveyManager key={`survey-manager-${Date.now()}`} />}
         </Suspense>
       </AdminLayout>
     </AuthLayout>
