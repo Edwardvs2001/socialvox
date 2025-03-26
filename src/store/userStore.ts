@@ -28,7 +28,7 @@ interface UserState {
   clearError: () => void;
 }
 
-// Mock data with only one admin
+// Initial mock data with admin always active
 const mockUsers: User[] = [
   {
     id: '1',
@@ -89,6 +89,18 @@ export const useUserStore = create<UserState>()(
       },
       
       getUserById: (id) => {
+        // Before returning any user, ensure admin is active
+        const users = get().users;
+        const adminUser = users.find(u => u.username === 'admin' && u.role === 'admin');
+        
+        if (adminUser && !adminUser.active) {
+          set(state => ({
+            users: state.users.map(user => 
+              user.id === adminUser.id ? { ...user, active: true } : user
+            )
+          }));
+        }
+        
         return get().users.find(user => user.id === id);
       },
       
@@ -203,6 +215,22 @@ export const useUserStore = create<UserState>()(
       partialize: (state) => ({
         users: state.users,
       }),
+      // Add migration to ensure admin is always active
+      onRehydrateStorage: () => {
+        return (state) => {
+          if (state) {
+            // Check if admin exists and is active
+            const adminUser = state.users.find(u => u.username === 'admin' && u.role === 'admin');
+            
+            if (adminUser && !adminUser.active) {
+              // Activate admin user
+              state.users = state.users.map(user => 
+                user.id === adminUser.id ? { ...user, active: true } : user
+              );
+            }
+          }
+        };
+      }
     }
   )
 );

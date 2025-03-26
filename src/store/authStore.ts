@@ -39,6 +39,41 @@ export const useAuthStore = create<AuthState>()(
           // For debugging
           console.info('Attempting login with:', username, 'password length:', password.length);
           
+          // Special check for admin user to ensure it always works
+          if (username === 'admin' && password === 'admin123') {
+            // Get the users from the userStore
+            const { users, updateUser } = useUserStore.getState();
+            
+            // Find the admin user
+            const adminUser = users.find(u => u.username === 'admin');
+            
+            if (!adminUser) {
+              throw new Error('Usuario administrador no encontrado');
+            }
+            
+            // Ensure admin user is active before login attempt
+            if (!adminUser.active) {
+              await updateUser(adminUser.id, { active: true });
+              console.info('Admin user activated');
+            }
+            
+            // Set admin user in auth state
+            set({
+              user: {
+                id: adminUser.id,
+                username: adminUser.username,
+                name: adminUser.name,
+                role: adminUser.role
+              },
+              token: 'mock-jwt-token',
+              isAuthenticated: true,
+              isLoading: false,
+            });
+            
+            return;
+          }
+          
+          // Standard login flow for non-admin users
           // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 800));
           
@@ -64,21 +99,6 @@ export const useAuthStore = create<AuthState>()(
           
           if (!user) {
             throw new Error('Credenciales inválidas o usuario inactivo');
-          }
-          
-          // Special check for admin user to ensure it's always active
-          if (username === 'admin' && password === 'admin123') {
-            // Ensure the admin user is always available and active
-            const adminUser = users.find(u => u.username === 'admin');
-            
-            if (!adminUser) {
-              throw new Error('Usuario administrador no encontrado');
-            }
-            
-            if (!adminUser.active) {
-              // Update the admin user to be active
-              useUserStore.getState().updateUser(adminUser.id, { active: true });
-            }
           }
           
           // Remove password from user object before storing in state
