@@ -147,7 +147,7 @@ export function LoginForm() {
   return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5"></div>
       <CardHeader className="space-y-1 relative z-10">
-        <CardTitle className="text-2xl font-bold text-center text-white drop-shadow-md">
+        <CardTitle className="font-bold text-center drop-shadow-md text-blue-600 text-2xl">
           Acceso de encuestador
         </CardTitle>
         <CardDescription className="text-center text-white/90 font-medium">
