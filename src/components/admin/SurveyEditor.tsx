@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -60,10 +59,8 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
     },
   });
   
-  // Initialize questions from existing survey
   useEffect(() => {
     if (existingSurvey) {
-      // Make sure to add type if it doesn't exist in older surveys
       const updatedQuestions = existingSurvey.questions.map(q => ({
         ...q,
         type: q.type || 'multiple-choice' as const
@@ -160,13 +157,11 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
   };
   
   const validateQuestions = (): boolean => {
-    // Make sure we have at least one question
     if (questions.length === 0) {
       toast.error("Debe agregar al menos una pregunta a la encuesta");
       return false;
     }
     
-    // Validate each question and its options
     for (const question of questions) {
       if (!question.text.trim()) {
         toast.error("Todas las preguntas deben tener un texto");
@@ -198,14 +193,12 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
     
     try {
       if (existingSurvey) {
-        // Update existing survey
         await updateSurvey(existingSurvey.id, {
           ...values,
           questions,
         });
         toast.success("Encuesta actualizada correctamente");
       } else {
-        // Create new survey
         if (!user) {
           toast.error("Necesita iniciar sesión para crear una encuesta");
           return;
@@ -218,11 +211,11 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
           questions,
           createdBy: user.id,
           assignedTo: [],
+          folderId: null,
         });
         toast.success("Encuesta creada correctamente");
       }
       
-      // Navigate back to surveys list
       navigate("/admin/surveys");
     } catch (error) {
       console.error("Error saving survey:", error);
@@ -466,7 +459,6 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
         </form>
       </Form>
       
-      {/* Delete Question Dialog */}
       <AlertDialog open={showDeleteQuestionDialog} onOpenChange={setShowDeleteQuestionDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -491,7 +483,6 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Assign Surveyors Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -556,3 +547,4 @@ export function SurveyEditor({ surveyId }: SurveyEditorProps) {
     </div>
   );
 }
+
