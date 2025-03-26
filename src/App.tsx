@@ -12,6 +12,7 @@ import AdminSurveys from "./pages/AdminSurveys";
 import AdminSurveyEditor from "./pages/AdminSurveyEditor";
 import AdminUsers from "./pages/AdminUsers";
 import AdminResults from "./pages/AdminResults";
+import AdminResultsList from "./pages/AdminResultsList"; // Add the new page
 import NotFound from "./pages/NotFound";
 
 // Create a client
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/admin/surveys/new" element={<AdminSurveyEditor />} />
           <Route path="/admin/surveys/edit/:id" element={<AdminSurveyEditor />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/results" element={<AdminResultsList />} />
           <Route path="/admin/results/:id" element={<AdminResults />} />
           
           {/* 404 Route */}

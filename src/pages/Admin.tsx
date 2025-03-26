@@ -1,7 +1,7 @@
 
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
-import { DashboardOverview } from '@/components/admin/DashboardOverview';
+import { AdminDashboard } from '@/components/admin/AdminDashboard';
 import { useAuthStore } from '@/store/authStore';
 
 export default function Admin() {
@@ -9,8 +9,8 @@ export default function Admin() {
   
   return (
     <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
-      <AdminLayout title={`Bienvenido, ${user?.name}`}>
-        <DashboardOverview />
+      <AdminLayout title={`Panel Administrativo`} description={`Bienvenido, ${user?.name}`}>
+        <AdminDashboard />
       </AdminLayout>
     </AuthLayout>
   );
