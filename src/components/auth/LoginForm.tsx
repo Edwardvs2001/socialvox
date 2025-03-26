@@ -84,7 +84,7 @@ export function LoginForm() {
           <CardTitle className="text-2xl font-bold text-center text-white drop-shadow-md">
             Seleccione su tipo de acceso
           </CardTitle>
-          <CardDescription className="text-center text-gray-200">
+          <CardDescription className="text-center text-white/90 font-medium">
             Escoja el tipo de usuario para continuar
           </CardDescription>
         </CardHeader>
@@ -125,15 +125,15 @@ export function LoginForm() {
           <CardTitle className="text-2xl font-bold text-center text-white drop-shadow-md">
             Acceso de administrador
           </CardTitle>
-          <CardDescription className="text-center text-gray-200">
+          <CardDescription className="text-center text-white/90 font-medium">
             Ingrese la contraseña para acceder
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 relative z-10">
           <div className="space-y-2">
-            <Label htmlFor="admin-password" className="text-gray-200">Contraseña de Administrador</Label>
+            <Label htmlFor="admin-password" className="text-white font-medium">Contraseña de Administrador</Label>
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <Lock className="h-4 w-4" />
               </div>
               <Input
@@ -143,14 +143,14 @@ export function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-focus-ring pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                className="input-focus-ring pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
                 autoComplete="current-password"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-white"
+                className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white"
                 onClick={togglePasswordVisibility}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -159,14 +159,14 @@ export function LoginForm() {
           </div>
           
           {failedLoginAttempts > 0 && (
-            <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-200 text-sm flex items-center">
+            <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-100 text-sm flex items-center font-medium">
               <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
             </div>
           )}
           
           {error && (
-            <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-200 text-sm flex items-center">
+            <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
               <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -191,7 +191,7 @@ export function LoginForm() {
           <Button 
             type="button" 
             variant="ghost" 
-            className="w-full mt-2 text-gray-300 hover:text-white hover:bg-white/10"
+            className="w-full mt-2 text-white hover:text-white hover:bg-white/10"
             onClick={() => setLoginType(null)}
           >
             Volver
@@ -208,16 +208,16 @@ export function LoginForm() {
         <CardTitle className="text-2xl font-bold text-center text-white drop-shadow-md">
           Acceso de encuestador
         </CardTitle>
-        <CardDescription className="text-center text-gray-200">
+        <CardDescription className="text-center text-white/90 font-medium">
           Ingrese sus credenciales para continuar
         </CardDescription>
       </CardHeader>
       <CardContent className="relative z-10">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-gray-200">Usuario</Label>
+            <Label htmlFor="username" className="text-white font-medium">Usuario</Label>
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <User className="h-4 w-4" />
               </div>
               <Input
@@ -227,15 +227,15 @@ export function LoginForm() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="input-focus-ring pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                className="input-focus-ring pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
                 autoComplete="username"
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-gray-200">Contraseña</Label>
+            <Label htmlFor="password" className="text-white font-medium">Contraseña</Label>
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <Lock className="h-4 w-4" />
               </div>
               <Input
@@ -245,14 +245,14 @@ export function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-focus-ring pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                className="input-focus-ring pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
                 autoComplete="current-password"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-white"
+                className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white"
                 onClick={togglePasswordVisibility}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -261,14 +261,14 @@ export function LoginForm() {
           </div>
           
           {failedLoginAttempts > 0 && (
-            <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-200 text-sm flex items-center">
+            <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-100 text-sm flex items-center font-medium">
               <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
             </div>
           )}
           
           {error && (
-            <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-200 text-sm flex items-center">
+            <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
               <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -296,7 +296,7 @@ export function LoginForm() {
           <Button 
             type="button" 
             variant="ghost" 
-            className="w-full mt-2 text-gray-300 hover:text-white hover:bg-white/10"
+            className="w-full mt-2 text-white hover:text-white hover:bg-white/10"
             onClick={() => setLoginType(null)}
           >
             Volver

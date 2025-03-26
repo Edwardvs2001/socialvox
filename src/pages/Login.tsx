@@ -23,7 +23,7 @@ export default function Login() {
                   className="w-full h-full object-contain p-2 animate-scale-in"
                 />
               </div>
-              <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-blue-200 to-red-200 bg-clip-text text-transparent drop-shadow-md">
+              <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent drop-shadow-md">
                 Encuestas VA
               </h1>
               <div className="w-40 h-1 bg-gradient-to-r from-blue-400 to-red-400 rounded-full mt-2 shadow-sm"></div>
