@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Survey, SurveyQuestion, useSurveyStore } from '@/store/surveyStore';
 import { useAuthStore } from '@/store/authStore';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -12,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { AudioRecorder } from './AudioRecorder';
 import { blobToBase64 } from '@/utils/api';
 import { toast } from 'sonner';
-import { Check, ChevronLeft, ChevronRight, Loader2, Lock, Mic } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, MapPin, Mic } from 'lucide-react';
 
 interface SurveyFormProps {
   survey: Survey;
@@ -30,6 +31,9 @@ export function SurveyForm({ survey }: SurveyFormProps) {
   
   // Audio recording
   const audioRecorder = useAudioRecorder();
+  
+  // Location tracking
+  const { location, isLoading: isLoadingLocation, permissionStatus, getCurrentPosition } = useGeolocation();
   
   // Current question
   const currentQuestion = survey.questions[currentQuestionIndex];
@@ -54,6 +58,11 @@ export function SurveyForm({ survey }: SurveyFormProps) {
     // Start recording audio automatically
     if (!audioRecorder.isRecording) {
       audioRecorder.startRecording();
+    }
+    
+    // Request location if not already granted
+    if (permissionStatus !== 'granted') {
+      getCurrentPosition();
     }
   }, [survey.id]);
   
@@ -91,6 +100,12 @@ export function SurveyForm({ survey }: SurveyFormProps) {
       return;
     }
     
+    if (!location.latitude || !location.longitude) {
+      toast.error('No se pudo obtener la ubicación. Por favor, verifica tus permisos de ubicación y vuelve a intentarlo.');
+      getCurrentPosition();
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -112,12 +127,13 @@ export function SurveyForm({ survey }: SurveyFormProps) {
         ? await blobToBase64(audioRecorder.audioBlob) 
         : null;
       
-      // Submit the response
+      // Submit the response with location data
       await submitResponse({
         surveyId: survey.id,
         respondentId: user?.id || '',
         answers: formattedAnswers,
-        audioRecording: audioBase64
+        audioRecording: audioBase64,
+        location: location
       });
       
       toast.success('Encuesta completada exitosamente');
@@ -142,21 +158,70 @@ export function SurveyForm({ survey }: SurveyFormProps) {
         ></div>
       </div>
       
-      {/* Audio recorder */}
-      <Card className="border-surveyor/20 bg-surveyor/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-md flex items-center">
-            <Mic className="w-4 h-4 mr-2 text-surveyor" />
-            Grabación de Audio
-          </CardTitle>
-          <CardDescription>
-            Se está grabando audio durante toda la encuesta
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AudioRecorder recorder={audioRecorder} />
-        </CardContent>
-      </Card>
+      {/* Location and audio recorders */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Audio recorder */}
+        <Card className="border-surveyor/20 bg-surveyor/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-md flex items-center">
+              <Mic className="w-4 h-4 mr-2 text-surveyor" />
+              Grabación de Audio
+            </CardTitle>
+            <CardDescription>
+              Se está grabando audio durante toda la encuesta
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AudioRecorder recorder={audioRecorder} />
+          </CardContent>
+        </Card>
+        
+        {/* Location card */}
+        <Card className="border-surveyor/20 bg-surveyor/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-md flex items-center">
+              <MapPin className="w-4 h-4 mr-2 text-surveyor" />
+              Ubicación
+            </CardTitle>
+            <CardDescription>
+              Se registrará la ubicación al enviar la encuesta
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm">
+              {isLoadingLocation ? (
+                <div className="flex items-center text-muted-foreground">
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <span>Obteniendo ubicación...</span>
+                </div>
+              ) : location.latitude && location.longitude ? (
+                <div className="space-y-2">
+                  <div className="flex items-center text-green-600">
+                    <Check className="w-4 h-4 mr-2" />
+                    <span>Ubicación obtenida</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Lat: {location.latitude.toFixed(6)}, Lng: {location.longitude.toFixed(6)}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-amber-600">{location.error || 'Esperando permisos de ubicación'}</div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs"
+                    onClick={getCurrentPosition}
+                  >
+                    <MapPin className="w-3 h-3 mr-1" />
+                    Solicitar ubicación
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
       {/* Question card */}
       <Card className="surveyor-card">
@@ -215,7 +280,7 @@ export function SurveyForm({ survey }: SurveyFormProps) {
           ) : (
             <Button
               onClick={handleSubmit}
-              disabled={!isFormComplete || isSubmitting || !audioRecorder.audioBlob}
+              disabled={!isFormComplete || isSubmitting || !audioRecorder.audioBlob || (!location.latitude && !location.longitude)}
               className="btn-surveyor"
             >
               {isSubmitting ? (
@@ -250,6 +315,13 @@ export function SurveyForm({ survey }: SurveyFormProps) {
             {audioRecorder.audioBlob ? <Check className="w-3 h-3" /> : '2'}
           </div>
           <span>Grabar audio durante la encuesta</span>
+        </div>
+        <div className="flex items-center text-xs">
+          <div className={`w-4 h-4 flex items-center justify-center rounded-full mr-2 
+            ${location.latitude && location.longitude ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+            {location.latitude && location.longitude ? <Check className="w-3 h-3" /> : '3'}
+          </div>
+          <span>Permitir acceso a la ubicación</span>
         </div>
       </div>
     </div>
