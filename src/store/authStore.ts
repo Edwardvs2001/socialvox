@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
@@ -86,19 +87,24 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           
-          // Call Supabase auth login
+          // Call Supabase auth login - print credentials for debugging
+          console.log(`Attempting login with email: ${email}`);
+          
           const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password,
+            email,
+            password,
           });
           
           if (error) {
+            console.error('Login error from Supabase:', error);
             throw error;
           }
           
           if (!data.session || !data.user) {
             throw new Error('No se pudo iniciar sesión');
           }
+          
+          console.log('Login successful, fetching profile for user:', data.user.id);
           
           // Get user profile from profiles table
           const { data: profileData, error: profileError } = await supabase
@@ -108,8 +114,11 @@ export const useAuthStore = create<AuthState>()(
             .single();
           
           if (profileError) {
+            console.error('Profile fetch error:', profileError);
             throw profileError;
           }
+          
+          console.log('Profile data retrieved:', profileData);
           
           // Set user data from profile
           set({

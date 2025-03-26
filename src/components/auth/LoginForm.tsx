@@ -27,15 +27,18 @@ export function LoginForm() {
   
   // Check session status on component mount
   useEffect(() => {
-    const isAuthenticated = useAuthStore.getState().isAuthenticated;
-    if (isAuthenticated) {
-      const isSessionValid = checkSession();
-      if (!isSessionValid) {
-        logout();
-        toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
+    const check = async () => {
+      const isAuthenticated = useAuthStore.getState().isAuthenticated;
+      if (isAuthenticated) {
+        const isSessionValid = await checkSession();
+        if (!isSessionValid) {
+          logout();
+          toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
+        }
       }
-    }
-  }, []);
+    };
+    check();
+  }, [checkSession, logout]);
   
   // Reset error when component unmounts
   useEffect(() => {
@@ -58,13 +61,22 @@ export function LoginForm() {
       return;
     }
     
+    // For admin login, default to admin@encuestasva.com if they just enter "admin"
+    const finalEmail = loginType === 'admin' && email === 'admin' ? 'admin@encuestasva.com' : email;
+    
     try {
-      await login(email, password);
+      console.log(`Attempting to login with: ${finalEmail}`);
+      await login(finalEmail, password);
       const user = useAuthStore.getState().user;
+      console.log('Login successful, user:', user);
+      
       if (user?.role === 'surveyor') {
         navigate('/surveyor');
       } else if (user?.role === 'admin' || user?.role === 'admin-manager') {
         navigate('/admin');
+      } else {
+        console.log('Unknown role, navigating to index');
+        navigate('/index');
       }
     } catch (err) {
       console.error('Login error:', err);
