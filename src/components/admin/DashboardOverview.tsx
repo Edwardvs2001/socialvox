@@ -9,13 +9,12 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { BarChart3, ClipboardList, FileText, Users, Plus } from 'lucide-react';
 
 export function DashboardOverview() {
-  const { surveys, responses, fetchSurveys } = useSurveyStore();
+  const { surveys, fetchSurveys } = useSurveyStore();
   const { users, fetchUsers } = useUserStore();
   const [chartData, setChartData] = useState([]);
   const updateTimerRef = useRef(null);
   const [activeSurveys, setActiveSurveys] = useState(0);
   const [surveyors, setSurveyors] = useState(0);
-  const [responseCount, setResponseCount] = useState(0);
   
   // Efecto para cargar datos iniciales y configurar actualizaciones periódicas
   useEffect(() => {
@@ -43,9 +42,8 @@ export function DashboardOverview() {
   useEffect(() => {
     setActiveSurveys(surveys.filter(s => s.isActive).length);
     setSurveyors(users.filter(u => u.role === 'surveyor' && u.active).length);
-    setResponseCount(responses.length);
     setChartData(generateChartData());
-  }, [surveys, responses, users]);
+  }, [surveys, users]);
   
   function generateChartData() {
     const today = new Date();
@@ -81,7 +79,7 @@ export function DashboardOverview() {
       </div>
       
       {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="admin-card hover:border-admin/30 transition-all duration-300 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -93,21 +91,6 @@ export function DashboardOverview() {
             <div className="text-2xl font-bold">{activeSurveys}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {surveys.length} encuestas en total
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="admin-card hover:border-admin/30 transition-all duration-300 hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Respuestas recibidas
-            </CardTitle>
-            <FileText className="h-4 w-4 text-admin" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{responseCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Desde el inicio
             </p>
           </CardContent>
         </Card>
