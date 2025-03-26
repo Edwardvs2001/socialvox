@@ -2,6 +2,7 @@
 // Mock API utility functions
 import { format, parseISO } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
+import { es } from "date-fns/locale";
 
 // Default timezone (Lima, Peru)
 export const DEFAULT_TIMEZONE = "America/Lima";
@@ -52,23 +53,25 @@ export const base64ToBlob = (base64: string, mimeType: string): Blob => {
   return new Blob(byteArrays, { type: mimeType });
 };
 
-// Format date with timezone support
+// Format date with timezone support and Spanish locale
 export const formatDate = (dateString: string, timezone = DEFAULT_TIMEZONE): string => {
   const date = parseISO(dateString);
   return formatInTimeZone(
     date,
     timezone,
-    "d 'de' MMMM 'de' yyyy, HH:mm"
+    "d 'de' MMMM 'de' yyyy, HH:mm",
+    { locale: es }
   );
 };
 
-// Format date short with timezone support
+// Format date short with timezone support and Spanish locale
 export const formatDateShort = (dateString: string, timezone = DEFAULT_TIMEZONE): string => {
   const date = parseISO(dateString);
   return formatInTimeZone(
     date,
     timezone,
-    "dd/MM/yyyy"
+    "dd/MM/yyyy",
+    { locale: es }
   );
 };
 
@@ -78,12 +81,12 @@ export const getCurrentLimaDateTime = (): Date => {
   return new Date(formatInTimeZone(now, DEFAULT_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"));
 };
 
-// Format date with custom format and timezone
+// Format date with custom format and timezone and Spanish locale
 export const formatDateWithFormat = (
   dateString: string, 
   formatStr: string = "PPP", 
   timezone = DEFAULT_TIMEZONE
 ): string => {
   const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-  return formatInTimeZone(date, timezone, formatStr);
+  return formatInTimeZone(date, timezone, formatStr, { locale: es });
 };
