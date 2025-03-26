@@ -138,7 +138,7 @@ export function LoginForm() {
             </Button>
           </div>
           
-          <Button type="button" variant="ghost" className="w-full mt-2 text-white hover:text-white hover:bg-white/10" onClick={() => setLoginType(null)}>
+          <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-white hover:text-white bg-black">
             Volver
           </Button>
         </CardContent>
