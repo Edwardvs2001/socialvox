@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSurveyStore, SurveyResponse } from '@/store/surveyStore';
 import { useUserStore } from '@/store/userStore';
@@ -9,15 +10,26 @@ import { formatDate } from '@/utils/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Loader2, PieChartIcon, BarChartIcon, FileText, MapPin } from 'lucide-react';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getAddressFromCoordinates } from '@/utils/geocoding';
 
 interface SurveyResultsProps {
   surveyId: string;
+}
+
+interface LocationWithAddress extends SurveyResponse['location'] {
+  address?: string;
+}
+
+interface ResponseWithAddress extends SurveyResponse {
+  locationWithAddress?: LocationWithAddress;
 }
 
 export function SurveyResults({ surveyId }: SurveyResultsProps) {
   const { getSurveyById, getSurveyResponses, isLoading } = useSurveyStore();
   const { users } = useUserStore();
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
+  const [responsesWithAddresses, setResponsesWithAddresses] = useState<ResponseWithAddress[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(false);
   
   const survey = getSurveyById(surveyId);
   const responses = getSurveyResponses(surveyId);
@@ -27,6 +39,52 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
       setSelectedQuestion(survey.questions[0].id);
     }
   }, [survey, selectedQuestion]);
+  
+  // Obtener direcciones para las coordenadas
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (responses.length === 0) return;
+      
+      setAddressesLoading(true);
+      const responsesWithAddressesTemp = [...responses];
+      
+      for (let i = 0; i < responsesWithAddressesTemp.length; i++) {
+        const response = responsesWithAddressesTemp[i];
+        if (response.location && 
+            response.location.latitude !== null && 
+            response.location.longitude !== null) {
+          try {
+            const address = await getAddressFromCoordinates(
+              response.location.latitude, 
+              response.location.longitude
+            );
+            
+            responsesWithAddressesTemp[i] = {
+              ...response,
+              locationWithAddress: {
+                ...response.location,
+                address
+              }
+            };
+          } catch (error) {
+            console.error('Error al obtener la dirección:', error);
+            responsesWithAddressesTemp[i] = {
+              ...response,
+              locationWithAddress: {
+                ...response.location,
+                address: 'No se pudo determinar la dirección'
+              }
+            };
+          }
+        }
+      }
+      
+      setResponsesWithAddresses(responsesWithAddressesTemp);
+      setAddressesLoading(false);
+    };
+    
+    fetchAddresses();
+  }, [responses]);
   
   const getRespondentName = (id: string) => {
     const user = users.find(u => u.id === id);
@@ -207,41 +265,53 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
                             </CardDescription>
                           </CardHeader>
                           <CardContent>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Encuestador</TableHead>
-                                  <TableHead>Fecha</TableHead>
-                                  <TableHead>Coordenadas</TableHead>
-                                  <TableHead>Precisión</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {responses.map((response) => (
-                                  <TableRow key={response.id}>
-                                    <TableCell>{getRespondentName(response.respondentId)}</TableCell>
-                                    <TableCell>{formatDate(response.completedAt)}</TableCell>
-                                    <TableCell>
-                                      {response.location ? 
-                                        formatLocation(response.location) : 
-                                        'No disponible'}
-                                    </TableCell>
-                                    <TableCell>
-                                      {response.location && response.location.accuracy !== null ? 
-                                        `±${response.location.accuracy.toFixed(2)} metros` : 
-                                        'No disponible'}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                                {responses.length === 0 && (
+                            {addressesLoading ? (
+                              <div className="flex justify-center items-center py-8">
+                                <Loader2 className="h-6 w-6 animate-spin text-admin mr-2" />
+                                <span>Cargando direcciones...</span>
+                              </div>
+                            ) : (
+                              <Table>
+                                <TableHeader>
                                   <TableRow>
-                                    <TableCell colSpan={4} className="text-center py-4">
-                                      No hay ubicaciones disponibles
-                                    </TableCell>
+                                    <TableHead>Encuestador</TableHead>
+                                    <TableHead>Fecha</TableHead>
+                                    <TableHead>Dirección</TableHead>
+                                    <TableHead>Coordenadas</TableHead>
+                                    <TableHead>Precisión</TableHead>
                                   </TableRow>
-                                )}
-                              </TableBody>
-                            </Table>
+                                </TableHeader>
+                                <TableBody>
+                                  {responsesWithAddresses.map((response) => (
+                                    <TableRow key={response.id}>
+                                      <TableCell>{getRespondentName(response.respondentId)}</TableCell>
+                                      <TableCell>{formatDate(response.completedAt)}</TableCell>
+                                      <TableCell>
+                                        {response.locationWithAddress?.address || 
+                                         (response.location ? 'Obteniendo dirección...' : 'No disponible')}
+                                      </TableCell>
+                                      <TableCell>
+                                        {response.location ? 
+                                          formatLocation(response.location) : 
+                                          'No disponible'}
+                                      </TableCell>
+                                      <TableCell>
+                                        {response.location && response.location.accuracy !== null ? 
+                                          `±${response.location.accuracy.toFixed(2)} metros` : 
+                                          'No disponible'}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                  {responses.length === 0 && (
+                                    <TableRow>
+                                      <TableCell colSpan={5} className="text-center py-4">
+                                        No hay ubicaciones disponibles
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                            )}
                           </CardContent>
                         </Card>
                       </TabsContent>
@@ -270,7 +340,7 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
             <CardContent>
               {responses.length > 0 ? (
                 <div className="space-y-4">
-                  {responses.map((response, index) => (
+                  {responsesWithAddresses.map((response, index) => (
                     <Card key={response.id} className="border-admin/20">
                       <CardHeader className="py-3">
                         <CardTitle className="text-base flex items-center justify-between">
@@ -306,6 +376,11 @@ export function SurveyResults({ surveyId }: SurveyResultsProps) {
                               <MapPin className="h-4 w-4 mr-2 text-admin" />
                               Ubicación:
                             </p>
+                            {response.locationWithAddress?.address && (
+                              <p className="text-sm font-medium mb-1">
+                                {response.locationWithAddress.address}
+                              </p>
+                            )}
                             <p className="text-sm">
                               Coordenadas: {formatLocation(response.location)}
                               {response.location.accuracy !== null && 
