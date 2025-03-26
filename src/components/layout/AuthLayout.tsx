@@ -41,8 +41,14 @@ export function AuthLayout({
         return;
       }
       
-      // Refresh the session timer on valid auth
-      refreshSession();
+      // Only refresh session when needed and not on every render
+      // This prevents infinite update loops
+      if (isAuthenticated && isSessionValid) {
+        // Using setTimeout to break the synchronous update cycle
+        setTimeout(() => {
+          refreshSession();
+        }, 0);
+      }
       
       if (allowedRoles.length > 0 && user) {
         // Check if user has admin-manager role, which should have access to admin pages
@@ -68,8 +74,10 @@ export function AuthLayout({
       
       if (isAuthenticated && isSessionValid) {
         console.log('Already authenticated, redirecting to dashboard');
-        // Refresh the session timer
-        refreshSession();
+        // Refresh the session timer but use setTimeout to break the synchronous cycle
+        setTimeout(() => {
+          refreshSession();
+        }, 0);
         
         // Already logged in, redirect to appropriate dashboard
         if (user?.role === 'surveyor') {
@@ -79,7 +87,7 @@ export function AuthLayout({
         }
       }
     }
-  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession, refreshSession]);
+  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession]);
   
   useEffect(() => {
     checkAuth();

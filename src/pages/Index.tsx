@@ -16,8 +16,10 @@ const Index = () => {
     if (isAuthenticated && isSessionValid && user) {
       console.log('Usuario autenticado:', user);
       
-      // Refresh the session timer
-      refreshSession();
+      // Refresh the session timer in an async way to prevent infinite loops
+      setTimeout(() => {
+        refreshSession();
+      }, 0);
       
       switch (user.role) {
         case 'admin':
@@ -40,7 +42,7 @@ const Index = () => {
       console.log('Usuario no autenticado o sesión expirada, redirigiendo a login');
       navigate('/');
     }
-  }, [navigate, isAuthenticated, user, checkSession, refreshSession]);
+  }, [navigate, isAuthenticated, user, checkSession]);
 
   useEffect(() => {
     // Only run once when component mounts
