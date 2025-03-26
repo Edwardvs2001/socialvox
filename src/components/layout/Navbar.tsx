@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -55,24 +54,14 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <Link 
             to={isAdmin ? '/admin' : '/surveyor'} 
-            className="flex flex-col items-center gap-1 font-bold text-xl"
+            className="flex items-center gap-2 font-bold text-xl"
           >
-            {appLogo ? (
-              <div className="flex flex-col items-center">
-                <Avatar className="h-10 w-10 rounded-md mb-0.5">
-                  <AvatarImage src={appLogo} alt="Logo" className="object-contain" />
-                  <AvatarFallback className="rounded-md">
-                    <ClipboardList className={`h-6 w-6 ${isAdmin ? 'text-admin' : 'text-surveyor'}`} />
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-lg">Encuestas VA</span>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <ClipboardList className={`h-10 w-10 mb-0.5 ${isAdmin ? 'text-admin' : 'text-surveyor'}`} />
-                <span className="text-lg">Encuestas VA</span>
-              </div>
-            )}
+            <img 
+              src="/lovable-uploads/08d8d744-0c91-48a2-a3af-c5f3ce5d78c5.png" 
+              alt="Encuestas VA Logo" 
+              className="h-10 w-10 object-contain"
+            />
+            <span className={`text-lg ${isAdmin ? 'text-red-500' : 'text-blue-500'}`}>Encuestas VA</span>
           </Link>
           
           <div className="hidden md:flex items-center gap-6 ml-6">

@@ -36,8 +36,10 @@ export function AdminDashboard() {
         <Card className="hover:shadow-md transition-all duration-300 bg-white border-admin/20 hover:border-admin/40">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center text-lg">
-              <ClipboardList className="mr-2 h-5 w-5 text-admin" />
-              Encuestas
+              <div className="flex items-center">
+                <ClipboardList className="mr-2 h-5 w-5 text-admin" />
+                Encuestas
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
