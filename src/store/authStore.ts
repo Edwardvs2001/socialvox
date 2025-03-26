@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -103,21 +102,22 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           
-          // Para depuración
+          // For debugging
           console.info('Intentando iniciar sesión con:', username, 'longitud de contraseña:', password.length);
           
-          // Special admin check - case insensitive username comparison
+          // **** SIMPLIFIED ADMIN LOGIN LOGIC ****
+          // Case insensitive username check for admin
           if (username.toLowerCase() === 'admin') {
             console.info('Verificando credenciales de administrador');
             
-            // Log password length for debugging
-            console.info('Admin password length:', adminPassword.length, 'Entered password length:', password.length);
+            // Debug admin password check
+            console.info('Admin password check - stored:', adminPassword);
+            console.info('Admin password check - entered:', password);
             
-            // Direct comparison for admin login
-            if (password !== adminPassword) {
+            // Simplified admin password check - direct string comparison but with tolerance for whitespace
+            if (password.trim() !== adminPassword.trim()) {
               console.error('Contraseña de administrador incorrecta');
               
-              // Increment failed login attempts for admin account
               set((state) => ({ 
                 failedLoginAttempts: state.failedLoginAttempts + 1,
                 lastLoginAttempt: currentTime,
@@ -133,7 +133,7 @@ export const useAuthStore = create<AuthState>()(
             const { users, createUser } = useUserStore.getState();
             
             // Find admin user (case-insensitive)
-            const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
+            let adminUser = users.find(u => u.username.toLowerCase() === 'admin');
             
             if (!adminUser) {
               console.info('Usuario administrador no encontrado, creando uno nuevo');
@@ -148,23 +148,16 @@ export const useAuthStore = create<AuthState>()(
                 email: 'admin@encuestasva.com'
               });
               
-              // Set admin user in auth state
-              set({
-                user: {
-                  id: newAdminUser.id,
-                  username: 'admin',
-                  name: 'Admin Principal',
-                  role: 'admin'
-                },
-                token: 'mock-jwt-token',
-                isAuthenticated: true,
-                isLoading: false,
-                failedLoginAttempts: 0,
-                sessionExpiration: currentTime + SESSION_TIMEOUT,
-              });
-              
-              console.info('Usuario administrador creado y sesión iniciada');
-              return;
+              adminUser = {
+                id: newAdminUser.id,
+                username: 'admin',
+                name: 'Admin Principal',
+                role: 'admin' as UserRole,
+                active: true,
+                email: 'admin@encuestasva.com',
+                createdAt: new Date().toISOString(),
+                password: adminPassword
+              };
             }
             
             // Ensure admin user is active before login attempt
@@ -193,8 +186,7 @@ export const useAuthStore = create<AuthState>()(
           }
           
           // Standard login flow for non-admin users
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 800));
+          await new Promise(resolve => setTimeout(resolve, 500));
           
           // Get users from userStore
           const { users } = useUserStore.getState();
@@ -207,7 +199,6 @@ export const useAuthStore = create<AuthState>()(
                  u.active
           );
           
-          // Log if user was found
           console.info('¿Usuario encontrado?', user ? 'Sí' : 'No');
           
           if (!user) {
@@ -234,8 +225,8 @@ export const useAuthStore = create<AuthState>()(
             token: 'mock-jwt-token',
             isAuthenticated: true,
             isLoading: false,
-            failedLoginAttempts: 0, // Reset counter on successful login
-            sessionExpiration: currentTime + SESSION_TIMEOUT, // Set session expiration
+            failedLoginAttempts: 0,
+            sessionExpiration: currentTime + SESSION_TIMEOUT,
           });
         } catch (error) {
           console.error('Error de autenticación:', error);
