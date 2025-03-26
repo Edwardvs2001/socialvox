@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, Lock, KeyRound, InfoIcon } from 'lucide-react';
+import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, Lock, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
 
@@ -94,11 +95,8 @@ export function LoginForm() {
       // Always use 'admin' username for admin login
       setUsername('admin');
       console.log('Attempting admin login with password:', password.length, 'characters');
-      
-      // Add more specific debug info
-      if (password === 'Admin@2024!') {
-        console.log('Using default admin password');
-      }
+      // Log comparison for debugging
+      console.log('Default admin password:', adminPassword === 'Admin@2024!' ? 'is default' : 'is changed');
       
       await login('admin', password);
       const user = useAuthStore.getState().user;
@@ -109,7 +107,7 @@ export function LoginForm() {
       }
     } catch (err) {
       console.error('Direct login error:', err);
-      toast.error('No se pudo iniciar sesión. Verifique la contraseña de administrador.');
+      // The error message is already set in the auth store
     }
   };
   
@@ -175,25 +173,11 @@ export function LoginForm() {
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <Lock className="h-4 w-4" />
               </div>
-              <Input 
-                id="admin-password" 
-                type={showPassword ? "text" : "password"} 
-                placeholder="Ingrese la contraseña de administrador" 
-                required 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                autoComplete="current-password" 
-                className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-400" 
-              />
+              <Input id="admin-password" type={showPassword ? "text" : "password"} placeholder="Ingrese la contraseña de administrador" required value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-400" />
               <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" onClick={togglePasswordVisibility}>
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
-          </div>
-          
-          <div className="p-3 rounded-md bg-blue-900/50 border border-blue-500/30 text-blue-100 text-sm flex items-center font-medium">
-            <InfoIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span>Contraseña predeterminada: Admin@2024!</span>
           </div>
           
           {failedLoginAttempts > 0 && <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-100 text-sm flex items-center font-medium">
@@ -212,6 +196,18 @@ export function LoginForm() {
               <span className="font-medium text-white">Ingresar como Administrador</span>
             </Button>
           </div>
+          
+          {failedLoginAttempts > 1 && !recoveryMode && (
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleRecoveryMode} 
+              className="w-full mt-2 text-amber-600 border-amber-300 hover:bg-amber-50"
+            >
+              <KeyRound className="h-4 w-4 mr-2" />
+              Usar contraseña por defecto
+            </Button>
+          )}
           
           <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-white hover:text-white bg-black">
             Volver

@@ -38,7 +38,7 @@ const mockUsers: User[] = [
     role: 'admin',
     active: true, // Ensure admin is always active
     createdAt: '2023-01-10T08:00:00Z',
-    password: 'Admin@2024!', // Default admin password
+    password: 'Admin@2024!', // Updated secure password
   },
   {
     id: '2',
@@ -68,7 +68,7 @@ export const useUserStore = create<UserState>()(
           
           // Make sure admin user is always active
           const users = get().users;
-          const adminUser = users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
+          const adminUser = users.find(u => u.username === 'admin' && u.role === 'admin');
           
           if (adminUser && !adminUser.active) {
             // Activate admin user if it's inactive
@@ -77,19 +77,6 @@ export const useUserStore = create<UserState>()(
                 user.id === adminUser.id ? { ...user, active: true } : user
               )
             }));
-          }
-          
-          // Make sure admin password matches across stores
-          if (adminUser) {
-            const authStore = require('./authStore').useAuthStore.getState();
-            if (adminUser.password !== authStore.adminPassword) {
-              // Update admin password in user store
-              set(state => ({
-                users: state.users.map(user => 
-                  user.id === adminUser.id ? { ...user, password: authStore.adminPassword } : user
-                )
-              }));
-            }
           }
           
           set({ isLoading: false });
@@ -122,33 +109,23 @@ export const useUserStore = create<UserState>()(
         
         try {
           // Check if username already exists
-          if (get().users.some(user => user.username.toLowerCase() === userData.username.toLowerCase())) {
+          if (get().users.some(user => user.username === userData.username)) {
             throw new Error('El nombre de usuario ya existe');
           }
           
           // Check if email already exists
-          if (get().users.some(user => user.email.toLowerCase() === userData.email.toLowerCase())) {
+          if (get().users.some(user => user.email === userData.email)) {
             throw new Error('El correo electrónico ya está registrado');
           }
           
           // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 800));
           
           const newUser: User = {
             ...userData,
             id: uuidv4(),
             createdAt: new Date().toISOString(),
           };
-          
-          // If creating admin user, update admin password in auth store
-          if (newUser.username.toLowerCase() === 'admin' && newUser.role === 'admin' && newUser.password) {
-            try {
-              const authStore = require('./authStore').useAuthStore.getState();
-              authStore.adminPassword = newUser.password;
-            } catch (error) {
-              console.error('Error syncing admin password with auth store:', error);
-            }
-          }
           
           set(state => ({
             users: [...state.users, newUser],
@@ -172,7 +149,7 @@ export const useUserStore = create<UserState>()(
           // If username is being updated, check it doesn't conflict
           if (updates.username) {
             const existingUser = get().users.find(
-              user => user.username.toLowerCase() === updates.username?.toLowerCase() && user.id !== id
+              user => user.username === updates.username && user.id !== id
             );
             
             if (existingUser) {
@@ -183,7 +160,7 @@ export const useUserStore = create<UserState>()(
           // If email is being updated, check it doesn't conflict
           if (updates.email) {
             const existingUser = get().users.find(
-              user => user.email.toLowerCase() === updates.email?.toLowerCase() && user.id !== id
+              user => user.email === updates.email && user.id !== id
             );
             
             if (existingUser) {
@@ -191,19 +168,8 @@ export const useUserStore = create<UserState>()(
             }
           }
           
-          // If updating admin user with new password, sync with auth store
-          const user = get().users.find(u => u.id === id);
-          if (user && user.username.toLowerCase() === 'admin' && user.role === 'admin' && updates.password) {
-            try {
-              const authStore = require('./authStore').useAuthStore.getState();
-              authStore.adminPassword = updates.password;
-            } catch (error) {
-              console.error('Error syncing admin password with auth store:', error);
-            }
-          }
-          
           // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 800));
           
           set(state => ({
             users: state.users.map(user => 
@@ -249,27 +215,18 @@ export const useUserStore = create<UserState>()(
       partialize: (state) => ({
         users: state.users,
       }),
-      // Add migration to ensure admin is always active and has the right password
+      // Add migration to ensure admin is always active
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {
             // Check if admin exists and is active
-            const adminUser = state.users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
+            const adminUser = state.users.find(u => u.username === 'admin' && u.role === 'admin');
             
-            if (adminUser) {
-              if (!adminUser.active) {
-                // Activate admin user
-                state.users = state.users.map(user => 
-                  user.id === adminUser.id ? { ...user, active: true } : user
-                );
-              }
-              
-              // Ensure admin password matches default if it hasn't been set
-              if (!adminUser.password) {
-                state.users = state.users.map(user => 
-                  user.id === adminUser.id ? { ...user, password: 'Admin@2024!' } : user
-                );
-              }
+            if (adminUser && !adminUser.active) {
+              // Activate admin user
+              state.users = state.users.map(user => 
+                user.id === adminUser.id ? { ...user, active: true } : user
+              );
             }
           }
         };
