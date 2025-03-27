@@ -22,11 +22,12 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
     // Create workbook
     const wb = XLSX.utils.book_new();
     
-    // Create template data
+    // Create template data with Spanish headers and examples
     const templateData = [
-      ['Texto de la Pregunta', 'Tipo', 'Opciones (separadas por ;)'],
-      ['¿Qué le pareció el servicio?', 'multiple-choice', 'Excelente;Bueno;Regular;Malo'],
-      ['¿Por qué eligió esta respuesta?', 'free-text', ''],
+      ['Número', 'Texto de la Pregunta', 'Tipo', 'Opciones (separadas por ;)'],
+      ['1', '¿Qué le pareció el servicio?', 'multiple-choice', 'Excelente;Bueno;Regular;Malo'],
+      ['2', '¿Por qué eligió esta respuesta?', 'free-text', ''],
+      ['3', '¿Recomendaría nuestro servicio?', 'multiple-choice', 'Sí, definitivamente;Probablemente;No estoy seguro;No'],
     ];
     
     // Create worksheet
@@ -54,11 +55,30 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
         // Get first sheet
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         
-        // Convert to JSON, skipping header row
-        const jsonData: ExcelQuestion[] = XLSX.utils.sheet_to_json(worksheet, { header: ['text', 'type', 'options'], range: 1 });
+        // Convert to JSON with appropriate headers
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+          header: ['order', 'text', 'type', 'options']
+        });
+        
+        // Skip header row
+        const questionsData = jsonData.slice(1);
+        
+        // Sort by order column if it exists
+        const sortedData = questionsData.sort((a: any, b: any) => {
+          // If both have valid order numbers, sort by them
+          if (!isNaN(Number(a.order)) && !isNaN(Number(b.order))) {
+            return Number(a.order) - Number(b.order);
+          }
+          // If only a has valid order, it goes first
+          if (!isNaN(Number(a.order))) return -1;
+          // If only b has valid order, it goes first
+          if (!isNaN(Number(b.order))) return 1;
+          // If neither has order, maintain original order
+          return 0;
+        });
         
         // Validate and transform data
-        const questions = jsonData.map(row => {
+        const questions = sortedData.map((row: any) => {
           if (!row.text || !row.type) {
             throw new Error('Todas las preguntas deben tener texto y tipo');
           }
@@ -76,7 +96,9 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
             if (!row.options) {
               throw new Error('Las preguntas de opción múltiple deben tener opciones');
             }
+            
             question.options = row.options.split(';').filter(Boolean);
+            
             if (question.options.length < 2) {
               throw new Error('Las preguntas de opción múltiple deben tener al menos 2 opciones');
             }
@@ -86,7 +108,7 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
         });
         
         onImport(questions);
-        toast.success('Encuesta importada correctamente');
+        toast.success(`${questions.length} preguntas importadas correctamente`);
       } catch (error) {
         console.error('Error importing survey:', error);
         toast.error(error instanceof Error ? error.message : 'Error al importar la encuesta');
