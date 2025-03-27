@@ -81,7 +81,7 @@ export function SurveyEditor({
     if (existingSurvey) {
       const updatedQuestions = existingSurvey.questions.map(q => ({
         ...q,
-        type: q.type || 'multiple-choice' as const
+        type: q.type || 'multiple-choice'
       }));
       setQuestions(updatedQuestions);
       setSelectedSurveyors(existingSurvey.assignedTo || []);
@@ -98,13 +98,18 @@ export function SurveyEditor({
   }, [existingSurvey, form]);
   
   const addQuestion = (type: 'multiple-choice' | 'free-text') => {
-    const newQuestion: SurveyQuestion = {
-      id: uuidv4(),
-      text: "",
-      type,
-      options: type === 'multiple-choice' ? ["", ""] : []
-    };
-    setQuestions([...questions, newQuestion]);
+    try {
+      const newQuestion: SurveyQuestion = {
+        id: uuidv4(),
+        text: "",
+        type,
+        options: type === 'multiple-choice' ? ["", ""] : []
+      };
+      setQuestions(prevQuestions => [...prevQuestions, newQuestion]);
+    } catch (error) {
+      console.error("Error adding question:", error);
+      toast.error("Error al agregar pregunta");
+    }
   };
   
   const updateQuestionText = (id: string, text: string) => {
