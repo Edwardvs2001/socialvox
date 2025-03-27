@@ -1,12 +1,12 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/basicAuthStore';
+import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 
 const Index = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user, refreshSession, logout } = useAuthStore();
+  const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const redirectingRef = useRef(false);
   const hasRefreshedRef = useRef(false);
@@ -19,7 +19,7 @@ const Index = () => {
     setIsRedirecting(true);
     
     // Check if session is still valid
-    const isSessionValid = useAuthStore.getState().checkSession();
+    const isSessionValid = checkSession();
     
     if (isAuthenticated && isSessionValid && user) {
       console.log('Usuario autenticado:', user);
@@ -69,7 +69,7 @@ const Index = () => {
         navigate('/');
       }, 50);
     }
-  }, [navigate, isAuthenticated, user, logout, refreshSession]);
+  }, [navigate, isAuthenticated, user, checkSession, logout, refreshSession]);
 
   useEffect(() => {
     // Only run once when component mounts

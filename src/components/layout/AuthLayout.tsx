@@ -1,6 +1,7 @@
+
 import { ReactNode, useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/basicAuthStore';
+import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 
 interface AuthLayoutProps {
@@ -14,7 +15,7 @@ export function AuthLayout({
   requiresAuth = true,
   allowedRoles = [] 
 }: AuthLayoutProps) {
-  const { isAuthenticated, user, logout, refreshSession } = useAuthStore();
+  const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
   const navigate = useNavigate();
   const hasCheckedAuthRef = useRef(false);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -34,8 +35,8 @@ export function AuthLayout({
     
     // Logic for pages that require authentication
     if (requiresAuth) {
-      // Check if session is valid
-      const isSessionValid = useAuthStore.getState().checkSession();
+      // First check if session is valid
+      const isSessionValid = checkSession();
       
       if (!isAuthenticated || !isSessionValid) {
         console.log('Not authenticated or session expired, redirecting to login');
@@ -78,7 +79,7 @@ export function AuthLayout({
     } else {
       // Logic for pages that don't require authentication (like login)
       // Check if session is valid for already authenticated users
-      const isSessionValid = isAuthenticated ? useAuthStore.getState().checkSession() : false;
+      const isSessionValid = isAuthenticated ? checkSession() : false;
       
       if (isAuthenticated && isSessionValid) {
         console.log('Already authenticated, redirecting to dashboard');
@@ -99,7 +100,7 @@ export function AuthLayout({
         }
       }
     }
-  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, refreshSession, logout]);
+  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession, refreshSession, logout]);
   
   useEffect(() => {
     // Run the auth check only once on component mount
@@ -112,7 +113,7 @@ export function AuthLayout({
     }
     
     refreshTimerRef.current = setInterval(() => {
-      if (isAuthenticated && useAuthStore.getState().checkSession()) {
+      if (isAuthenticated && checkSession()) {
         refreshSession();
       }
     }, 15 * 60 * 1000); // 15 minutes
@@ -122,7 +123,7 @@ export function AuthLayout({
         clearInterval(refreshTimerRef.current);
       }
     };
-  }, [checkAuth, isAuthenticated, refreshSession]);
+  }, [checkAuth]);
   
   return (
     <div className="min-h-screen bg-background flex flex-col">

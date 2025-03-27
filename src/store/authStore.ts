@@ -1,8 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useUserStore } from './userStore';
 
 export type UserRole = 'admin' | 'surveyor' | 'admin-manager';
 
@@ -15,7 +14,7 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  session: any | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -23,18 +22,16 @@ interface AuthState {
   lastLoginAttempt: number | null;
   adminPassword: string;
   sessionExpiration: number | null;
-  
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, userData: Partial<User>) => Promise<void>;
-  logout: () => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => void;
   clearError: () => void;
   resetLoginAttempts: () => void;
-  checkSession: () => Promise<boolean>;
+  checkSession: () => boolean;
   refreshSession: () => void;
   changeAdminPassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
-// Auth security constants
+// Admin security constants
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_TIME = 10 * 60 * 1000; // 10 minutes in milliseconds
 const DEFAULT_ADMIN_PASSWORD = 'Admin@2024!'; // Default admin password
@@ -44,7 +41,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      session: null,
+      token: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
@@ -53,27 +50,46 @@ export const useAuthStore = create<AuthState>()(
       adminPassword: DEFAULT_ADMIN_PASSWORD,
       sessionExpiration: null,
       
-      checkSession: async () => {
-        // Updated to use the current Supabase API
-        const { data } = await supabase.auth.getSession();
-        return !!data.session;
+      checkSession: () => {
+        const { sessionExpiration, isAuthenticated } = get();
+        
+        // If not authenticated, no need to check
+        if (!isAuthenticated) return false;
+        
+        // If session has expired, return false
+        if (sessionExpiration && Date.now() > sessionExpiration) {
+          console.info('Sesión expirada, cerrando sesión automáticamente');
+          // Don't call logout directly here to avoid state updates during render
+          return false;
+        }
+        
+        return true;
       },
       
       refreshSession: () => {
-        // Supabase handles token refreshing automatically
-        const currentTime = Date.now();
-        set({ 
-          sessionExpiration: currentTime + SESSION_TIMEOUT,
-          error: null
-        });
+        // Only refresh if authenticated to avoid unnecessary state updates
+        if (get().isAuthenticated) {
+          // Use a stable timestamp for session expiration
+          const newExpiration = Date.now() + SESSION_TIMEOUT;
+          
+          // Only update if the session would be extended by at least 1 minute
+          // This helps reduce unnecessary state updates
+          const currentExpiration = get().sessionExpiration || 0;
+          if (newExpiration > currentExpiration + 60000) {
+            set({ 
+              sessionExpiration: newExpiration,
+              error: null
+            });
+          }
+        }
       },
       
-      login: async (email, password) => {
+      login: async (username, password) => {
         set({ isLoading: true, error: null });
         
         try {
           const currentTime = Date.now();
-          const { failedLoginAttempts, lastLoginAttempt } = get();
+          const { failedLoginAttempts, lastLoginAttempt, adminPassword } = get();
           
           // Check if account is locked out
           if (failedLoginAttempts >= MAX_LOGIN_ATTEMPTS && lastLoginAttempt) {
@@ -87,139 +103,136 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           
-          // Special case for "admin" login (convenience feature)
-          let finalEmail = email;
-          if (email.toLowerCase() === 'admin') {
-            finalEmail = 'admin@encuestasva.com';
-            console.log('Using admin@encuestasva.com for login with "admin"');
-          }
+          // Normalize username for case-insensitive comparison
+          const normalizedUsername = username.toLowerCase().trim();
           
-          // Call Supabase auth login
-          console.log(`Attempting login with email: ${finalEmail}`);
-          
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: finalEmail,
-            password,
-          });
-          
-          if (error) {
-            console.error('Login error from Supabase:', error);
-            throw error;
-          }
-          
-          if (!data.session || !data.user) {
-            throw new Error('No se pudo iniciar sesión');
-          }
-          
-          console.log('Login successful, fetching profile for user:', data.user.id);
-          
-          // Get user profile from profiles table
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-          
-          if (profileError) {
-            console.error('Profile fetch error:', profileError);
-            throw profileError;
-          }
-          
-          console.log('Profile data retrieved:', profileData);
-          
-          // Set user data from profile
-          set({
-            user: {
-              id: profileData.id,
-              username: profileData.username || data.user.user_metadata.username || '',
-              name: profileData.name || data.user.user_metadata.name || '',
-              role: profileData.role || data.user.user_metadata.role || 'surveyor',
-            },
-            session: data.session,
-            isAuthenticated: true,
-            isLoading: false,
-            failedLoginAttempts: 0,
-            sessionExpiration: currentTime + SESSION_TIMEOUT,
-          });
-          
-        } catch (error) {
-          console.error('Error de autenticación:', error);
-          
-          // Increment failed login attempts
-          set((state) => ({ 
-            failedLoginAttempts: state.failedLoginAttempts + 1,
-            lastLoginAttempt: Date.now(),
-            error: error instanceof Error ? error.message : 'Error desconocido',
-            isLoading: false,
-          }));
-          
-          throw error;
-        }
-      },
-      
-      signup: async (email, password, userData) => {
-        set({ isLoading: true, error: null });
-        
-        try {
-          // Sign up with supabase
-          const { data, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-              data: {
-                username: userData.username,
-                name: userData.name,
-                role: userData.role || 'surveyor',
-              }
+          // Admin login handling - always case insensitive
+          if (normalizedUsername === 'admin') {
+            // Use adminPassword from state for verification
+            if (password !== adminPassword) {
+              // Increment failed login attempts and throw error
+              set((state) => ({ 
+                failedLoginAttempts: state.failedLoginAttempts + 1,
+                lastLoginAttempt: currentTime,
+                error: 'Credenciales inválidas. La contraseña de administrador es incorrecta.',
+                isLoading: false
+              }));
+              throw new Error('Credenciales inválidas');
             }
-          });
-          
-          if (error) {
-            throw error;
-          }
-          
-          // Success, but may require email confirmation
-          if (data.user?.identities?.length === 0) {
-            throw new Error('Este correo ya está registrado');
-          }
-          
-          if (data.session) {
+            
+            // Get users from userStore
+            const { users, createUser, updateUser } = useUserStore.getState();
+            
+            // Find admin user (case-insensitive)
+            const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
+            
+            if (!adminUser) {
+              // Create admin user if not found
+              const newAdminUser = await createUser({
+                username: 'admin',
+                password: adminPassword,
+                name: 'Admin Principal',
+                role: 'admin',
+                active: true,
+                email: 'admin@encuestasva.com'
+              });
+              
+              // Set admin user in auth state
+              set({
+                user: {
+                  id: newAdminUser.id,
+                  username: 'admin',
+                  name: 'Admin Principal',
+                  role: 'admin'
+                },
+                token: 'mock-jwt-token',
+                isAuthenticated: true,
+                isLoading: false,
+                failedLoginAttempts: 0,
+                sessionExpiration: currentTime + SESSION_TIMEOUT,
+              });
+              
+              return;
+            }
+            
+            // Ensure admin user is active and password is synced
+            await updateUser(adminUser.id, { 
+              active: true,
+              password: adminPassword
+            });
+            
+            // Set admin user in auth state
             set({
               user: {
-                id: data.user.id,
-                username: userData.username || '',
-                name: userData.name || '',
-                role: userData.role || 'surveyor',
+                id: adminUser.id,
+                username: adminUser.username,
+                name: adminUser.name,
+                role: adminUser.role
               },
-              session: data.session,
+              token: 'mock-jwt-token',
               isAuthenticated: true,
               isLoading: false,
+              failedLoginAttempts: 0,
+              sessionExpiration: currentTime + SESSION_TIMEOUT,
             });
-          } else {
-            // Email confirmation may be required
-            set({ isLoading: false });
+            
+            return;
           }
           
-        } catch (error) {
-          console.error('Error en el registro:', error);
+          // Standard login flow for non-admin users
+          const { users } = useUserStore.getState();
+          
+          // Find user with matching username, password and active status
+          // Case-insensitive username comparison for better user experience
+          const user = users.find(
+            u => u.username.toLowerCase() === normalizedUsername && 
+                 u.password === password && 
+                 u.active
+          );
+          
+          if (!user) {
+            // Increment failed attempts on login failure
+            set((state) => ({ 
+              failedLoginAttempts: state.failedLoginAttempts + 1,
+              lastLoginAttempt: currentTime,
+              error: 'Credenciales inválidas o usuario inactivo',
+              isLoading: false
+            }));
+            throw new Error('Credenciales inválidas o usuario inactivo');
+          }
+          
+          // Remove password from user object before storing in state
+          const userWithoutPassword = {
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            role: user.role
+          };
+          
           set({
-            error: error instanceof Error ? error.message : 'Error desconocido',
+            user: userWithoutPassword,
+            token: 'mock-jwt-token',
+            isAuthenticated: true,
             isLoading: false,
+            failedLoginAttempts: 0, // Reset counter on successful login
+            sessionExpiration: currentTime + SESSION_TIMEOUT, // Set session expiration
           });
+        } catch (error) {
+          console.error('Error de autenticación:', error);
+          if (!get().error) {
+            set({
+              error: error instanceof Error ? error.message : 'Error desconocido',
+              isLoading: false,
+            });
+          }
           throw error;
         }
       },
       
-      logout: async () => {
-        try {
-          await supabase.auth.signOut();
-        } catch (error) {
-          console.error('Error al cerrar sesión:', error);
-        }
-        
+      logout: () => {
         set({
           user: null,
-          session: null,
+          token: null,
           isAuthenticated: false,
           sessionExpiration: null,
         });
@@ -237,18 +250,23 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // First verify current password by trying to sign in
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: 'admin@encuestasva.com', // Assuming this is admin email
-            password: currentPassword,
-          });
+          const { adminPassword } = get();
           
-          if (signInError) {
+          // Verify current password
+          if (currentPassword !== adminPassword) {
+            set({ 
+              error: 'La contraseña actual es incorrecta',
+              isLoading: false 
+            });
             throw new Error('La contraseña actual es incorrecta');
           }
           
           // Validate new password
           if (newPassword.length < 8) {
+            set({ 
+              error: 'La nueva contraseña debe tener al menos 8 caracteres',
+              isLoading: false 
+            });
             throw new Error('La nueva contraseña debe tener al menos 8 caracteres');
           }
           
@@ -259,31 +277,36 @@ export const useAuthStore = create<AuthState>()(
           const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
           
           if (!(hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar)) {
+            set({ 
+              error: 'La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales',
+              isLoading: false 
+            });
             throw new Error('La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales');
           }
           
-          // Update password in Supabase
-          const { error: updateError } = await supabase.auth.updateUser({
-            password: newPassword
-          });
-          
-          if (updateError) {
-            throw updateError;
-          }
-          
-          // Store the admin password in state for backward compatibility
+          // Update admin password
           set({ 
             adminPassword: newPassword,
             isLoading: false 
           });
           
+          // Also update the password in userStore to keep them in sync
+          const { users, updateUser } = useUserStore.getState();
+          const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
+          
+          if (adminUser) {
+            await updateUser(adminUser.id, { password: newPassword });
+          }
+          
           return;
         } catch (error) {
           console.error('Error al cambiar la contraseña:', error);
-          set({ 
-            error: error instanceof Error ? error.message : 'Error al cambiar la contraseña',
-            isLoading: false 
-          });
+          if (!get().error) {
+            set({ 
+              error: error instanceof Error ? error.message : 'Error al cambiar la contraseña',
+              isLoading: false 
+            });
+          }
           throw error;
         }
       },
@@ -292,7 +315,7 @@ export const useAuthStore = create<AuthState>()(
       name: 'encuestas-va-auth',
       partialize: (state) => ({ 
         user: state.user,
-        session: state.session,
+        token: state.token,
         isAuthenticated: state.isAuthenticated,
         failedLoginAttempts: state.failedLoginAttempts,
         lastLoginAttempt: state.lastLoginAttempt,
@@ -302,77 +325,21 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {
-            // Set up auth state change listener
-            supabase.auth.onAuthStateChange((event, session) => {
-              if (event === 'SIGNED_IN' && session) {
-                // Get user profile
-                setTimeout(async () => {
-                  try {
-                    const { data, error } = await supabase
-                      .from('profiles')
-                      .select('*')
-                      .eq('id', session.user.id)
-                      .single();
-                      
-                    if (error) throw error;
-                    
-                    // Update state with user info
-                    useAuthStore.setState({
-                      user: {
-                        id: data.id,
-                        username: data.username || session.user.user_metadata.username || '',
-                        name: data.name || session.user.user_metadata.name || '',
-                        role: data.role || session.user.user_metadata.role || 'surveyor',
-                      },
-                      session: session,
-                      isAuthenticated: true,
-                    });
-                  } catch (err) {
-                    console.error('Error fetching user profile:', err);
-                  }
-                }, 0);
-              } else if (event === 'SIGNED_OUT') {
-                useAuthStore.setState({
-                  user: null,
-                  session: null,
-                  isAuthenticated: false,
-                });
+            // Ensure admin password is synchronized with userStore on app load
+            try {
+              const userStore = useUserStore.getState();
+              const adminUser = userStore.users.find(u => u.username.toLowerCase() === 'admin');
+              
+              if (adminUser && adminUser.password && adminUser.password !== state.adminPassword) {
+                // If passwords don't match, update userStore to match authStore
+                userStore.updateUser(adminUser.id, { 
+                  password: state.adminPassword,
+                  active: true
+                }).catch(e => console.error('Error syncing admin password:', e));
               }
-            });
-            
-            // Check for existing session on page load
-            supabase.auth.getSession().then(({ data: { session } }) => {
-              if (session) {
-                // Get user profile
-                setTimeout(async () => {
-                  try {
-                    const { data, error } = await supabase
-                      .from('profiles')
-                      .select('*')
-                      .eq('id', session.user.id)
-                      .single();
-                      
-                    if (error) throw error;
-                    
-                    // Update state with user info
-                    useAuthStore.setState({
-                      user: {
-                        id: data.id,
-                        username: data.username || session.user.user_metadata.username || '',
-                        name: data.name || session.user.user_metadata.name || '',
-                        role: data.role || session.user.user_metadata.role || 'surveyor',
-                      },
-                      session: session,
-                      isAuthenticated: true,
-                    });
-                  } catch (err) {
-                    console.error('Error fetching user profile:', err);
-                  }
-                }, 0);
-              }
-            }).catch(err => {
-              console.error('Error checking session:', err);
-            });
+            } catch (e) {
+              console.error('Error during auth store rehydration:', e);
+            }
           }
         };
       }

@@ -3,28 +3,15 @@ import { useEffect } from 'react';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { UserManager } from '@/components/admin/UserManager';
-import { useAuthStore } from '@/store/basicAuthStore';
-import { toast } from 'sonner';
+import { useUserStore } from '@/store/userStore';
 
 export default function AdminUsers() {
-  const { users } = useAuthStore();
+  const { fetchUsers } = useUserStore();
   
-  // No need to fetch users since they're already in the store
-  // Just check if admin exists
+  // Fetch users when the component mounts
   useEffect(() => {
-    // Check if admin user exists, if not it should have been created by default
-    const adminExists = users.some(user => 
-      user.username.toLowerCase() === 'admin' && 
-      user.role === 'admin'
-    );
-    
-    if (!adminExists) {
-      console.log('Admin user not found in store, this should not happen with our setup');
-      toast.info('El usuario administrador está configurado correctamente');
-    } else {
-      console.log('Admin user exists in the store');
-    }
-  }, [users]);
+    fetchUsers();
+  }, [fetchUsers]);
   
   return (
     <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>

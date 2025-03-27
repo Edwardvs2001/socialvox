@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { UserRole } from './authStore';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface User {
   id: string;
@@ -22,17 +21,40 @@ interface UserState {
   error: string | null;
   
   fetchUsers: () => Promise<void>;
-  getUserById: (id: string) => Promise<User | undefined>;
+  getUserById: (id: string) => User | undefined;
   createUser: (userData: Omit<User, 'id' | 'createdAt'>) => Promise<User>;
   updateUser: (id: string, updates: Partial<User>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
   clearError: () => void;
 }
 
+const mockUsers: User[] = [
+  {
+    id: '1',
+    username: 'admin',
+    name: 'Administrador',
+    email: 'admin@encuestasva.com',
+    role: 'admin',
+    active: true,
+    createdAt: '2023-01-10T08:00:00Z',
+    password: 'Admin@2024!',
+  },
+  {
+    id: '2',
+    username: 'surveyor',
+    name: 'Juan Pérez',
+    email: 'juan@encuestasva.com',
+    role: 'surveyor',
+    active: true,
+    createdAt: '2023-01-15T10:30:00Z',
+    password: 'surveyor123',
+  }
+];
+
 export const useUserStore = create<UserState>()(
   persist(
     (set, get) => ({
-      users: [],
+      users: mockUsers,
       isLoading: false,
       error: null,
       
@@ -40,28 +62,31 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Fetch users from Supabase
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .order('created_at', { ascending: false });
+          await new Promise(resolve => setTimeout(resolve, 500));
           
-          if (error) throw error;
+          const users = get().users;
+          const adminUser = users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
           
-          // Transform data to match User interface
-          const users: User[] = data.map(profile => ({
-            id: profile.id,
-            username: profile.username,
-            name: profile.name,
-            email: profile.email,
-            role: profile.role,
-            active: profile.active,
-            createdAt: profile.created_at,
-          }));
+          if (adminUser) {
+            const updates: Partial<User> = {};
+            let needsUpdate = false;
+            
+            if (!adminUser.active) {
+              updates.active = true;
+              needsUpdate = true;
+            }
+            
+            if (needsUpdate) {
+              set(state => ({
+                users: state.users.map(user => 
+                  user.id === adminUser.id ? { ...user, ...updates } : user
+                )
+              }));
+            }
+          }
           
-          set({ users, isLoading: false });
+          set({ isLoading: false });
         } catch (error) {
-          console.error('Error fetching users:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al cargar usuarios',
             isLoading: false,
@@ -69,139 +94,53 @@ export const useUserStore = create<UserState>()(
         }
       },
       
-      getUserById: async (id) => {
-        try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', id)
-            .single();
-          
-          if (error) throw error;
-          
-          // Transform to User interface
-          return {
-            id: data.id,
-            username: data.username,
-            name: data.name,
-            email: data.email,
-            role: data.role,
-            active: data.active,
-            createdAt: data.created_at,
-          };
-        } catch (error) {
-          console.error('Error fetching user:', error);
-          return undefined;
+      getUserById: (id) => {
+        const users = get().users;
+        const adminUser = users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
+        
+        if (adminUser && !adminUser.active) {
+          set(state => ({
+            users: state.users.map(user => 
+              user.id === adminUser.id ? { ...user, active: true } : user
+            )
+          }));
         }
+        
+        return get().users.find(user => user.id === id);
       },
       
       createUser: async (userData) => {
         set({ isLoading: true, error: null });
         
         try {
-          // Case-insensitive username check
-          const { data: existingUsernames } = await supabase
-            .from('profiles')
-            .select('username')
-            .ilike('username', userData.username);
+          // Case-insensitive username check for better validation
+          const normalizedUsername = userData.username.toLowerCase().trim();
           
-          if (existingUsernames && existingUsernames.length > 0) {
+          if (get().users.some(user => user.username.toLowerCase() === normalizedUsername)) {
             throw new Error('El nombre de usuario ya existe');
           }
           
           // Case-insensitive email check
-          const { data: existingEmails } = await supabase
-            .from('profiles')
-            .select('email')
-            .ilike('email', userData.email);
-          
-          if (existingEmails && existingEmails.length > 0) {
+          const normalizedEmail = userData.email.toLowerCase().trim();
+          if (get().users.some(user => user.email.toLowerCase() === normalizedEmail)) {
             throw new Error('El correo electrónico ya está registrado');
           }
           
-          console.log('Creating new user with data:', {
-            email: userData.email,
-            role: userData.role,
-            username: userData.username,
-            name: userData.name
-          });
+          await new Promise(resolve => setTimeout(resolve, 800));
           
-          // Create user with Supabase Auth
-          const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: userData.email,
-            password: userData.password || generateStrongPassword(),
-            options: {
-              data: {
-                username: userData.username,
-                name: userData.name,
-                role: userData.role,
-              }
-            }
-          });
-          
-          if (authError) {
-            console.error('Error creating user account:', authError);
-            throw authError;
-          }
-          
-          if (!authData.user) {
-            throw new Error('No se pudo crear el usuario');
-          }
-          
-          console.log('User created successfully, id:', authData.user.id);
-          
-          // Wait a moment for the trigger to create the profile
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Update active status in profiles (since trigger creates the profile)
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ 
-              active: userData.active,
-              role: userData.role
-            })
-            .eq('id', authData.user.id);
-          
-          if (updateError) {
-            console.error('Error updating user profile:', updateError);
-            throw updateError;
-          }
-          
-          // Fetch newly created profile
-          const { data: newProfile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', authData.user.id)
-            .single();
-          
-          if (profileError) {
-            console.error('Error fetching new user profile:', profileError);
-            throw profileError;
-          }
-          
-          console.log('New user profile:', newProfile);
-          
-          // Create User object from profile
           const newUser: User = {
-            id: newProfile.id,
-            username: newProfile.username,
-            name: newProfile.name,
-            email: newProfile.email,
-            role: newProfile.role,
-            active: newProfile.active,
-            createdAt: newProfile.created_at,
-            password: userData.password,
+            ...userData,
+            id: uuidv4(),
+            createdAt: new Date().toISOString(),
           };
           
-          // Update local state
           set(state => ({
-            users: [newUser, ...state.users],
+            users: [...state.users, newUser],
             isLoading: false,
           }));
           
           return newUser;
         } catch (error) {
-          console.error('Error creating user:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al crear usuario',
             isLoading: false,
@@ -214,92 +153,54 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Check if updating username - must be unique
           if (updates.username) {
-            const { data: existingUsernames } = await supabase
-              .from('profiles')
-              .select('username')
-              .ilike('username', updates.username)
-              .neq('id', id);
+            const normalizedNewUsername = updates.username.toLowerCase().trim();
+            const existingUser = get().users.find(
+              user => user.username.toLowerCase() === normalizedNewUsername && user.id !== id
+            );
             
-            if (existingUsernames && existingUsernames.length > 0) {
+            if (existingUser) {
               throw new Error('El nombre de usuario ya existe');
             }
           }
           
-          // Check if updating email - must be unique
           if (updates.email) {
-            const { data: existingEmails } = await supabase
-              .from('profiles')
-              .select('email')
-              .ilike('email', updates.email)
-              .neq('id', id);
+            const normalizedNewEmail = updates.email.toLowerCase().trim();
+            const existingUser = get().users.find(
+              user => user.email.toLowerCase() === normalizedNewEmail && user.id !== id
+            );
             
-            if (existingEmails && existingEmails.length > 0) {
+            if (existingUser) {
               throw new Error('El correo electrónico ya está registrado');
             }
           }
           
-          // If password is being updated, update auth user
-          if (updates.password) {
-            const { error: passwordError } = await supabase.auth.admin.updateUserById(
-              id,
-              { password: updates.password }
-            );
-            
-            if (passwordError) throw passwordError;
+          // Improve admin password synchronization
+          const user = get().users.find(u => u.id === id);
+          if (user && user.username.toLowerCase() === 'admin' && updates.password) {
+            try {
+              const authStore = require('./authStore').useAuthStore;
+              const currentPassword = authStore.getState().adminPassword;
+              
+              if (updates.password !== currentPassword) {
+                // Update authStore password to match userStore
+                authStore.setState({ adminPassword: updates.password });
+                console.log('Admin password synchronized with authStore');
+              }
+            } catch (e) {
+              console.error('Error al sincronizar contraseña con authStore:', e);
+            }
           }
           
-          // If email is being updated, update auth user
-          if (updates.email) {
-            const { error: emailError } = await supabase.auth.admin.updateUserById(
-              id,
-              { email: updates.email }
-            );
-            
-            if (emailError) throw emailError;
-          }
+          await new Promise(resolve => setTimeout(resolve, 800));
           
-          // Update user metadata if needed
-          const userMetadata: Record<string, any> = {};
-          
-          if (updates.username) userMetadata.username = updates.username;
-          if (updates.name) userMetadata.name = updates.name;
-          if (updates.role) userMetadata.role = updates.role;
-          
-          if (Object.keys(userMetadata).length > 0) {
-            const { error: metadataError } = await supabase.auth.admin.updateUserById(
-              id,
-              { user_metadata: userMetadata }
-            );
-            
-            if (metadataError) throw metadataError;
-          }
-          
-          // Update profile in profiles table
-          const profileUpdates: Record<string, any> = {};
-          
-          if (updates.username) profileUpdates.username = updates.username;
-          if (updates.name) profileUpdates.name = updates.name;
-          if (updates.email) profileUpdates.email = updates.email;
-          if (updates.role) profileUpdates.role = updates.role;
-          if (updates.active !== undefined) profileUpdates.active = updates.active;
-          
-          if (Object.keys(profileUpdates).length > 0) {
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .update(profileUpdates)
-              .eq('id', id);
-            
-            if (profileError) throw profileError;
-          }
-          
-          // Update local state
-          await get().fetchUsers(); // Reload users from server
-          
-          set({ isLoading: false });
+          set(state => ({
+            users: state.users.map(user => 
+              user.id === id ? { ...user, ...updates } : user
+            ),
+            isLoading: false,
+          }));
         } catch (error) {
-          console.error('Error updating user:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al actualizar usuario',
             isLoading: false,
@@ -312,29 +213,19 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Check if trying to delete admin user
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('username, role')
-            .eq('id', id)
-            .single();
-          
-          if (userProfile && userProfile.username.toLowerCase() === 'admin') {
+          // Prevent deletion of the admin user
+          const user = get().users.find(u => u.id === id);
+          if (user && user.username.toLowerCase() === 'admin') {
             throw new Error('No se puede eliminar el usuario administrador');
           }
           
-          // Delete user from Supabase Auth
-          const { error: deleteError } = await supabase.auth.admin.deleteUser(id);
+          await new Promise(resolve => setTimeout(resolve, 800));
           
-          if (deleteError) throw deleteError;
-          
-          // Update local state
           set(state => ({
             users: state.users.filter(user => user.id !== id),
             isLoading: false,
           }));
         } catch (error) {
-          console.error('Error deleting user:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al eliminar usuario',
             isLoading: false,
@@ -352,32 +243,56 @@ export const useUserStore = create<UserState>()(
       partialize: (state) => ({
         users: state.users,
       }),
+      onRehydrateStorage: () => {
+        return (state) => {
+          if (state) {
+            // Ensure admin user exists and is active
+            const adminUser = state.users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
+            
+            if (adminUser) {
+              if (!adminUser.active) {
+                state.users = state.users.map(user => 
+                  user.id === adminUser.id ? { ...user, active: true } : user
+                );
+              }
+              
+              try {
+                // Ensure admin password is synchronized with authStore
+                const authStore = require('./authStore').useAuthStore;
+                const authPassword = authStore.getState().adminPassword;
+                
+                if (adminUser.password !== authPassword) {
+                  // Make sure userStore has the same password as authStore
+                  state.users = state.users.map(user => 
+                    user.id === adminUser.id ? { ...user, password: authPassword } : user
+                  );
+                }
+              } catch (e) {
+                console.error('Error al sincronizar contraseña con authStore en rehidratación:', e);
+              }
+            } else {
+              // If admin user doesn't exist, create one with default settings
+              try {
+                const authStore = require('./authStore').useAuthStore;
+                const authPassword = authStore.getState().adminPassword;
+                
+                state.users.push({
+                  id: '1',
+                  username: 'admin',
+                  name: 'Administrador',
+                  email: 'admin@encuestasva.com',
+                  role: 'admin',
+                  active: true,
+                  createdAt: new Date().toISOString(),
+                  password: authPassword,
+                });
+              } catch (e) {
+                console.error('Error al crear usuario admin en rehidratación:', e);
+              }
+            }
+          }
+        };
+      }
     }
   )
 );
-
-// Helper function to generate a strong password
-function generateStrongPassword(length = 12) {
-  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-  const numbers = '0123456789';
-  const special = '!@#$%^&*()_+';
-  
-  const allChars = uppercase + lowercase + numbers + special;
-  
-  let password = '';
-  
-  // Ensure at least one of each type
-  password += uppercase[Math.floor(Math.random() * uppercase.length)];
-  password += lowercase[Math.floor(Math.random() * lowercase.length)];
-  password += numbers[Math.floor(Math.random() * numbers.length)];
-  password += special[Math.floor(Math.random() * special.length)];
-  
-  // Fill the rest
-  for (let i = 4; i < length; i++) {
-    password += allChars[Math.floor(Math.random() * allChars.length)];
-  }
-  
-  // Shuffle the password
-  return password.split('').sort(() => 0.5 - Math.random()).join('');
-}
