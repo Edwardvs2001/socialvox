@@ -144,7 +144,7 @@ export function SurveyEditor({
     setQuestions(questions.map(q => q.id === id ? {
       ...q,
       dependsOn,
-      showWhen: dependsOn ? showWhen : undefined
+      showWhen: dependsOn ? (showWhen.length > 0 ? showWhen : undefined) : undefined
     } : q));
   };
   
@@ -579,9 +579,9 @@ export function SurveyEditor({
                         <div className="space-y-3">
                           <FormLabel>Lógica condicional</FormLabel>
                           <Select
-                            value={question.dependsOn || ""}
+                            value={question.dependsOn || "no-dependency"}
                             onValueChange={(value) => {
-                              if (value === "") {
+                              if (value === "no-dependency") {
                                 updateQuestionCondition(question.id, undefined, []);
                               } else {
                                 updateQuestionCondition(question.id, value, question.showWhen || []);
@@ -592,7 +592,7 @@ export function SurveyEditor({
                               <SelectValue placeholder="Esta pregunta no depende de ninguna otra" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">No depende de ninguna pregunta</SelectItem>
+                              <SelectItem value="no-dependency">No depende de ninguna pregunta</SelectItem>
                               {getAvailableParentQuestions(question.id).map(q => (
                                 <SelectItem key={q.id} value={q.id}>
                                   Pregunta {questions.findIndex(item => item.id === q.id) + 1}: {q.text.substring(0, 50)}
@@ -809,12 +809,12 @@ export function SurveyEditor({
           </DialogHeader>
           
           <div className="py-4">
-            <Select value={selectedFolderId || "null"} onValueChange={value => setSelectedFolderId(value === "null" ? null : value)}>
+            <Select value={selectedFolderId || "no-folder"} onValueChange={value => setSelectedFolderId(value === "no-folder" ? null : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona una carpeta" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="null">Sin carpeta</SelectItem>
+                <SelectItem value="no-folder">Sin carpeta</SelectItem>
                 {folders.map(folder => (
                   <SelectItem key={folder.id} value={folder.id}>
                     {getFolderPath(folder.id)}
