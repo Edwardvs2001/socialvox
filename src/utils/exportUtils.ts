@@ -13,6 +13,11 @@ export const exportResultsToExcel = (survey: Survey, responses: SurveyResponse[]
   // Formatear encabezados
   const headers = ['ID', 'Encuestado', 'Fecha de Finalización'];
   
+  // Añadir encabezados demográficos si la encuesta los recopila
+  if (survey.collectDemographics) {
+    headers.push('Edad', 'Género', 'Ubicación');
+  }
+  
   // Añadir encabezados de preguntas
   survey.questions.forEach(question => {
     headers.push(question.text);
@@ -28,6 +33,15 @@ export const exportResultsToExcel = (survey: Survey, responses: SurveyResponse[]
       `Encuestado ${index + 1}`,
       new Date(response.completedAt).toLocaleString()
     ];
+    
+    // Añadir datos demográficos si la encuesta los recopila
+    if (survey.collectDemographics) {
+      row.push(
+        response.respondentInfo?.age?.toString() || '',
+        response.respondentInfo?.gender || '',
+        response.respondentInfo?.location || ''
+      );
+    }
     
     // Añadir respuestas para cada pregunta
     survey.questions.forEach(question => {
@@ -113,6 +127,11 @@ export const exportResultsToCSV = (survey: Survey, responses: SurveyResponse[]):
   // Comenzar con encabezados
   const headers = ['ID', 'Encuestado', 'Fecha de Finalización'];
   
+  // Añadir encabezados demográficos si la encuesta los recopila
+  if (survey.collectDemographics) {
+    headers.push('Edad', 'Género', 'Ubicación');
+  }
+  
   // Añadir encabezados de preguntas
   survey.questions.forEach(question => {
     headers.push(question.text.replace(/,/g, ' '));
@@ -128,6 +147,15 @@ export const exportResultsToCSV = (survey: Survey, responses: SurveyResponse[]):
       `Encuestado ${index + 1}`,
       response.completedAt
     ];
+    
+    // Añadir datos demográficos si la encuesta los recopila
+    if (survey.collectDemographics) {
+      row.push(
+        response.respondentInfo?.age?.toString() || '',
+        (response.respondentInfo?.gender || '').replace(/,/g, ' '),
+        (response.respondentInfo?.location || '').replace(/,/g, ' ')
+      );
+    }
     
     // Añadir respuestas para cada pregunta
     survey.questions.forEach(question => {

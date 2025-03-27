@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, PieChart, Pie, Legend } from 'recharts';
 import { useSurveyStore } from '@/store/surveyStore';
 import { Button } from '@/components/ui/button';
-import { DownloadIcon, Mic, FileSpreadsheet, FileText } from 'lucide-react';
+import { DownloadIcon, Mic, FileSpreadsheet, FileText, Users } from 'lucide-react';
 import { exportResultsToCSV, exportResultsToExcel, exportAudioRecordings } from '@/utils/exportUtils';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -34,12 +34,65 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
     const totalResponses = responses.length;
     const hasAudioCount = responses.filter(r => r.audioRecording).length;
     
+    // Calculate demographic statistics
+    const ageGroups: Record<string, number> = {};
+    const genderGroups: Record<string, number> = {};
+    const locationGroups: Record<string, number> = {};
+    
+    responses.forEach(response => {
+      if (response.respondentInfo) {
+        // Age data
+        if (response.respondentInfo.age !== undefined) {
+          const ageGroup = getAgeGroup(response.respondentInfo.age);
+          ageGroups[ageGroup] = (ageGroups[ageGroup] || 0) + 1;
+        }
+        
+        // Gender data
+        if (response.respondentInfo.gender) {
+          genderGroups[response.respondentInfo.gender] = (genderGroups[response.respondentInfo.gender] || 0) + 1;
+        }
+        
+        // Location data
+        if (response.respondentInfo.location) {
+          locationGroups[response.respondentInfo.location] = (locationGroups[response.respondentInfo.location] || 0) + 1;
+        }
+      }
+    });
+    
     return {
       totalResponses,
       hasAudioCount,
-      audioPercentage: totalResponses ? Math.round((hasAudioCount / totalResponses) * 100) : 0
+      audioPercentage: totalResponses ? Math.round((hasAudioCount / totalResponses) * 100) : 0,
+      demographics: {
+        ageGroups: Object.entries(ageGroups).map(([name, value]) => ({ 
+          name, 
+          value,
+          percentage: totalResponses ? Math.round((value / totalResponses) * 100) : 0
+        })),
+        genderGroups: Object.entries(genderGroups).map(([name, value]) => ({ 
+          name, 
+          value,
+          percentage: totalResponses ? Math.round((value / totalResponses) * 100) : 0
+        })),
+        locationGroups: Object.entries(locationGroups).map(([name, value]) => ({ 
+          name, 
+          value,
+          percentage: totalResponses ? Math.round((value / totalResponses) * 100) : 0
+        }))
+      }
     };
   }, [survey, responses]);
+  
+  // Helper function to categorize ages into groups
+  const getAgeGroup = (age: number): string => {
+    if (age < 18) return "Menor de 18";
+    if (age < 25) return "18-24";
+    if (age < 35) return "25-34";
+    if (age < 45) return "35-44";
+    if (age < 55) return "45-54";
+    if (age < 65) return "55-64";
+    return "65 o mayor";
+  };
   
   // Generate charts data for each question
   const questionsData = useMemo(() => {
@@ -153,6 +206,7 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
   }
   
   const hasAudioRecordings = responses.some(r => r.audioRecording);
+  const hasDemographics = responses.some(r => r.respondentInfo);
   
   return (
     <div className="space-y-6">
@@ -211,6 +265,9 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
           <TabsTrigger value="overview">Vista General</TabsTrigger>
           <TabsTrigger value="questions">Preguntas y Respuestas</TabsTrigger>
           <TabsTrigger value="detailed">Detallado</TabsTrigger>
+          {hasDemographics && (
+            <TabsTrigger value="demographics">Datos Demográficos</TabsTrigger>
+          )}
           {responses.some(r => r.audioRecording) && (
             <TabsTrigger value="audio">Grabaciones</TabsTrigger>
           )}
@@ -311,6 +368,207 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
           })}
         </TabsContent>
         
+        {/* Demographic data tab */}
+        {hasDemographics && (
+          <TabsContent value="demographics" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Age Groups Card */}
+              {statsData.demographics.ageGroups.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Distribución por Edad</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={isMobile ? "h-60" : "h-80"}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={statsData.demographics.ageGroups}
+                          margin={{ top: 10, right: 30, left: isMobile ? 0 : 20, bottom: isMobile ? 60 : 30 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={isMobile ? -45 : 0} 
+                            textAnchor={isMobile ? "end" : "middle"}
+                            height={isMobile ? 80 : 60}
+                            tick={{ fontSize: isMobile ? 10 : 12 }}
+                          />
+                          <YAxis />
+                          <Tooltip formatter={(value) => [`${value} respuestas`, 'Cantidad']} />
+                          <Bar dataKey="value" name="Personas" fill="#8884d8">
+                            {statsData.demographics.ageGroups.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Grupo de Edad</TableHead>
+                            <TableHead>Cantidad</TableHead>
+                            <TableHead>Porcentaje</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {statsData.demographics.ageGroups.map((group, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{group.name}</TableCell>
+                              <TableCell>{group.value}</TableCell>
+                              <TableCell>{group.percentage}%</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Gender Distribution Card */}
+              {statsData.demographics.genderGroups.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Distribución por Género</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={isMobile ? "h-60" : "h-80"}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={statsData.demographics.genderGroups}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={true}
+                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {statsData.demographics.genderGroups.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value) => [`${value} respuestas`, 'Cantidad']} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Género</TableHead>
+                            <TableHead>Cantidad</TableHead>
+                            <TableHead>Porcentaje</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {statsData.demographics.genderGroups.map((group, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{group.name}</TableCell>
+                              <TableCell>{group.value}</TableCell>
+                              <TableCell>{group.percentage}%</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Location Distribution Card */}
+              {statsData.demographics.locationGroups.length > 0 && (
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="text-base">Distribución por Ubicación</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={isMobile ? "h-60" : "h-80"}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={statsData.demographics.locationGroups}
+                          margin={{ top: 10, right: 30, left: isMobile ? 0 : 20, bottom: isMobile ? 60 : 30 }}
+                          layout={isMobile ? "vertical" : "horizontal"}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          {isMobile ? (
+                            <>
+                              <YAxis dataKey="name" type="category" width={120} />
+                              <XAxis type="number" />
+                            </>
+                          ) : (
+                            <>
+                              <XAxis 
+                                dataKey="name" 
+                                angle={statsData.demographics.locationGroups.length > 5 ? -45 : 0} 
+                                textAnchor={statsData.demographics.locationGroups.length > 5 ? "end" : "middle"}
+                                height={statsData.demographics.locationGroups.length > 5 ? 80 : 60}
+                                tick={{ fontSize: statsData.demographics.locationGroups.length > 5 ? 10 : 12 }}
+                              />
+                              <YAxis />
+                            </>
+                          )}
+                          <Tooltip formatter={(value) => [`${value} respuestas`, 'Cantidad']} />
+                          <Bar dataKey="value" name="Ubicaciones" fill="#8884d8">
+                            {statsData.demographics.locationGroups.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Ubicación</TableHead>
+                            <TableHead>Cantidad</TableHead>
+                            <TableHead>Porcentaje</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {statsData.demographics.locationGroups.map((group, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{group.name}</TableCell>
+                              <TableCell>{group.value}</TableCell>
+                              <TableCell>{group.percentage}%</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Card for when no demographic data is available */}
+              {statsData.demographics.ageGroups.length === 0 && 
+               statsData.demographics.genderGroups.length === 0 && 
+               statsData.demographics.locationGroups.length === 0 && (
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle>Datos Demográficos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No hay datos demográficos disponibles</h3>
+                      <p className="text-muted-foreground max-w-md">
+                        Esta encuesta tiene habilitada la recopilación de datos demográficos, 
+                        pero aún no se han recibido respuestas con esta información.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        )}
+        
         {/* New tab for Questions and Answers */}
         <TabsContent value="questions" className="space-y-4">
           <Card>
@@ -398,6 +656,13 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
                       <TableHead>ID</TableHead>
                       <TableHead>Encuestado</TableHead>
                       <TableHead>Fecha</TableHead>
+                      {survey.collectDemographics && (
+                        <>
+                          <TableHead>Edad</TableHead>
+                          <TableHead>Género</TableHead>
+                          <TableHead>Ubicación</TableHead>
+                        </>
+                      )}
                       {survey.questions.map((q) => (
                         <TableHead key={q.id}>{q.text}</TableHead>
                       ))}
@@ -410,6 +675,19 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
                         <TableCell className="font-medium">{index + 1}</TableCell>
                         <TableCell>Encuestado {index + 1}</TableCell>
                         <TableCell>{new Date(response.completedAt).toLocaleString()}</TableCell>
+                        {survey.collectDemographics && (
+                          <>
+                            <TableCell>
+                              {response.respondentInfo?.age || '-'}
+                            </TableCell>
+                            <TableCell>
+                              {response.respondentInfo?.gender || '-'}
+                            </TableCell>
+                            <TableCell>
+                              {response.respondentInfo?.location || '-'}
+                            </TableCell>
+                          </>
+                        )}
                         {survey.questions.map((question) => {
                           const answer = response.answers.find(a => a.questionId === question.id);
                           let displayValue = '';
