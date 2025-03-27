@@ -17,6 +17,16 @@ interface ExcelQuestion {
   showWhen?: string[];
 }
 
+// Define the type for the imported row data
+interface ExcelRowData {
+  order: string | number;
+  text: string;
+  type: string;
+  options?: string;
+  dependsOn?: string | number;
+  showWhen?: string;
+}
+
 export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => void }) {
   const isMobile = useIsMobile();
   
@@ -61,13 +71,13 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
         // Convert to JSON with appropriate headers
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
           header: ['order', 'text', 'type', 'options', 'dependsOn', 'showWhen']
-        });
+        }) as ExcelRowData[];
         
         // Skip header row
         const questionsData = jsonData.slice(1);
         
         // Sort by order column if it exists
-        const sortedData = questionsData.sort((a: any, b: any) => {
+        const sortedData = questionsData.sort((a: ExcelRowData, b: ExcelRowData) => {
           // If both have valid order numbers, sort by them
           if (!isNaN(Number(a.order)) && !isNaN(Number(b.order))) {
             return Number(a.order) - Number(b.order);
@@ -84,7 +94,7 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
         const orderToId = new Map<number, string>();
         
         // First pass: create questions and map order numbers to IDs
-        const questions = sortedData.map((row: any, index: number) => {
+        const questions = sortedData.map((row: ExcelRowData, index: number) => {
           if (!row.text || !row.type) {
             throw new Error('Todas las preguntas deben tener texto y tipo');
           }
