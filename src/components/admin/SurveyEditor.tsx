@@ -113,6 +113,14 @@ export function SurveyEditor({
     }
   };
   
+  const handleAddMultipleChoiceQuestion = () => {
+    addQuestion('multiple-choice');
+  };
+  
+  const handleAddFreeTextQuestion = () => {
+    addQuestion('free-text');
+  };
+  
   const updateQuestionText = (id: string, text: string) => {
     setQuestions(questions.map(q => q.id === id ? {
       ...q,
@@ -374,7 +382,7 @@ export function SurveyEditor({
       ...importedQuestions.map(q => ({
         ...q,
         id: uuidv4(),
-        dependsOn: '',
+        dependsOn: undefined,
         showWhen: []
       }))
     ]);
@@ -524,14 +532,25 @@ export function SurveyEditor({
                 <h3 className="text-lg font-medium">Preguntas</h3>
                 <div className="flex items-center gap-2">
                   <ExcelImporter onImport={handleImportedQuestions} />
-                  <Button
-                    type="button"
-                    onClick={addQuestion}
-                    className="btn-admin"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Agregar Pregunta
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      onClick={handleAddMultipleChoiceQuestion}
+                      className="btn-admin"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Opción Múltiple
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleAddFreeTextQuestion}
+                      variant="outline"
+                      className="text-admin border-admin hover:bg-admin/10"
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Respuesta Libre
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardHeader>
