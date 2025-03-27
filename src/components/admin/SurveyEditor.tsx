@@ -523,38 +523,42 @@ export function SurveyEditor({
           </Card>
           
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <div>
                 <CardTitle>Preguntas</CardTitle>
                 <CardDescription>Preguntas y opciones de respuesta</CardDescription>
               </div>
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Preguntas</h3>
-                <div className="flex items-center gap-2">
+            </CardHeader>
+            
+            <CardContent className="pt-4 border-t">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h3 className="text-lg font-medium">Agregar Preguntas</h3>
+                <div className="flex flex-wrap gap-2">
                   <ExcelImporter onImport={handleImportedQuestions} />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      onClick={handleAddMultipleChoiceQuestion}
-                      className="btn-admin"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Opción Múltiple
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleAddFreeTextQuestion}
-                      variant="outline"
-                      className="text-admin border-admin hover:bg-admin/10"
-                    >
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Respuesta Libre
-                    </Button>
-                  </div>
+                  
+                  <Button
+                    type="button"
+                    onClick={handleAddMultipleChoiceQuestion}
+                    className="btn-admin"
+                    size={isMobile ? "sm" : "default"}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {isMobile ? "Opción Múltiple" : "Agregar Opción Múltiple"}
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    onClick={handleAddFreeTextQuestion}
+                    variant="outline"
+                    className="text-admin border-admin hover:bg-admin/10"
+                    size={isMobile ? "sm" : "default"}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    {isMobile ? "Texto Libre" : "Agregar Texto Libre"}
+                  </Button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
+              
               {questions.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
                   <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-2" />

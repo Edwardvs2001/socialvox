@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Download, Upload } from 'lucide-react';
 import { saveAs } from 'file-saver';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface ExcelQuestion {
   text: string;
@@ -14,6 +16,8 @@ interface ExcelQuestion {
 }
 
 export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => void }) {
+  const isMobile = useIsMobile();
+  
   const downloadTemplate = () => {
     // Create workbook
     const wb = XLSX.utils.book_new();
@@ -94,33 +98,38 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
   
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="outline" 
-          onClick={downloadTemplate}
-          className="gap-2"
-        >
-          <Download className="h-4 w-4" />
-          Descargar Plantilla
-        </Button>
-        <div className="relative">
-          <Input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFileUpload}
-            className="hidden"
-            id="excel-upload"
-          />
+      <ToggleGroup type="single" className="justify-start">
+        <ToggleGroupItem value="import" asChild>
+          <Button 
+            variant="outline" 
+            size={isMobile ? "sm" : "default"}
+            className="text-admin border-admin hover:bg-admin/10"
+            onClick={() => document.getElementById('excel-upload')?.click()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {isMobile ? "Importar" : "Importar Excel"}
+            <Input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="excel-upload"
+            />
+          </Button>
+        </ToggleGroupItem>
+        
+        <ToggleGroupItem value="download" asChild>
           <Button 
             variant="outline"
-            onClick={() => document.getElementById('excel-upload')?.click()}
-            className="gap-2"
+            size={isMobile ? "sm" : "default"}
+            className="text-admin border-admin hover:bg-admin/10"
+            onClick={downloadTemplate}
           >
-            <Upload className="h-4 w-4" />
-            Importar Excel
+            <Download className="h-4 w-4 mr-2" />
+            {isMobile ? "Plantilla" : "Descargar Plantilla"}
           </Button>
-        </div>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
     </div>
   );
 }
