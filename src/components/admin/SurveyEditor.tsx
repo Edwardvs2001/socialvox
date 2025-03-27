@@ -17,10 +17,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Save, Trash, AlertTriangle, Users, ListChecks, MessageSquare, FolderOpen } from 'lucide-react';
+import { Loader2, Plus, Save, Trash, AlertTriangle, Users, ListChecks, MessageSquare, FolderOpen, Link } from 'lucide-react';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
 const formSchema = z.object({
   title: z.string().min(3, {
     message: "El título debe tener al menos 3 caracteres"
@@ -28,18 +29,19 @@ const formSchema = z.object({
   description: z.string().min(5, {
     message: "La descripción debe tener al menos 5 caracteres"
   }),
-  isActive: z.boolean().default(true)
+  isActive: z.boolean().default(true),
+  collectDemographics: z.boolean().default(true)
 });
+
 interface SurveyEditorProps {
   surveyId: string | null;
 }
+
 export function SurveyEditor({
   surveyId
 }: SurveyEditorProps) {
   const navigate = useNavigate();
-  const {
-    user
-  } = useAuthStore();
+  const { user } = useAuthStore();
   const {
     getSurveyById,
     createSurvey,
@@ -49,9 +51,8 @@ export function SurveyEditor({
     folders,
     isLoading
   } = useSurveyStore();
-  const {
-    users
-  } = useUserStore();
+  const { users } = useUserStore();
+  
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [showDeleteQuestionDialog, setShowDeleteQuestionDialog] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
@@ -60,17 +61,22 @@ export function SurveyEditor({
   const [selectedSurveyors, setSelectedSurveyors] = useState<string[]>([]);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  
   const isMobile = useIsMobile();
+  
   const existingSurvey = surveyId ? getSurveyById(surveyId) : null;
   const surveyors = users.filter(user => user.role === 'surveyor' && user.active);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: existingSurvey?.title || "",
       description: existingSurvey?.description || "",
-      isActive: existingSurvey?.isActive ?? true
+      isActive: existingSurvey?.isActive ?? true,
+      collectDemographics: existingSurvey?.collectDemographics ?? true
     }
   });
+  
   useEffect(() => {
     if (existingSurvey) {
       const updatedQuestions = existingSurvey.questions.map(q => ({
@@ -80,8 +86,12 @@ export function SurveyEditor({
       setQuestions(updatedQuestions);
       setSelectedSurveyors(existingSurvey.assignedTo);
       setSelectedFolderId(existingSurvey.folderId);
+      
+      // Update form values for demographics
+      form.setValue("collectDemographics", existingSurvey.collectDemographics ?? true);
     }
-  }, [existingSurvey]);
+  }, [existingSurvey, form]);
+  
   const addQuestion = (type: 'multiple-choice' | 'free-text') => {
     const newQuestion: SurveyQuestion = {
       id: uuidv4(),
@@ -91,54 +101,85 @@ export function SurveyEditor({
     };
     setQuestions([...questions, newQuestion]);
   };
+  
   const updateQuestionText = (id: string, text: string) => {
     setQuestions(questions.map(q => q.id === id ? {
       ...q,
       text
     } : q));
   };
+  
   const updateOptionText = (questionId: string, optionIndex: number, text: string) => {
     setQuestions(questions.map(q => q.id === questionId ? {
       ...q,
       options: q.options.map((opt, idx) => idx === optionIndex ? text : opt)
     } : q));
   };
+  
   const addOption = (questionId: string) => {
     setQuestions(questions.map(q => q.id === questionId ? {
       ...q,
       options: [...q.options, ""]
     } : q));
   };
+  
   const removeOption = (questionId: string, optionIndex: number) => {
     setQuestions(questions.map(q => q.id === questionId ? {
       ...q,
       options: q.options.filter((_, idx) => idx !== optionIndex)
     } : q));
   };
+  
+  const updateQuestionCondition = (id: string, dependsOn: string | undefined, showWhen: string[]) => {
+    setQuestions(questions.map(q => q.id === id ? {
+      ...q,
+      dependsOn,
+      showWhen: dependsOn ? showWhen : undefined
+    } : q));
+  };
+  
   const confirmDeleteQuestion = (id: string) => {
     setQuestionToDelete(id);
     setShowDeleteQuestionDialog(true);
   };
+  
   const deleteQuestion = () => {
     if (questionToDelete) {
-      setQuestions(questions.filter(q => q.id !== questionToDelete));
+      // Before deleting, update any question that depends on this one
+      const updatedQuestions = questions.map(q => {
+        if (q.dependsOn === questionToDelete) {
+          return {
+            ...q,
+            dependsOn: undefined,
+            showWhen: undefined
+          };
+        }
+        return q;
+      });
+      
+      // Now remove the question
+      setQuestions(updatedQuestions.filter(q => q.id !== questionToDelete));
       setShowDeleteQuestionDialog(false);
       setQuestionToDelete(null);
     }
   };
+  
   const openAssignDialog = () => {
     setShowAssignDialog(true);
   };
+  
   const openFolderDialog = () => {
     setShowFolderDialog(true);
   };
+  
   const handleAssignSurvey = async (createdSurveyId?: string) => {
     const surveyIdToUse = createdSurveyId || (existingSurvey ? existingSurvey.id : null);
     if (!surveyIdToUse) return;
+    
     try {
       await assignSurvey(surveyIdToUse, selectedSurveyors);
       if (!createdSurveyId) {
-        // Solo mostrar toast si no es parte de la creación
+        // Only show toast if not part of creation
         toast.success("Encuesta asignada correctamente a los encuestadores seleccionados");
       }
       setShowAssignDialog(false);
@@ -147,13 +188,15 @@ export function SurveyEditor({
       toast.error("Error al asignar la encuesta");
     }
   };
+  
   const handleSaveFolderAssignment = async (createdSurveyId?: string) => {
     const surveyIdToUse = createdSurveyId || (existingSurvey ? existingSurvey.id : null);
     if (!surveyIdToUse) return;
+    
     try {
       await assignSurveyToFolder(surveyIdToUse, selectedFolderId);
       if (!createdSurveyId) {
-        // Solo mostrar toast si no es parte de la creación
+        // Only show toast if not part of creation
         toast.success("Encuesta asignada a carpeta correctamente");
       }
       setShowFolderDialog(false);
@@ -162,6 +205,7 @@ export function SurveyEditor({
       toast.error("Error al asignar encuesta a carpeta");
     }
   };
+  
   const toggleSurveyor = (surveyorId: string) => {
     setSelectedSurveyors(prevSelected => {
       if (prevSelected.includes(surveyorId)) {
@@ -171,21 +215,43 @@ export function SurveyEditor({
       }
     });
   };
+  
+  const getAvailableParentQuestions = (currentQuestionId: string) => {
+    return questions.filter(q => 
+      q.id !== currentQuestionId && 
+      q.type === 'multiple-choice' &&
+      !hasCircularDependency(currentQuestionId, q.id)
+    );
+  };
+  
+  const hasCircularDependency = (childId: string, potentialParentId: string): boolean => {
+    const parent = questions.find(q => q.id === potentialParentId);
+    
+    if (!parent) return false;
+    if (!parent.dependsOn) return false;
+    if (parent.dependsOn === childId) return true;
+    
+    return hasCircularDependency(childId, parent.dependsOn);
+  };
+  
   const validateQuestions = (): boolean => {
     if (questions.length === 0) {
       toast.error("Debe agregar al menos una pregunta a la encuesta");
       return false;
     }
+    
     for (const question of questions) {
       if (!question.text.trim()) {
         toast.error("Todas las preguntas deben tener un texto");
         return false;
       }
+      
       if (question.type === 'multiple-choice') {
         if (question.options.length < 2) {
           toast.error(`La pregunta "${question.text}" debe tener al menos 2 opciones`);
           return false;
         }
+        
         for (const option of question.options) {
           if (!option.trim()) {
             toast.error(`Todas las opciones de la pregunta "${question.text}" deben tener texto`);
@@ -193,32 +259,64 @@ export function SurveyEditor({
           }
         }
       }
+      
+      if (question.dependsOn) {
+        const parentQuestion = questions.find(q => q.id === question.dependsOn);
+        if (!parentQuestion) {
+          toast.error(`La pregunta "${question.text}" depende de una pregunta que ya no existe`);
+          return false;
+        }
+        
+        if (parentQuestion.type !== 'multiple-choice') {
+          toast.error(`La pregunta "${question.text}" solo puede depender de preguntas de opción múltiple`);
+          return false;
+        }
+        
+        if (!question.showWhen || question.showWhen.length === 0) {
+          toast.error(`La pregunta "${question.text}" debe especificar al menos una opción que la active`);
+          return false;
+        }
+        
+        for (const option of question.showWhen) {
+          if (!parentQuestion.options.includes(option)) {
+            toast.error(`La opción condicional "${option}" ya no existe en la pregunta padre`);
+            return false;
+          }
+        }
+      }
     }
+    
     return true;
   };
+  
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!validateQuestions()) return;
+    
     setIsSubmitting(true);
+    
     try {
       if (existingSurvey) {
         await updateSurvey(existingSurvey.id, {
           ...values,
           questions
         });
-
-        // Manejar asignaciones si fueron modificadas
+        
+        // Handle assignments if modified
         if (selectedFolderId !== existingSurvey.folderId) {
           await handleSaveFolderAssignment();
         }
+        
         if (JSON.stringify(selectedSurveyors) !== JSON.stringify(existingSurvey.assignedTo)) {
           await handleAssignSurvey();
         }
+        
         toast.success("Encuesta actualizada correctamente");
       } else {
         if (!user) {
           toast.error("Necesita iniciar sesión para crear una encuesta");
           return;
         }
+        
         const newSurvey = await createSurvey({
           title: values.title,
           description: values.description,
@@ -226,20 +324,24 @@ export function SurveyEditor({
           questions,
           createdBy: user.id,
           assignedTo: [],
-          folderId: null
+          folderId: null,
+          collectDemographics: values.collectDemographics
         });
-
-        // Aplicar asignaciones si fueron seleccionadas
+        
+        // Apply assignments if selected
         const assignmentPromises = [];
         if (selectedFolderId) {
           assignmentPromises.push(handleSaveFolderAssignment(newSurvey.id));
         }
+        
         if (selectedSurveyors.length > 0) {
           assignmentPromises.push(handleAssignSurvey(newSurvey.id));
         }
+        
         await Promise.all(assignmentPromises);
         toast.success("Encuesta creada correctamente");
       }
+      
       navigate("/admin/surveys");
     } catch (error) {
       console.error("Error saving survey:", error);
@@ -248,10 +350,12 @@ export function SurveyEditor({
       setIsSubmitting(false);
     }
   };
+  
   const getFolderPath = (folderId: string | null): string => {
     if (!folderId) return 'Sin carpeta';
     const breadcrumb: string[] = [];
     let currentId = folderId;
+    
     while (currentId) {
       const folder = folders.find(f => f.id === currentId);
       if (folder) {
@@ -261,9 +365,12 @@ export function SurveyEditor({
         break;
       }
     }
+    
     return breadcrumb.join(' > ');
   };
-  return <div className="space-y-6">
+  
+  return (
+    <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <Card>
@@ -273,20 +380,34 @@ export function SurveyEditor({
                 <CardDescription>Detalles básicos de la encuesta</CardDescription>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
-                <Button type="button" variant="outline" onClick={openFolderDialog} size={isMobile ? "sm" : "default"} className="btn-admin text-neutral-950">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={openFolderDialog} 
+                  size={isMobile ? "sm" : "default"} 
+                  className="btn-admin text-neutral-950"
+                >
                   <FolderOpen className="mr-2 h-4 w-4" />
                   {selectedFolderId ? "Cambiar Carpeta" : "Asignar Carpeta"}
                 </Button>
-                <Button type="button" variant="outline" onClick={openAssignDialog} size={isMobile ? "sm" : "default"} className="btn-admin text-zinc-950">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={openAssignDialog} 
+                  size={isMobile ? "sm" : "default"} 
+                  className="btn-admin text-zinc-950"
+                >
                   <Users className="mr-2 h-4 w-4" />
                   {selectedSurveyors.length > 0 ? "Cambiar Encuestadores" : "Asignar Encuestadores"}
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField control={form.control} name="title" render={({
-              field
-            }) => <FormItem>
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel>Título</FormLabel>
                     <FormControl>
                       <Input placeholder="Título de la encuesta" {...field} />
@@ -295,11 +416,15 @@ export function SurveyEditor({
                       Nombre descriptivo para identificar la encuesta
                     </FormDescription>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )}
+              />
               
-              <FormField control={form.control} name="description" render={({
-              field
-            }) => <FormItem>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel>Descripción</FormLabel>
                     <FormControl>
                       <Textarea placeholder="Descripción de la encuesta" className="resize-none" {...field} />
@@ -308,11 +433,15 @@ export function SurveyEditor({
                       Explica brevemente el propósito de esta encuesta
                     </FormDescription>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )}
+              />
               
-              <FormField control={form.control} name="isActive" render={({
-              field
-            }) => <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">Encuesta Activa</FormLabel>
                       <FormDescription>
@@ -323,27 +452,54 @@ export function SurveyEditor({
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )}
+              />
               
-              {selectedFolderId && <div className="p-4 rounded-lg border">
+              <FormField
+                control={form.control}
+                name="collectDemographics"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Recopilar datos demográficos</FormLabel>
+                      <FormDescription>
+                        Solicitar edad, género y lugar de la encuesta
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {selectedFolderId && (
+                <div className="p-4 rounded-lg border">
                   <FormLabel className="text-base pb-2 block">Carpeta Asignada</FormLabel>
                   <div className="flex items-center gap-1 text-admin">
                     <FolderOpen className="h-3.5 w-3.5" />
                     <span className="font-medium">{getFolderPath(selectedFolderId)}</span>
                   </div>
-                </div>}
+                </div>
+              )}
               
-              {selectedSurveyors.length > 0 && <div className="p-4 rounded-lg border">
+              {selectedSurveyors.length > 0 && (
+                <div className="p-4 rounded-lg border">
                   <FormLabel className="text-base pb-2 block">Encuestadores Asignados</FormLabel>
                   <div className="flex flex-wrap gap-2">
                     {selectedSurveyors.map(surveyorId => {
-                  const surveyor = users.find(u => u.id === surveyorId);
-                  return <div key={surveyorId} className="bg-muted text-xs px-2 py-1 rounded-full">
+                      const surveyor = users.find(u => u.id === surveyorId);
+                      return (
+                        <div key={surveyorId} className="bg-muted text-xs px-2 py-1 rounded-full">
                           {surveyor?.name || "Desconocido"}
-                        </div>;
-                })}
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>}
+                </div>
+              )}
             </CardContent>
           </Card>
           
@@ -354,23 +510,39 @@ export function SurveyEditor({
                 <CardDescription>Preguntas y opciones de respuesta</CardDescription>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
-                <Button type="button" onClick={() => addQuestion('multiple-choice')} variant="outline" size={isMobile ? "sm" : "default"} className="btn-admin text-zinc-950">
+                <Button 
+                  type="button" 
+                  onClick={() => addQuestion('multiple-choice')} 
+                  variant="outline" 
+                  size={isMobile ? "sm" : "default"} 
+                  className="btn-admin text-zinc-950"
+                >
                   <ListChecks className="mr-2 h-4 w-4" />
                   <span className={isMobile ? "text-mobile-xs" : ""}>Opción Múltiple</span>
                 </Button>
-                <Button type="button" onClick={() => addQuestion('free-text')} variant="outline" size={isMobile ? "sm" : "default"} className="btn-admin text-zinc-950">
+                <Button 
+                  type="button" 
+                  onClick={() => addQuestion('free-text')} 
+                  variant="outline" 
+                  size={isMobile ? "sm" : "default"} 
+                  className="btn-admin text-zinc-950"
+                >
                   <MessageSquare className="mr-2 h-4 w-4" />
                   <span className={isMobile ? "text-mobile-xs" : ""}>Respuesta Libre</span>
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              {questions.length === 0 ? <div className="text-center py-4 text-muted-foreground">
+              {questions.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
                   <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-2" />
                   <p>No has agregado preguntas a esta encuesta.</p>
                   <p>Haz clic en los botones de arriba para agregar una pregunta.</p>
-                </div> : <div className="space-y-6">
-                  {questions.map((question, qIndex) => <Card key={question.id} className="border-admin/20">
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {questions.map((question, qIndex) => (
+                    <Card key={question.id} className="border-admin/20">
                       <CardHeader className="pb-2 flex flex-row items-start justify-between">
                         <div className="space-y-1 w-full">
                           <div className="flex items-center">
@@ -380,37 +552,154 @@ export function SurveyEditor({
                             <span className="text-xs bg-muted px-2 py-1 rounded-full">
                               {question.type === 'multiple-choice' ? 'Opción Múltiple' : 'Respuesta Libre'}
                             </span>
+                            {question.dependsOn && (
+                              <span className="text-xs bg-blue-100 text-blue-800 ml-2 px-2 py-1 rounded-full flex items-center">
+                                <Link className="h-3 w-3 mr-1" />
+                                Condicional
+                              </span>
+                            )}
                           </div>
-                          <Input id={`question-${question.id}`} value={question.text} placeholder="Texto de la pregunta" onChange={e => updateQuestionText(question.id, e.target.value)} />
+                          <Input 
+                            id={`question-${question.id}`} 
+                            value={question.text} 
+                            placeholder="Texto de la pregunta" 
+                            onChange={e => updateQuestionText(question.id, e.target.value)} 
+                          />
                         </div>
-                        <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => confirmDeleteQuestion(question.id)}>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive" 
+                          onClick={() => confirmDeleteQuestion(question.id)}
+                        >
                           <Trash className="h-4 w-4" />
                         </Button>
                       </CardHeader>
-                      {question.type === 'multiple-choice' ? <CardContent className="pb-2">
+                      
+                      <CardContent className="border-t border-b py-3 border-muted">
+                        <div className="space-y-3">
+                          <FormLabel>Lógica condicional</FormLabel>
+                          <Select
+                            value={question.dependsOn || ""}
+                            onValueChange={(value) => {
+                              if (value === "") {
+                                updateQuestionCondition(question.id, undefined, []);
+                              } else {
+                                updateQuestionCondition(question.id, value, question.showWhen || []);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Esta pregunta no depende de ninguna otra" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">No depende de ninguna pregunta</SelectItem>
+                              {getAvailableParentQuestions(question.id).map(q => (
+                                <SelectItem key={q.id} value={q.id}>
+                                  Pregunta {questions.findIndex(item => item.id === q.id) + 1}: {q.text.substring(0, 50)}
+                                  {q.text.length > 50 ? "..." : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          
+                          {question.dependsOn && (
+                            <div className="mt-2 space-y-3">
+                              <FormLabel>Mostrar cuando se seleccione:</FormLabel>
+                              <div className="flex flex-col gap-3">
+                                {questions.find(q => q.id === question.dependsOn)?.options.map((option, idx) => (
+                                  <div key={idx} className="flex items-center space-x-2">
+                                    <Checkbox 
+                                      id={`condition-${question.id}-${idx}`}
+                                      checked={question.showWhen?.includes(option)}
+                                      onCheckedChange={(checked) => {
+                                        const currentShowWhen = question.showWhen || [];
+                                        if (checked) {
+                                          updateQuestionCondition(
+                                            question.id, 
+                                            question.dependsOn, 
+                                            [...currentShowWhen, option]
+                                          );
+                                        } else {
+                                          updateQuestionCondition(
+                                            question.id,
+                                            question.dependsOn,
+                                            currentShowWhen.filter(opt => opt !== option)
+                                          );
+                                        }
+                                      }}
+                                    />
+                                    <label 
+                                      htmlFor={`condition-${question.id}-${idx}`}
+                                      className="text-sm"
+                                    >
+                                      {option || `[Opción ${idx + 1} sin texto]`}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                              {(!question.showWhen || question.showWhen.length === 0) && (
+                                <div className="text-yellow-600 bg-yellow-50 p-2 rounded text-xs flex items-center">
+                                  <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                                  Selecciona al menos una opción o esta pregunta no se mostrará
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                      
+                      {question.type === 'multiple-choice' ? (
+                        <CardContent className="pb-2">
                           <div className="space-y-2">
                             <FormLabel>Opciones de respuesta</FormLabel>
-                            {question.options.map((option, oIndex) => <div key={oIndex} className="flex items-center gap-2">
-                                <Input value={option} placeholder={`Opción ${oIndex + 1}`} onChange={e => updateOptionText(question.id, oIndex, e.target.value)} className="flex-1" />
-                                {question.options.length > 2 && <Button type="button" variant="ghost" size="icon" className="text-destructive shrink-0" onClick={() => removeOption(question.id, oIndex)}>
+                            {question.options.map((option, oIndex) => (
+                              <div key={oIndex} className="flex items-center gap-2">
+                                <Input 
+                                  value={option} 
+                                  placeholder={`Opción ${oIndex + 1}`} 
+                                  onChange={e => updateOptionText(question.id, oIndex, e.target.value)} 
+                                  className="flex-1" 
+                                />
+                                {question.options.length > 2 && (
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-destructive shrink-0" 
+                                    onClick={() => removeOption(question.id, oIndex)}
+                                  >
                                     <Trash className="h-4 w-4" />
-                                  </Button>}
-                              </div>)}
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
                           </div>
                           <CardFooter className="px-0 pt-4 pb-0">
-                            <Button type="button" variant="outline" size="sm" onClick={() => addOption(question.id)}>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => addOption(question.id)}
+                            >
                               <Plus className="mr-2 h-3 w-3" />
                               Agregar Opción
                             </Button>
                           </CardFooter>
-                        </CardContent> : <CardContent className="pb-2">
+                        </CardContent>
+                      ) : (
+                        <CardContent className="pb-2">
                           <div className="text-sm text-muted-foreground italic bg-muted/30 p-3 rounded-md">
                             <MessageSquare className="inline-block mr-2 h-4 w-4" />
                             Los encuestados podrán escribir una respuesta libre a esta pregunta.
                           </div>
-                        </CardContent>}
-                    </Card>)}
-                </div>}
+                        </CardContent>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
           
@@ -419,13 +708,17 @@ export function SurveyEditor({
               Cancelar
             </Button>
             <Button type="submit" className="btn-admin" disabled={isSubmitting}>
-              {isSubmitting ? <>
+              {isSubmitting ? (
+                <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {existingSurvey ? "Actualizando..." : "Creando..."}
-                </> : <>
+                </>
+              ) : (
+                <>
                   <Save className="mr-2 h-4 w-4" />
                   {existingSurvey ? "Actualizar Encuesta" : "Crear Encuesta"}
-                </>}
+                </>
+              )}
             </Button>
           </div>
         </form>
@@ -442,10 +735,13 @@ export function SurveyEditor({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={e => {
-            e.preventDefault();
-            deleteQuestion();
-          }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction 
+              onClick={e => {
+                e.preventDefault();
+                deleteQuestion();
+              }} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -526,5 +822,6 @@ export function SurveyEditor({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>;
+    </div>
+  );
 }

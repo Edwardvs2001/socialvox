@@ -16,6 +16,14 @@ export interface SurveyQuestion {
   text: string;
   type: 'multiple-choice' | 'free-text';
   options: string[];
+  dependsOn?: string;
+  showWhen?: string[];
+}
+
+export interface RespondentInfo {
+  age?: number;
+  gender?: string;
+  location?: string;
 }
 
 export interface Survey {
@@ -28,6 +36,7 @@ export interface Survey {
   createdBy: string;
   assignedTo: string[];
   folderId: string | null;
+  collectDemographics: boolean;
 }
 
 export interface SurveyResponse {
@@ -38,6 +47,7 @@ export interface SurveyResponse {
   audioRecording: string | null;
   completedAt: string;
   syncedToServer: boolean;
+  respondentInfo?: RespondentInfo;
 }
 
 interface SurveyState {
@@ -133,7 +143,8 @@ const mockSurveys: Survey[] = [
     createdAt: '2023-09-15T10:30:00Z',
     createdBy: '1',
     assignedTo: ['2'],
-    folderId: 'folder-1'
+    folderId: 'folder-1',
+    collectDemographics: true
   },
   {
     id: '2',
@@ -157,7 +168,8 @@ const mockSurveys: Survey[] = [
     createdAt: '2023-10-05T14:45:00Z',
     createdBy: '1',
     assignedTo: ['2'],
-    folderId: 'folder-2'
+    folderId: 'folder-2',
+    collectDemographics: false
   }
 ];
 

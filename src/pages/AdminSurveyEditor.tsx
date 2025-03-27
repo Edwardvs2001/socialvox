@@ -17,7 +17,7 @@ export default function AdminSurveyEditor() {
   const isNewSurvey = !id || id === 'new';
   const survey = isNewSurvey ? null : getSurveyById(id);
   
-  // Cargar usuarios para poder asignar encuestadores
+  // Load users so we can assign surveyors
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
