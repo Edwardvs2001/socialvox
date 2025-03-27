@@ -21,6 +21,7 @@ import { Loader2, Plus, Save, Trash, AlertTriangle, Users, ListChecks, MessageSq
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ExcelImporter } from './ExcelImporter';
 
 const formSchema = z.object({
   title: z.string().min(3, {
@@ -105,7 +106,7 @@ export function SurveyEditor({
         type,
         options: type === 'multiple-choice' ? ["Option 1", "Option 2"] : []
       };
-      setQuestions(prevQuestions => [...prevQuestions, newQuestion]);
+      setQuestions(prev => [...prev, newQuestion]);
     } catch (error) {
       console.error("Error adding question:", error);
       toast.error("Error al agregar pregunta");
@@ -367,8 +368,20 @@ export function SurveyEditor({
     return breadcrumb.join(' > ');
   };
   
+  const handleImportedQuestions = (importedQuestions: any[]) => {
+    setQuestions(prev => [
+      ...prev,
+      ...importedQuestions.map(q => ({
+        ...q,
+        id: uuidv4(),
+        dependsOn: '',
+        showWhen: []
+      }))
+    ]);
+  };
+  
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <Card>
@@ -507,27 +520,19 @@ export function SurveyEditor({
                 <CardTitle>Preguntas</CardTitle>
                 <CardDescription>Preguntas y opciones de respuesta</CardDescription>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button 
-                  type="button" 
-                  onClick={() => addQuestion('multiple-choice')} 
-                  variant="outline" 
-                  size={isMobile ? "sm" : "default"} 
-                  className="btn-admin text-zinc-950"
-                >
-                  <ListChecks className="mr-2 h-4 w-4" />
-                  <span className={isMobile ? "text-mobile-xs" : ""}>Opción Múltiple</span>
-                </Button>
-                <Button 
-                  type="button" 
-                  onClick={() => addQuestion('free-text')} 
-                  variant="outline" 
-                  size={isMobile ? "sm" : "default"} 
-                  className="btn-admin text-zinc-950"
-                >
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  <span className={isMobile ? "text-mobile-xs" : ""}>Respuesta Libre</span>
-                </Button>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Preguntas</h3>
+                <div className="flex items-center gap-2">
+                  <ExcelImporter onImport={handleImportedQuestions} />
+                  <Button
+                    type="button"
+                    onClick={addQuestion}
+                    className="btn-admin"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Agregar Pregunta
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
