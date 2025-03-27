@@ -13,6 +13,8 @@ interface ExcelQuestion {
   text: string;
   type: 'multiple-choice' | 'free-text';
   options?: string;
+  dependsOn?: string;
+  showWhen?: string[];
 }
 
 export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => void }) {
@@ -24,10 +26,11 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
     
     // Create template data with Spanish headers and examples
     const templateData = [
-      ['Número', 'Texto de la Pregunta', 'Tipo', 'Opciones (separadas por ;)'],
-      ['1', '¿Qué le pareció el servicio?', 'multiple-choice', 'Excelente;Bueno;Regular;Malo'],
-      ['2', '¿Por qué eligió esta respuesta?', 'free-text', ''],
-      ['3', '¿Recomendaría nuestro servicio?', 'multiple-choice', 'Sí, definitivamente;Probablemente;No estoy seguro;No'],
+      ['Número', 'Texto de la Pregunta', 'Tipo', 'Opciones (separadas por ;)', 'Depende de pregunta #', 'Mostrar cuando (separado por ;)'],
+      ['1', '¿Qué le pareció el servicio?', 'multiple-choice', 'Excelente;Bueno;Regular;Malo', '', ''],
+      ['2', '¿Por qué eligió esta respuesta?', 'free-text', '', '1', 'Malo;Regular'],
+      ['3', '¿Recomendaría nuestro servicio?', 'multiple-choice', 'Sí, definitivamente;Probablemente;No estoy seguro;No', '', ''],
+      ['4', '¿Qué podríamos mejorar?', 'free-text', '', '3', 'No estoy seguro;No'],
     ];
     
     // Create worksheet
@@ -57,7 +60,7 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
         
         // Convert to JSON with appropriate headers
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-          header: ['order', 'text', 'type', 'options']
+          header: ['order', 'text', 'type', 'options', 'dependsOn', 'showWhen']
         });
         
         // Skip header row
@@ -76,9 +79,12 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
           // If neither has order, maintain original order
           return 0;
         });
+
+        // Create a map of order to id for conditional logic
+        const orderToId = new Map<number, string>();
         
-        // Validate and transform data
-        const questions = sortedData.map((row: any) => {
+        // First pass: create questions and map order numbers to IDs
+        const questions = sortedData.map((row: any, index: number) => {
           if (!row.text || !row.type) {
             throw new Error('Todas las preguntas deben tener texto y tipo');
           }
@@ -88,9 +94,15 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
           }
           
           const question: any = {
+            id: `q${index + 1}`,
             text: row.text,
             type: row.type,
           };
+          
+          // Store the mapping of order to question id
+          if (row.order && !isNaN(Number(row.order))) {
+            orderToId.set(Number(row.order), question.id);
+          }
           
           if (row.type === 'multiple-choice') {
             if (!row.options) {
@@ -102,9 +114,29 @@ export function ExcelImporter({ onImport }: { onImport: (questions: any[]) => vo
             if (question.options.length < 2) {
               throw new Error('Las preguntas de opción múltiple deben tener al menos 2 opciones');
             }
+          } else {
+            question.options = [];
           }
           
           return question;
+        });
+        
+        // Second pass: add conditional logic
+        questions.forEach((question: any, index: number) => {
+          const row = sortedData[index];
+          
+          // Handle conditional logic
+          if (row.dependsOn && !isNaN(Number(row.dependsOn))) {
+            const parentQuestionId = orderToId.get(Number(row.dependsOn));
+            if (parentQuestionId) {
+              question.dependsOn = parentQuestionId;
+              
+              // Handle showWhen conditions
+              if (row.showWhen) {
+                question.showWhen = row.showWhen.split(';').filter(Boolean);
+              }
+            }
+          }
         });
         
         onImport(questions);
