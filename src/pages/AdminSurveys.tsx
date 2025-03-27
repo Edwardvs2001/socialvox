@@ -4,10 +4,11 @@ import { AuthLayout } from '@/components/layout/AuthLayout';
 import { SurveyManager } from '@/components/admin/SurveyManager';
 import { Suspense, useEffect, useState, useRef } from 'react';
 import { useSurveyStore } from '@/store/surveyStore';
+import { Loader2 } from 'lucide-react';
 
 export default function AdminSurveys() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const { fetchSurveys, clearError } = useSurveyStore();
+  const { fetchSurveys, clearError, isLoading } = useSurveyStore();
   const loadingRef = useRef(false);
   const isMounted = useRef(true);
   
@@ -50,8 +51,17 @@ export default function AdminSurveys() {
         title="Gestión de Encuestas"
         description="Crear, editar y administrar encuestas"
       >
-        <Suspense fallback={<div>Cargando...</div>}>
+        <Suspense fallback={
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-admin" />
+          </div>
+        }>
           {isLoaded && <SurveyManager />}
+          {isLoading && !isLoaded && (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-admin" />
+            </div>
+          )}
         </Suspense>
       </AdminLayout>
     </AuthLayout>

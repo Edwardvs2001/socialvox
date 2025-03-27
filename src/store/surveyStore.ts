@@ -210,10 +210,26 @@ export const useSurveyStore = create<SurveyState>()(
           // Simulate API call delay
           await new Promise(resolve => setTimeout(resolve, 800));
           
+          // Ensure there's an assigned array even if not provided
+          const assignedTo = surveyData.assignedTo || [];
+          
+          // Ensure questions have the correct type
+          const questions = surveyData.questions.map(q => ({
+            ...q,
+            type: q.type || 'multiple-choice',
+            options: q.options || []
+          }));
+          
           const newSurvey: Survey = {
             ...surveyData,
             id: uuidv4(),
             createdAt: new Date().toISOString(),
+            assignedTo,
+            questions,
+            // Fix default values if not specified
+            isActive: surveyData.isActive !== undefined ? surveyData.isActive : true,
+            collectDemographics: surveyData.collectDemographics !== undefined ? surveyData.collectDemographics : true,
+            folderId: surveyData.folderId || null
           };
           
           set(state => ({

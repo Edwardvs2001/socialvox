@@ -84,11 +84,16 @@ export function SurveyEditor({
         type: q.type || 'multiple-choice' as const
       }));
       setQuestions(updatedQuestions);
-      setSelectedSurveyors(existingSurvey.assignedTo);
+      setSelectedSurveyors(existingSurvey.assignedTo || []);
       setSelectedFolderId(existingSurvey.folderId);
       
       // Update form values for demographics
       form.setValue("collectDemographics", existingSurvey.collectDemographics ?? true);
+    } else {
+      // Reset to default state for new survey
+      setQuestions([]);
+      setSelectedSurveyors([]);
+      setSelectedFolderId(null);
     }
   }, [existingSurvey, form]);
   
@@ -323,29 +328,17 @@ export function SurveyEditor({
           isActive: values.isActive,
           questions,
           createdBy: user.id,
-          assignedTo: [],
-          folderId: null,
+          assignedTo: selectedSurveyors,
+          folderId: selectedFolderId,
           collectDemographics: values.collectDemographics
         });
         
-        // Apply assignments if selected
-        const assignmentPromises = [];
-        if (selectedFolderId) {
-          assignmentPromises.push(handleSaveFolderAssignment(newSurvey.id));
-        }
-        
-        if (selectedSurveyors.length > 0) {
-          assignmentPromises.push(handleAssignSurvey(newSurvey.id));
-        }
-        
-        await Promise.all(assignmentPromises);
         toast.success("Encuesta creada correctamente");
+        navigate("/admin/surveys");
       }
-      
-      navigate("/admin/surveys");
     } catch (error) {
       console.error("Error saving survey:", error);
-      toast.error("Error al guardar la encuesta");
+      toast.error("Error al guardar la encuesta: " + (error instanceof Error ? error.message : "Error desconocido"));
     } finally {
       setIsSubmitting(false);
     }
