@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/store/basicAuthStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,17 +26,14 @@ export function LoginForm() {
   
   // Check session status on component mount
   useEffect(() => {
-    const check = async () => {
-      const isAuthenticated = useAuthStore.getState().isAuthenticated;
-      if (isAuthenticated) {
-        const isSessionValid = await checkSession();
-        if (!isSessionValid) {
-          logout();
-          toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
-        }
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (isAuthenticated) {
+      const isSessionValid = checkSession();
+      if (!isSessionValid) {
+        logout();
+        toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
       }
-    };
-    check();
+    }
   }, [checkSession, logout]);
   
   // Reset error when component unmounts

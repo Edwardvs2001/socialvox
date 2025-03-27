@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useUserStore, User } from '@/store/userStore';
-import { UserRole } from '@/store/authStore';
+import { useAuthStore, User, UserRole } from '@/store/basicAuthStore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -38,7 +37,7 @@ const userFormSchema = z.object({
 });
 
 export function UserManager() {
-  const { users, fetchUsers, createUser, updateUser, deleteUser, isLoading, error } = useUserStore();
+  const { users, createUser, updateUser, deleteUser, isLoading, error } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -57,10 +56,6 @@ export function UserManager() {
       active: true,
     },
   });
-  
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
   
   const filteredUsers = users.filter(user => 
     user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -87,7 +82,7 @@ export function UserManager() {
       username: user.username,
       name: user.name,
       email: user.email,
-      password: "",
+      password: "", // Empty password field for editing
       role: user.role,
       active: user.active,
     });
@@ -106,16 +101,24 @@ export function UserManager() {
     
     try {
       if (selectedUser) {
-        await updateUser(selectedUser.id, {
+        // Update existing user
+        const updateData: Partial<User> = {
           username: values.username,
           name: values.name,
           email: values.email,
-          password: values.password || undefined,
           role: values.role,
           active: values.active
-        });
+        };
+        
+        // Only include password if it was provided
+        if (values.password) {
+          updateData.password = values.password;
+        }
+        
+        await updateUser(selectedUser.id, updateData);
         toast.success("Usuario actualizado correctamente");
       } else {
+        // Create new user
         await createUser({
           username: values.username,
           name: values.name,
@@ -147,7 +150,7 @@ export function UserManager() {
       setIsDeleteDialogOpen(false);
     } catch (error) {
       console.error("Error deleting user:", error);
-      toast.error("Error al eliminar usuario");
+      toast.error(error instanceof Error ? error.message : "Error al eliminar usuario");
     } finally {
       setIsSubmitting(false);
     }

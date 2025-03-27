@@ -1,8 +1,6 @@
-
 import { ReactNode, useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from '@/store/basicAuthStore';
 import { toast } from 'sonner';
 
 interface AuthLayoutProps {
@@ -16,13 +14,13 @@ export function AuthLayout({
   requiresAuth = true,
   allowedRoles = [] 
 }: AuthLayoutProps) {
-  const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
+  const { isAuthenticated, user, logout, refreshSession } = useAuthStore();
   const navigate = useNavigate();
   const hasCheckedAuthRef = useRef(false);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initialCheckRef = useRef(false);
   
-  const checkAuth = useCallback(async () => {
+  const checkAuth = useCallback(() => {
     // Prevent multiple checks on the same render cycle
     if (initialCheckRef.current) return;
     initialCheckRef.current = true;
@@ -36,8 +34,8 @@ export function AuthLayout({
     
     // Logic for pages that require authentication
     if (requiresAuth) {
-      // First check if session is valid
-      const isSessionValid = await checkSession();
+      // Check if session is valid
+      const isSessionValid = useAuthStore.getState().checkSession();
       
       if (!isAuthenticated || !isSessionValid) {
         console.log('Not authenticated or session expired, redirecting to login');
@@ -80,7 +78,7 @@ export function AuthLayout({
     } else {
       // Logic for pages that don't require authentication (like login)
       // Check if session is valid for already authenticated users
-      const isSessionValid = isAuthenticated ? await checkSession() : false;
+      const isSessionValid = isAuthenticated ? useAuthStore.getState().checkSession() : false;
       
       if (isAuthenticated && isSessionValid) {
         console.log('Already authenticated, redirecting to dashboard');
@@ -101,19 +99,9 @@ export function AuthLayout({
         }
       }
     }
-  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession, refreshSession, logout]);
+  }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, refreshSession, logout]);
   
   useEffect(() => {
-    // Set up auth state listener for Supabase
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event);
-      
-      if (event === 'SIGNED_OUT') {
-        // User signed out, update state
-        useAuthStore.getState().logout();
-      }
-    });
-    
     // Run the auth check only once on component mount
     checkAuth();
     
@@ -124,7 +112,7 @@ export function AuthLayout({
     }
     
     refreshTimerRef.current = setInterval(() => {
-      if (isAuthenticated && checkSession()) {
+      if (isAuthenticated && useAuthStore.getState().checkSession()) {
         refreshSession();
       }
     }, 15 * 60 * 1000); // 15 minutes
@@ -133,13 +121,8 @@ export function AuthLayout({
       if (refreshTimerRef.current) {
         clearInterval(refreshTimerRef.current);
       }
-      
-      // Clean up Supabase auth listener
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
     };
-  }, [checkAuth]);
+  }, [checkAuth, isAuthenticated, refreshSession]);
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
