@@ -87,11 +87,18 @@ export const useAuthStore = create<AuthState>()(
             }
           }
           
-          // Call Supabase auth login - print credentials for debugging
-          console.log(`Attempting login with email: ${email}`);
+          // Special case for "admin" login (convenience feature)
+          let finalEmail = email;
+          if (email.toLowerCase() === 'admin') {
+            finalEmail = 'admin@encuestasva.com';
+            console.log('Using admin@encuestasva.com for login with "admin"');
+          }
+          
+          // Call Supabase auth login
+          console.log(`Attempting login with email: ${finalEmail}`);
           
           const { data, error } = await supabase.auth.signInWithPassword({
-            email,
+            email: finalEmail,
             password,
           });
           
@@ -124,9 +131,9 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: {
               id: profileData.id,
-              username: profileData.username,
-              name: profileData.name,
-              role: profileData.role,
+              username: profileData.username || data.user.user_metadata.username || '',
+              name: profileData.name || data.user.user_metadata.name || '',
+              role: profileData.role || data.user.user_metadata.role || 'surveyor',
             },
             session: data.session,
             isAuthenticated: true,
@@ -313,9 +320,9 @@ export const useAuthStore = create<AuthState>()(
                     useAuthStore.setState({
                       user: {
                         id: data.id,
-                        username: data.username,
-                        name: data.name,
-                        role: data.role,
+                        username: data.username || session.user.user_metadata.username || '',
+                        name: data.name || session.user.user_metadata.name || '',
+                        role: data.role || session.user.user_metadata.role || 'surveyor',
                       },
                       session: session,
                       isAuthenticated: true,
@@ -351,9 +358,9 @@ export const useAuthStore = create<AuthState>()(
                     useAuthStore.setState({
                       user: {
                         id: data.id,
-                        username: data.username,
-                        name: data.name,
-                        role: data.role,
+                        username: data.username || session.user.user_metadata.username || '',
+                        name: data.name || session.user.user_metadata.name || '',
+                        role: data.role || session.user.user_metadata.role || 'surveyor',
                       },
                       session: session,
                       isAuthenticated: true,

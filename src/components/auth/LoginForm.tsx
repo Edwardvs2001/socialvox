@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -61,12 +60,10 @@ export function LoginForm() {
       return;
     }
     
-    // For admin login, default to admin@encuestasva.com if they just enter "admin"
-    const finalEmail = loginType === 'admin' && email === 'admin' ? 'admin@encuestasva.com' : email;
-    
     try {
-      console.log(`Attempting to login with: ${finalEmail}`);
-      await login(finalEmail, password);
+      // Login will convert 'admin' to 'admin@encuestasva.com' internally
+      console.log(`Attempting to login with: ${email}`);
+      await login(email, password);
       const user = useAuthStore.getState().user;
       console.log('Login successful, user:', user);
       

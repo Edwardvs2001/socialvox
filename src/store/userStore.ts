@@ -119,31 +119,53 @@ export const useUserStore = create<UserState>()(
             throw new Error('El correo electrónico ya está registrado');
           }
           
-          // Create user in Supabase Auth
-          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          console.log('Creating new user with data:', {
+            email: userData.email,
+            role: userData.role,
+            username: userData.username,
+            name: userData.name
+          });
+          
+          // Create user with Supabase Auth
+          const { data: authData, error: authError } = await supabase.auth.signUp({
             email: userData.email,
             password: userData.password || generateStrongPassword(),
-            email_confirm: true,
-            user_metadata: {
-              username: userData.username,
-              name: userData.name,
-              role: userData.role,
+            options: {
+              data: {
+                username: userData.username,
+                name: userData.name,
+                role: userData.role,
+              }
             }
           });
           
-          if (authError) throw authError;
+          if (authError) {
+            console.error('Error creating user account:', authError);
+            throw authError;
+          }
           
           if (!authData.user) {
             throw new Error('No se pudo crear el usuario');
           }
           
+          console.log('User created successfully, id:', authData.user.id);
+          
+          // Wait a moment for the trigger to create the profile
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
           // Update active status in profiles (since trigger creates the profile)
           const { error: updateError } = await supabase
             .from('profiles')
-            .update({ active: userData.active })
+            .update({ 
+              active: userData.active,
+              role: userData.role
+            })
             .eq('id', authData.user.id);
           
-          if (updateError) throw updateError;
+          if (updateError) {
+            console.error('Error updating user profile:', updateError);
+            throw updateError;
+          }
           
           // Fetch newly created profile
           const { data: newProfile, error: profileError } = await supabase
@@ -152,7 +174,12 @@ export const useUserStore = create<UserState>()(
             .eq('id', authData.user.id)
             .single();
           
-          if (profileError) throw profileError;
+          if (profileError) {
+            console.error('Error fetching new user profile:', profileError);
+            throw profileError;
+          }
+          
+          console.log('New user profile:', newProfile);
           
           // Create User object from profile
           const newUser: User = {

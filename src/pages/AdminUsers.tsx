@@ -18,62 +18,68 @@ export default function AdminUsers() {
     // This ensures there's always at least one admin in the system
     const createInitialAdmin = async () => {
       try {
+        console.log('Checking if admin user exists...');
         // Check if admin exists
-        const { data } = await supabase
+        const { data, error: queryError } = await supabase
           .from('profiles')
           .select('*')
           .eq('username', 'admin')
           .eq('role', 'admin');
         
+        if (queryError) {
+          console.error('Error checking for admin:', queryError);
+          return;
+        }
+        
         if (!data || data.length === 0) {
-          // Create admin user through the Auth API
-          try {
-            const { error } = await supabase.auth.admin.createUser({
-              email: 'admin@encuestasva.com',
-              password: 'Admin@2024!',
-              email_confirm: true,
-              user_metadata: {
+          console.log('Admin user not found, creating admin user...');
+          
+          // Create admin user through Auth API
+          const { data: userData, error: authError } = await supabase.auth.signUp({
+            email: 'admin@encuestasva.com',
+            password: 'Admin@2024!',
+            options: {
+              data: {
                 username: 'admin',
                 name: 'Administrador',
                 role: 'admin',
               }
-            });
-            
-            if (error) {
-              console.error('Error creating admin user:', error);
-              
-              // Alternative method for creating user if admin API fails
-              const { error: signUpError } = await supabase.auth.signUp({
-                email: 'admin@encuestasva.com',
-                password: 'Admin@2024!',
-                options: {
-                  data: {
-                    username: 'admin',
-                    name: 'Administrador',
-                    role: 'admin',
-                  }
-                }
-              });
-              
-              if (signUpError) {
-                console.error('Error creating admin user with signUp:', signUpError);
-                toast.error('No se pudo crear el usuario administrador');
-                return;
-              } else {
-                console.log('Admin user created successfully with signUp');
-                toast.success('Usuario admin creado correctamente');
-              }
-            } else {
-              console.log('Admin user created successfully');
-              toast.success('Usuario admin creado correctamente');
             }
-          } catch (error) {
-            console.error('Error in admin user creation process:', error);
-            toast.error('Error al crear usuario administrador');
+          });
+          
+          if (authError) {
+            console.error('Error creating admin user:', authError);
+            toast.error('No se pudo crear el usuario administrador');
+            return;
           }
+          
+          // Wait a moment for the trigger to create the profile
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Update user profile with admin role (in case trigger doesn't set it)
+          if (userData.user) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ 
+                role: 'admin',
+                active: true,
+                username: 'admin',
+                name: 'Administrador'
+              })
+              .eq('id', userData.user.id);
+            
+            if (updateError) {
+              console.error('Error updating admin profile:', updateError);
+            }
+          }
+          
+          console.log('Admin user created successfully');
+          toast.success('Usuario admin creado correctamente');
           
           // Refresh users list
           fetchUsers();
+        } else {
+          console.log('Admin user already exists');
         }
       } catch (error) {
         console.error('Error checking/creating admin:', error);
