@@ -103,7 +103,7 @@ export function SurveyEditor({
         id: uuidv4(),
         text: "",
         type,
-        options: type === 'multiple-choice' ? ["", ""] : []
+        options: type === 'multiple-choice' ? ["Option 1", "Option 2"] : []
       };
       setQuestions(prevQuestions => [...prevQuestions, newQuestion]);
     } catch (error) {
@@ -129,7 +129,7 @@ export function SurveyEditor({
   const addOption = (questionId: string) => {
     setQuestions(questions.map(q => q.id === questionId ? {
       ...q,
-      options: [...q.options, ""]
+      options: [...q.options, `Option ${q.options.length + 1}`]
     } : q));
   };
   
@@ -756,18 +756,31 @@ export function SurveyEditor({
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            {surveyors.length > 0 ? <div className="max-h-[300px] overflow-y-auto pr-2">
-                {surveyors.map(surveyor => <div key={surveyor.id} className="flex items-center space-x-2 py-2 border-b">
-                    <Checkbox id={`surveyor-${surveyor.id}`} checked={selectedSurveyors.includes(surveyor.id)} onCheckedChange={() => toggleSurveyor(surveyor.id)} />
-                    <label htmlFor={`surveyor-${surveyor.id}`} className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            {surveyors.length > 0 ? (
+              <div className="max-h-[300px] overflow-y-auto pr-2">
+                {surveyors.map(surveyor => (
+                  <div key={surveyor.id} className="flex items-center space-x-2 py-2 border-b">
+                    <Checkbox 
+                      id={`surveyor-${surveyor.id}`} 
+                      checked={selectedSurveyors.includes(surveyor.id)} 
+                      onCheckedChange={() => toggleSurveyor(surveyor.id)} 
+                    />
+                    <label 
+                      htmlFor={`surveyor-${surveyor.id}`} 
+                      className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
                       <div>{surveyor.name}</div>
                       <div className="text-xs text-muted-foreground mt-1">{surveyor.email}</div>
                     </label>
-                  </div>)}
-              </div> : <div className="text-center py-4 text-muted-foreground">
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
                 <p>No hay encuestadores disponibles.</p>
                 <p className="text-sm mt-1">Crea usuarios con rol de encuestador primero.</p>
-              </div>}
+              </div>
+            )}
           </div>
           
           <DialogFooter>
@@ -775,10 +788,12 @@ export function SurveyEditor({
               Cancelar
             </Button>
             <Button className="btn-admin" onClick={() => handleAssignSurvey()} disabled={isSubmitting}>
-              {isSubmitting ? <>
+              {isSubmitting ? (
+                <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Asignando...
-                </> : "Guardar Asignaciones"}
+                </>
+              ) : "Guardar Asignaciones"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -800,9 +815,11 @@ export function SurveyEditor({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="null">Sin carpeta</SelectItem>
-                {folders.map(folder => <SelectItem key={folder.id} value={folder.id}>
+                {folders.map(folder => (
+                  <SelectItem key={folder.id} value={folder.id}>
                     {getFolderPath(folder.id)}
-                  </SelectItem>)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -812,10 +829,12 @@ export function SurveyEditor({
               Cancelar
             </Button>
             <Button onClick={() => handleSaveFolderAssignment()} className="btn-admin" disabled={isSubmitting}>
-              {isSubmitting ? <>
+              {isSubmitting ? (
+                <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Guardando...
-                </> : <>Guardar</>}
+                </>
+              ) : <>Guardar</>}
             </Button>
           </DialogFooter>
         </DialogContent>
