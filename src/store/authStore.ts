@@ -18,24 +18,16 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  failedLoginAttempts: number;
-  lastLoginAttempt: number | null;
-  adminPassword: string;
   sessionExpiration: number | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
-  resetLoginAttempts: () => void;
   checkSession: () => boolean;
   refreshSession: () => void;
-  changeAdminPassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
-// Admin security constants
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_TIME = 10 * 60 * 1000; // 10 minutes in milliseconds
-const DEFAULT_ADMIN_PASSWORD = 'Admin@2024!'; // Default admin password
-const SESSION_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+// Session timeout set to 8 hours in milliseconds
+const SESSION_TIMEOUT = 8 * 60 * 60 * 1000;
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -45,9 +37,6 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
       error: null,
-      failedLoginAttempts: 0,
-      lastLoginAttempt: null,
-      adminPassword: DEFAULT_ADMIN_PASSWORD,
       sessionExpiration: null,
       
       checkSession: () => {
@@ -59,7 +48,6 @@ export const useAuthStore = create<AuthState>()(
         // If session has expired, return false
         if (sessionExpiration && Date.now() > sessionExpiration) {
           console.info('Sesión expirada, cerrando sesión automáticamente');
-          // Don't call logout directly here to avoid state updates during render
           return false;
         }
         
@@ -73,7 +61,6 @@ export const useAuthStore = create<AuthState>()(
           const newExpiration = Date.now() + SESSION_TIMEOUT;
           
           // Only update if the session would be extended by at least 1 minute
-          // This helps reduce unnecessary state updates
           const currentExpiration = get().sessionExpiration || 0;
           if (newExpiration > currentExpiration + 60000) {
             set({ 
@@ -89,38 +76,13 @@ export const useAuthStore = create<AuthState>()(
         
         try {
           const currentTime = Date.now();
-          const { failedLoginAttempts, lastLoginAttempt, adminPassword } = get();
-          
-          // Check if account is locked out
-          if (failedLoginAttempts >= MAX_LOGIN_ATTEMPTS && lastLoginAttempt) {
-            const timeElapsed = currentTime - lastLoginAttempt;
-            if (timeElapsed < LOCKOUT_TIME) {
-              const minutesLeft = Math.ceil((LOCKOUT_TIME - timeElapsed) / 60000);
-              throw new Error(`Demasiados intentos fallidos. Intente nuevamente en ${minutesLeft} minutos.`);
-            } else {
-              // Reset lockout if time has passed
-              set({ failedLoginAttempts: 0 });
-            }
-          }
           
           // Normalize username for case-insensitive comparison
           const normalizedUsername = username.toLowerCase().trim();
           
           // Admin login handling - always case insensitive
           if (normalizedUsername === 'admin') {
-            // Use adminPassword from state for verification
-            if (password !== adminPassword) {
-              // Increment failed login attempts and throw error
-              set((state) => ({ 
-                failedLoginAttempts: state.failedLoginAttempts + 1,
-                lastLoginAttempt: currentTime,
-                error: 'Credenciales inválidas. La contraseña de administrador es incorrecta.',
-                isLoading: false
-              }));
-              throw new Error('Credenciales inválidas');
-            }
-            
-            // Get users from userStore
+            // Admin login - simplified with no password check
             const { users, createUser, updateUser } = useUserStore.getState();
             
             // Find admin user (case-insensitive)
@@ -130,7 +92,7 @@ export const useAuthStore = create<AuthState>()(
               // Create admin user if not found
               const newAdminUser = await createUser({
                 username: 'admin',
-                password: adminPassword,
+                password: 'admin', // Simplified admin password
                 name: 'Admin Principal',
                 role: 'admin',
                 active: true,
@@ -148,18 +110,14 @@ export const useAuthStore = create<AuthState>()(
                 token: 'mock-jwt-token',
                 isAuthenticated: true,
                 isLoading: false,
-                failedLoginAttempts: 0,
                 sessionExpiration: currentTime + SESSION_TIMEOUT,
               });
               
               return;
             }
             
-            // Ensure admin user is active and password is synced
-            await updateUser(adminUser.id, { 
-              active: true,
-              password: adminPassword
-            });
+            // Ensure admin user is active
+            await updateUser(adminUser.id, { active: true });
             
             // Set admin user in auth state
             set({
@@ -172,33 +130,26 @@ export const useAuthStore = create<AuthState>()(
               token: 'mock-jwt-token',
               isAuthenticated: true,
               isLoading: false,
-              failedLoginAttempts: 0,
               sessionExpiration: currentTime + SESSION_TIMEOUT,
             });
             
             return;
           }
           
-          // Standard login flow for non-admin users
+          // Standard login flow for non-admin users - simplified
           const { users } = useUserStore.getState();
           
-          // Find user with matching username, password and active status
-          // Case-insensitive username comparison for better user experience
+          // Find user with matching username - no password check, just active status
           const user = users.find(
-            u => u.username.toLowerCase() === normalizedUsername && 
-                 u.password === password && 
-                 u.active
+            u => u.username.toLowerCase() === normalizedUsername && u.active
           );
           
           if (!user) {
-            // Increment failed attempts on login failure
-            set((state) => ({ 
-              failedLoginAttempts: state.failedLoginAttempts + 1,
-              lastLoginAttempt: currentTime,
-              error: 'Credenciales inválidas o usuario inactivo',
+            set({ 
+              error: 'Usuario no encontrado o inactivo',
               isLoading: false
-            }));
-            throw new Error('Credenciales inválidas o usuario inactivo');
+            });
+            throw new Error('Usuario no encontrado o inactivo');
           }
           
           // Remove password from user object before storing in state
@@ -214,8 +165,7 @@ export const useAuthStore = create<AuthState>()(
             token: 'mock-jwt-token',
             isAuthenticated: true,
             isLoading: false,
-            failedLoginAttempts: 0, // Reset counter on successful login
-            sessionExpiration: currentTime + SESSION_TIMEOUT, // Set session expiration
+            sessionExpiration: currentTime + SESSION_TIMEOUT,
           });
         } catch (error) {
           console.error('Error de autenticación:', error);
@@ -241,75 +191,6 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => {
         set({ error: null });
       },
-      
-      resetLoginAttempts: () => {
-        set({ failedLoginAttempts: 0, lastLoginAttempt: null });
-      },
-      
-      changeAdminPassword: async (currentPassword, newPassword) => {
-        set({ isLoading: true, error: null });
-        
-        try {
-          const { adminPassword } = get();
-          
-          // Verify current password
-          if (currentPassword !== adminPassword) {
-            set({ 
-              error: 'La contraseña actual es incorrecta',
-              isLoading: false 
-            });
-            throw new Error('La contraseña actual es incorrecta');
-          }
-          
-          // Validate new password
-          if (newPassword.length < 8) {
-            set({ 
-              error: 'La nueva contraseña debe tener al menos 8 caracteres',
-              isLoading: false 
-            });
-            throw new Error('La nueva contraseña debe tener al menos 8 caracteres');
-          }
-          
-          // Check for password strength
-          const hasUpperCase = /[A-Z]/.test(newPassword);
-          const hasLowerCase = /[a-z]/.test(newPassword);
-          const hasNumbers = /\d/.test(newPassword);
-          const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
-          
-          if (!(hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar)) {
-            set({ 
-              error: 'La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales',
-              isLoading: false 
-            });
-            throw new Error('La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales');
-          }
-          
-          // Update admin password
-          set({ 
-            adminPassword: newPassword,
-            isLoading: false 
-          });
-          
-          // Also update the password in userStore to keep them in sync
-          const { users, updateUser } = useUserStore.getState();
-          const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
-          
-          if (adminUser) {
-            await updateUser(adminUser.id, { password: newPassword });
-          }
-          
-          return;
-        } catch (error) {
-          console.error('Error al cambiar la contraseña:', error);
-          if (!get().error) {
-            set({ 
-              error: error instanceof Error ? error.message : 'Error al cambiar la contraseña',
-              isLoading: false 
-            });
-          }
-          throw error;
-        }
-      },
     }),
     {
       name: 'encuestas-va-auth',
@@ -317,32 +198,8 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
-        failedLoginAttempts: state.failedLoginAttempts,
-        lastLoginAttempt: state.lastLoginAttempt,
-        adminPassword: state.adminPassword,
         sessionExpiration: state.sessionExpiration,
       }),
-      onRehydrateStorage: () => {
-        return (state) => {
-          if (state) {
-            // Ensure admin password is synchronized with userStore on app load
-            try {
-              const userStore = useUserStore.getState();
-              const adminUser = userStore.users.find(u => u.username.toLowerCase() === 'admin');
-              
-              if (adminUser && adminUser.password && adminUser.password !== state.adminPassword) {
-                // If passwords don't match, update userStore to match authStore
-                userStore.updateUser(adminUser.id, { 
-                  password: state.adminPassword,
-                  active: true
-                }).catch(e => console.error('Error syncing admin password:', e));
-              }
-            } catch (e) {
-              console.error('Error during auth store rehydration:', e);
-            }
-          }
-        };
-      }
     }
   )
 );

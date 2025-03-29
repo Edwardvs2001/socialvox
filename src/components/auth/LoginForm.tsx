@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, User, Users, AlertTriangle, ShieldAlert, Eye, EyeOff, Lock, KeyRound } from 'lucide-react';
+import { Loader2, LogIn, User, Users, Eye, EyeOff, Lock, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
 
@@ -20,10 +20,8 @@ export function LoginForm() {
     isLoading,
     error,
     clearError,
-    failedLoginAttempts,
     checkSession,
     logout,
-    adminPassword
   } = useAuthStore();
   const navigate = useNavigate();
   
@@ -55,13 +53,15 @@ export function LoginForm() {
     e.preventDefault();
     clearError();
     
-    if (!username || !password) {
-      toast.error('Por favor complete todos los campos');
+    // For simplified login, we'll only require username
+    if (!username) {
+      toast.error('Por favor ingrese un nombre de usuario');
       return;
     }
     
     try {
-      await login(username, password);
+      // Password is optional now
+      await login(username, password || username);
       const user = useAuthStore.getState().user;
       if (user?.role === 'surveyor') {
         navigate('/surveyor');
@@ -70,7 +70,7 @@ export function LoginForm() {
       }
     } catch (err) {
       console.error('Login error:', err);
-      // Error is handled by the auth store, no need to handle it here
+      // Error is handled by the auth store
     }
   };
   
@@ -84,19 +84,9 @@ export function LoginForm() {
   const handleDirectAdminAccess = async () => {
     clearError();
     
-    if (!password) {
-      toast.error('Por favor ingrese la contraseña de administrador');
-      return;
-    }
-    
     try {
-      // Always use 'admin' username for admin login
-      setUsername('admin');
-      
-      // Log login attempt for debugging
-      console.info('Attempting admin login with password:', password.length, 'characters');
-      
-      await login('admin', password);
+      // Simplified admin login with default credentials
+      await login('admin', 'admin');
       const user = useAuthStore.getState().user;
       if (user?.role === 'admin' || user?.role === 'admin-manager') {
         navigate('/admin');
@@ -105,7 +95,6 @@ export function LoginForm() {
       }
     } catch (err) {
       console.error('Direct login error:', err);
-      // The error message is already set in the auth store
     }
   };
   
@@ -145,7 +134,7 @@ export function LoginForm() {
       </Card>;
   }
   
-  // Admin login screen
+  // Admin login screen - simplified, no password needed
   if (loginType === 'admin') {
     return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-red-700/5"></div>
@@ -154,30 +143,15 @@ export function LoginForm() {
             Acceso de administrador
           </CardTitle>
           <CardDescription className="text-center font-medium text-gray-800">
-            Ingrese la contraseña para acceder
+            Acceso directo simplificado
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 relative z-10">
-          <div className="space-y-2">
-            <Label htmlFor="admin-password" className="text-black font-medium bg-gray-50">Contraseña de Administrador</Label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
-                <Lock className="h-4 w-4" />
-              </div>
-              <Input id="admin-password" type={showPassword ? "text" : "password"} placeholder="Ingrese la contraseña de administrador" required value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-400" />
-              <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" onClick={togglePasswordVisibility}>
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
+          <div className="text-center text-sm bg-blue-50 p-3 rounded-md">
+            Acceso simplificado: Haga clic en el botón para ingresar como administrador
           </div>
           
-          {failedLoginAttempts > 0 && <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-100 text-sm flex items-center font-medium">
-              <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
-              <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
-            </div>}
-          
           {error && <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
-              <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>{error}</span>
             </div>}
           
@@ -195,7 +169,7 @@ export function LoginForm() {
       </Card>;
   }
   
-  // Surveyor login screen
+  // Surveyor login screen - simplified
   return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5"></div>
       <CardHeader className="space-y-1 relative z-10">
@@ -203,7 +177,7 @@ export function LoginForm() {
           Acceso de encuestador
         </CardTitle>
         <CardDescription className="text-center text-white/90 font-medium">
-          Ingrese sus credenciales para continuar
+          Ingrese su nombre de usuario (contraseña opcional)
         </CardDescription>
       </CardHeader>
       <CardContent className="relative z-10">
@@ -218,25 +192,19 @@ export function LoginForm() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-black font-medium bg-gray-50">Contraseña</Label>
+            <Label htmlFor="password" className="text-black font-medium bg-gray-50">Contraseña (Opcional)</Label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
                 <Lock className="h-4 w-4" />
               </div>
-              <Input id="password" type={showPassword ? "text" : "password"} placeholder="Ingrese su contraseña" required value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
+              <Input id="password" type={showPassword ? "text" : "password"} placeholder="Opcional" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
               <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" onClick={togglePasswordVisibility}>
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
           </div>
           
-          {failedLoginAttempts > 0 && <div className="p-3 rounded-md bg-amber-900/50 border border-amber-600/30 text-amber-100 text-sm flex items-center font-medium">
-              <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
-              <span>Intentos fallidos: {failedLoginAttempts} de 5 permitidos</span>
-            </div>}
-          
           {error && <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
-              <ShieldAlert className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>{error}</span>
             </div>}
           
