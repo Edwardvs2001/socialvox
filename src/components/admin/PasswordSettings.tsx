@@ -8,21 +8,50 @@ import { toast } from 'sonner';
 import { useUserStore } from '@/store/userStore';
 import { useAuthStore } from '@/store/authStore';
 
-// Since the password functionality has been removed, this component is simplified
 export function PasswordSettings() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const updateUser = useUserStore(state => state.updateUser);
   const user = useAuthStore(state => state.user);
   
-  const handleDisablePasswords = async () => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     
     try {
-      toast.info("Las contraseñas han sido desactivadas en todo el sistema.");
+      // Validate password match
+      if (newPassword !== confirmPassword) {
+        toast.error("Las contraseñas nuevas no coinciden");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Validate password strength
+      if (newPassword.length < 6) {
+        toast.error("La contraseña debe tener al menos 6 caracteres");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!user) {
+        toast.error("No hay usuario autenticado");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Update user password
+      await updateUser(user.id, { password: newPassword });
+      
+      toast.success("Contraseña actualizada con éxito");
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
       setIsLoading(false);
     } catch (error) {
-      console.error("Error al deshabilitar contraseñas:", error);
-      toast.error("Error al deshabilitar contraseñas");
+      console.error("Error al cambiar contraseña:", error);
+      toast.error("Error al actualizar la contraseña");
       setIsLoading(false);
     }
   };
@@ -32,26 +61,47 @@ export function PasswordSettings() {
       <CardHeader>
         <CardTitle>Configuración de Seguridad</CardTitle>
         <CardDescription>
-          El sistema opera sin requerir contraseñas para facilitar el acceso rápido.
+          Actualice su contraseña para mantener la seguridad de su cuenta
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="p-3 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
-            <p className="font-medium">Información importante</p>
-            <p>El sistema está configurado para funcionar sin contraseñas. Los usuarios solo necesitan ingresar su nombre de usuario para acceder.</p>
+        <form onSubmit={handlePasswordChange} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-password">Nueva Contraseña</Label>
+            <Input
+              id="new-password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Nueva contraseña"
+              minLength={6}
+              required
+            />
           </div>
-        </div>
-        
-        <div className="pt-2">
-          <Button
-            variant="outline"
-            className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700"
-            disabled={true}
-          >
-            Sistema configurado sin contraseñas
-          </Button>
-        </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirmar contraseña"
+              minLength={6}
+              required
+            />
+          </div>
+          
+          <div className="pt-2">
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading || !newPassword || !confirmPassword}
+            >
+              {isLoading ? "Actualizando..." : "Actualizar Contraseña"}
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
   );

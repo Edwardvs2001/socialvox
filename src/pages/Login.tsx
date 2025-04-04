@@ -11,14 +11,6 @@ export default function Login() {
         <div className="absolute w-96 h-96 bg-red-500/20 rounded-full -bottom-20 -right-20 blur-3xl"></div>
         <div className="absolute w-72 h-72 bg-yellow-500/10 rounded-full top-1/4 right-1/4 blur-2xl animate-pulse-subtle"></div>
         
-        {/* Info banner about simplified login */}
-        <div className="w-full max-w-md mx-auto mb-6 bg-white/10 backdrop-blur-md p-4 rounded-lg border border-white/20 text-white text-center shadow-lg">
-          <h2 className="font-bold text-lg">Acceso Simplificado</h2>
-          <p className="text-sm opacity-90">
-            Se ha removido la seguridad de login para facilitar el acceso.
-          </p>
-        </div>
-        
         {/* Login container with 3D effect */}
         <div className="w-full max-w-md mx-auto relative z-10 perspective-1000">
           <div className="logo-panel rounded-t-2xl flex flex-col items-center pt-10 px-8 pb-6 border-b-0 bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-lg border border-white/20 shadow-[0_10px_50px_rgba(0,0,0,0.3)] transform-style-3d rotate-x-2">

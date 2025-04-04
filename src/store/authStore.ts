@@ -18,7 +18,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   sessionExpiration: number | null;
-  login: (username: string, password?: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   checkSession: () => boolean;
@@ -79,131 +79,38 @@ export const useAuthStore = create<AuthState>()(
           // Normalize username for case-insensitive comparison
           const normalizedUsername = username.toLowerCase().trim();
           
-          // Admin login handling - always case insensitive and no password required
-          if (normalizedUsername === 'admin') {
-            // Admin login - no password check
-            const { users } = useUserStore.getState();
-            
-            // Find admin user (case-insensitive)
-            const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
-            
-            if (!adminUser) {
-              // Buscar cualquier usuario con correo admin@encuestasva.com antes de crear uno nuevo
-              const emailExists = users.find(u => u.email.toLowerCase() === 'admin@encuestasva.com');
-              
-              // Si existe un usuario con ese correo, usarlo como admin en vez de crear uno nuevo
-              if (emailExists) {
-                // Actualizar el usuario existente para que sea admin
-                try {
-                  const { updateUser } = useUserStore.getState();
-                  await updateUser(emailExists.id, { 
-                    username: 'admin',
-                    role: 'admin',
-                    active: true 
-                  });
-                  
-                  // Set admin user in auth state
-                  set({
-                    user: {
-                      id: emailExists.id,
-                      username: 'admin',
-                      name: emailExists.name,
-                      role: 'admin'
-                    },
-                    token: 'mock-jwt-token',
-                    isAuthenticated: true,
-                    isLoading: false,
-                    sessionExpiration: currentTime + SESSION_TIMEOUT,
-                  });
-                  
-                  return;
-                } catch (error) {
-                  console.error('Error al actualizar usuario admin:', error);
-                  set({ 
-                    error: 'Error al configurar el usuario administrador',
-                    isLoading: false
-                  });
-                  throw error;
-                }
-              }
-              
-              // Si no existe el usuario con ese correo, lo creamos con un correo diferente
-              try {
-                const { createUser } = useUserStore.getState();
-                const newAdminUser = await createUser({
-                  username: 'admin',
-                  password: '', // No password required
-                  name: 'Admin Principal',
-                  role: 'admin',
-                  active: true,
-                  email: `admin_${Date.now()}@encuestasva.com` // Email único para evitar colisiones
-                });
-                
-                // Set admin user in auth state
-                set({
-                  user: {
-                    id: newAdminUser.id,
-                    username: 'admin',
-                    name: 'Admin Principal',
-                    role: 'admin'
-                  },
-                  token: 'mock-jwt-token',
-                  isAuthenticated: true,
-                  isLoading: false,
-                  sessionExpiration: currentTime + SESSION_TIMEOUT,
-                });
-                
-                return;
-              } catch (error) {
-                console.error('Error al crear usuario admin:', error);
-                set({ 
-                  error: 'Error al crear usuario administrador',
-                  isLoading: false
-                });
-                throw error;
-              }
-            }
-            
-            // Ensure admin user is active
-            try {
-              const { updateUser } = useUserStore.getState();
-              await updateUser(adminUser.id, { active: true });
-            } catch (error) {
-              console.error('Error al actualizar estado del usuario admin:', error);
-              // No lanzamos error aquí, continuamos con el login
-            }
-            
-            // Set admin user in auth state
-            set({
-              user: {
-                id: adminUser.id,
-                username: adminUser.username,
-                name: adminUser.name,
-                role: adminUser.role
-              },
-              token: 'mock-jwt-token',
-              isAuthenticated: true,
-              isLoading: false,
-              sessionExpiration: currentTime + SESSION_TIMEOUT,
-            });
-            
-            return;
-          }
-          
-          // Standard login flow for non-admin users - no password check, just username
+          // Get all users from store
           const { users } = useUserStore.getState();
           
-          // Find user with matching username - no password check, just active status
+          // Find user with matching username (case-insensitive)
           const user = users.find(
-            u => u.username.toLowerCase() === normalizedUsername && u.active
+            u => u.username.toLowerCase() === normalizedUsername
           );
           
           if (!user) {
             set({ 
-              error: 'Usuario no encontrado o inactivo',
+              error: 'Usuario no encontrado',
               isLoading: false
             });
-            throw new Error('Usuario no encontrado o inactivo');
+            throw new Error('Usuario no encontrado');
+          }
+          
+          // Check if user is active
+          if (!user.active) {
+            set({ 
+              error: 'Usuario inactivo',
+              isLoading: false
+            });
+            throw new Error('Usuario inactivo');
+          }
+          
+          // Verify password - simple string comparison (for more security, use a hash function)
+          if (user.password !== password) {
+            set({ 
+              error: 'Contraseña incorrecta',
+              isLoading: false
+            });
+            throw new Error('Contraseña incorrecta');
           }
           
           // Remove password from user object before storing in state

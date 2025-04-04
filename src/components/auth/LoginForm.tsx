@@ -53,15 +53,19 @@ export function LoginForm() {
     e.preventDefault();
     clearError();
     
-    // Only username is required
+    // Validate username and password
     if (!username) {
       toast.error('Por favor ingrese un nombre de usuario');
       return;
     }
     
+    if (!password) {
+      toast.error('Por favor ingrese su contraseña');
+      return;
+    }
+    
     try {
-      // Password is completely optional
-      await login(username);
+      await login(username, password);
       const user = useAuthStore.getState().user;
       if (user?.role === 'surveyor') {
         navigate('/surveyor');
@@ -79,23 +83,6 @@ export function LoginForm() {
     clearError();
     setUsername('');
     setPassword('');
-  };
-  
-  const handleDirectAdminAccess = async () => {
-    clearError();
-    
-    try {
-      // Simplified admin login with no password
-      await login('admin');
-      const user = useAuthStore.getState().user;
-      if (user?.role === 'admin' || user?.role === 'admin-manager') {
-        navigate('/admin');
-      } else {
-        toast.error('Error al acceder: El usuario no tiene permisos de administrador');
-      }
-    } catch (err) {
-      console.error('Direct login error:', err);
-    }
   };
   
   const togglePasswordVisibility = () => {
@@ -134,7 +121,7 @@ export function LoginForm() {
       </Card>;
   }
   
-  // Admin login screen - simplified, no password needed
+  // Admin login screen
   if (loginType === 'admin') {
     return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-red-700/5"></div>
@@ -143,33 +130,79 @@ export function LoginForm() {
             Acceso de administrador
           </CardTitle>
           <CardDescription className="text-center font-medium text-gray-800">
-            Acceso directo simplificado
+            Ingrese sus credenciales
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 relative z-10">
-          <div className="text-center text-sm bg-blue-50 p-3 rounded-md">
-            Acceso simplificado: Haga clic en el botón para ingresar como administrador
-          </div>
-          
-          {error && <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
-              <span>{error}</span>
-            </div>}
-          
-          <div className="grid grid-cols-1 gap-4">
-            <Button onClick={handleDirectAdminAccess} variant="red" className="p-6 h-auto flex flex-col gap-3 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 transition-all duration-300" disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-8 w-8 animate-spin text-white" /> : <Users className="h-8 w-8 text-white drop-shadow-md" />}
-              <span className="font-medium text-white">Ingresar como Administrador</span>
+        <CardContent className="relative z-10">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-username" className="text-black font-medium">Usuario</Label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
+                  <User className="h-4 w-4" />
+                </div>
+                <Input 
+                  id="admin-username" 
+                  type="text" 
+                  placeholder="Ingrese su nombre de usuario" 
+                  required 
+                  value={username} 
+                  onChange={e => setUsername(e.target.value)} 
+                  autoComplete="username" 
+                  className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" 
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="admin-password" className="text-black font-medium">Contraseña</Label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
+                  <Lock className="h-4 w-4" />
+                </div>
+                <Input 
+                  id="admin-password" 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="Ingrese su contraseña" 
+                  required 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  autoComplete="current-password" 
+                  className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" 
+                />
+                <button 
+                  type="button" 
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            
+            {error && <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
+                <span>{error}</span>
+              </div>}
+            
+            <Button type="submit" className="w-full mt-6 bg-gradient-to-br from-red-500 to-red-600 border border-white/10 shadow-lg hover:shadow-red-500/20 transition-all duration-300" variant="red" disabled={isLoading}>
+              {isLoading ? <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Iniciando sesión...
+                </> : <>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Iniciar sesión
+                </>}
             </Button>
-          </div>
-          
-          <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-white hover:text-white bg-black">
-            Volver
-          </Button>
+            
+            <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-white hover:text-white bg-black">
+              Volver
+            </Button>
+          </form>
         </CardContent>
       </Card>;
   }
   
-  // Surveyor login screen - simplified, no password required
+  // Surveyor login screen
   return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5"></div>
       <CardHeader className="space-y-1 relative z-10">
@@ -177,7 +210,7 @@ export function LoginForm() {
           Acceso de encuestador
         </CardTitle>
         <CardDescription className="text-center text-white/90 font-medium">
-          Ingrese su nombre de usuario (no requiere contraseña)
+          Ingrese sus credenciales
         </CardDescription>
       </CardHeader>
       <CardContent className="relative z-10">
@@ -189,6 +222,32 @@ export function LoginForm() {
                 <User className="h-4 w-4" />
               </div>
               <Input id="username" type="text" placeholder="Ingrese su nombre de usuario" required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
+            </div>
+          </div>
+          
+          <div className="space-y-2 bg-gray-50">
+            <Label htmlFor="password" className="text-black font-medium rounded-sm bg-gray-50">Contraseña</Label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
+                <Lock className="h-4 w-4" />
+              </div>
+              <Input 
+                id="password" 
+                type={showPassword ? "text" : "password"} 
+                placeholder="Ingrese su contraseña" 
+                required 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                autoComplete="current-password" 
+                className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" 
+              />
+              <button 
+                type="button" 
+                onClick={togglePasswordVisibility}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
           
