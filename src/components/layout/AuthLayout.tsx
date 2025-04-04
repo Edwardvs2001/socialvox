@@ -1,4 +1,3 @@
-
 import { ReactNode, useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -19,12 +18,12 @@ export function AuthLayout({
   const navigate = useNavigate();
   const hasCheckedAuthRef = useRef(false);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const initialCheckRef = useRef(false);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
   
   const checkAuth = useCallback(() => {
-    // Prevent multiple checks on the same render cycle
-    if (initialCheckRef.current) return;
-    initialCheckRef.current = true;
+    // Prevent multiple checks in the same rendering cycle
+    if (hasCheckedAuthRef.current) return;
+    hasCheckedAuthRef.current = true;
     
     console.log('AuthLayout - Checking auth:', { 
       isAuthenticated, 
@@ -51,13 +50,9 @@ export function AuthLayout({
       }
       
       // Only refresh session when authenticated and have valid session
-      // Use setTimeout to prevent infinite update loops
-      if (isAuthenticated && isSessionValid && !hasCheckedAuthRef.current) {
-        hasCheckedAuthRef.current = true;
-        setTimeout(() => {
-          refreshSession();
-        }, 100);
-      }
+      setTimeout(() => {
+        refreshSession();
+      }, 100);
       
       if (allowedRoles.length > 0 && user) {
         // Check if user has admin-manager role, which should have access to admin pages
@@ -84,13 +79,9 @@ export function AuthLayout({
       if (isAuthenticated && isSessionValid) {
         console.log('Already authenticated, redirecting to dashboard');
         
-        // Only schedule refresh if we haven't already checked auth
-        if (!hasCheckedAuthRef.current) {
-          hasCheckedAuthRef.current = true;
-          setTimeout(() => {
-            refreshSession();
-          }, 100);
-        }
+        setTimeout(() => {
+          refreshSession();
+        }, 100);
         
         // Already logged in, redirect to appropriate dashboard
         if (user?.role === 'surveyor') {
@@ -100,6 +91,8 @@ export function AuthLayout({
         }
       }
     }
+    
+    setInitialCheckDone(true);
   }, [isAuthenticated, user, requiresAuth, allowedRoles, navigate, checkSession, refreshSession, logout]);
   
   useEffect(() => {
@@ -124,6 +117,17 @@ export function AuthLayout({
       }
     };
   }, [checkAuth]);
+  
+  // Don't render children until initial auth check is done
+  if (requiresAuth && !initialCheckDone) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col justify-center items-center">
+        <div className="animate-pulse text-center">
+          <p className="text-muted-foreground">Verificando autenticación...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-background flex flex-col">

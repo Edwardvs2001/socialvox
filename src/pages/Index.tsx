@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 const Index = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, checkSession, refreshSession, logout } = useAuthStore();
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const redirectingRef = useRef(false);
   const hasRefreshedRef = useRef(false);
   
@@ -16,7 +15,6 @@ const Index = () => {
     // Use ref to prevent multiple redirects including during the function execution
     if (redirectingRef.current) return;
     redirectingRef.current = true;
-    setIsRedirecting(true);
     
     // Check if session is still valid
     const isSessionValid = checkSession();
@@ -24,12 +22,10 @@ const Index = () => {
     if (isAuthenticated && isSessionValid && user) {
       console.log('Usuario autenticado:', user);
       
-      // Refresh the session timer in an async way to prevent infinite loops
+      // Refresh the session timer
       if (!hasRefreshedRef.current) {
-        setTimeout(() => {
-          refreshSession();
-          hasRefreshedRef.current = true;
-        }, 100);
+        refreshSession();
+        hasRefreshedRef.current = true;
       }
       
       let targetPath = '/';
@@ -54,7 +50,7 @@ const Index = () => {
       // Use setTimeout to ensure state updates are processed before navigation
       setTimeout(() => {
         navigate(targetPath);
-      }, 50);
+      }, 100);
       
     } else {
       if (isAuthenticated && !isSessionValid) {
@@ -67,15 +63,13 @@ const Index = () => {
       // Use setTimeout to ensure state updates are processed before navigation
       setTimeout(() => {
         navigate('/');
-      }, 50);
+      }, 100);
     }
   }, [navigate, isAuthenticated, user, checkSession, logout, refreshSession]);
 
   useEffect(() => {
     // Only run once when component mounts
-    if (!redirectingRef.current) {
-      handleRedirect();
-    }
+    handleRedirect();
     
     return () => {
       // Clean up when component unmounts
