@@ -1,4 +1,3 @@
-
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { LoginForm } from '@/components/auth/LoginForm';
 export default function Login() {
@@ -17,7 +16,7 @@ export default function Login() {
               <div className="w-28 h-28 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/80 to-red-600/80 p-1 shadow-lg mb-4 rotate-scale">
                 <img src="/lovable-uploads/d499dc04-307c-40f6-bede-03ef45e212ea.png" alt="SocialVox Logo" className="w-full h-full object-contain p-2 animate-scale-in" />
               </div>
-              <h1 className="text-3xl font-bold text-center text-blue-600 drop-shadow-md">
+              <h1 className="text-3xl font-bold text-center drop-shadow-md text-gray-900">
                 SocialVox
               </h1>
               <div className="w-40 h-1 bg-gradient-to-r from-blue-400 to-red-400 rounded-full mt-2 shadow-sm"></div>
