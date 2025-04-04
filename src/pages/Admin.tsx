@@ -9,7 +9,7 @@ export default function Admin() {
   
   return (
     <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
-      <AdminLayout title={`Panel Administrativo`} description={`Bienvenido, ${user?.name}`}>
+      <AdminLayout title={`Encuestas VA - Panel Principal`} description={`Bienvenido, ${user?.name}`}>
         <AdminDashboard />
       </AdminLayout>
     </AuthLayout>

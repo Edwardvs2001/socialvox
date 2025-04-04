@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -6,7 +7,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { UserCircle, LogOut, ClipboardList, User, BarChart, Menu, X, Image } from 'lucide-react';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-export function Navbar() {
+
+interface NavbarProps {
+  isSurveyorView?: boolean;
+}
+
+export function Navbar({ isSurveyorView = false }: NavbarProps) {
   const {
     user,
     logout
@@ -19,6 +25,7 @@ export function Navbar() {
   } = useOfflineSync();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [appLogo, setAppLogo] = useState<string | null>(null);
+  
   useEffect(() => {
     // Try to get the logo from localStorage if it exists
     const storedLogo = localStorage.getItem('appLogo');
@@ -26,67 +33,102 @@ export function Navbar() {
       setAppLogo(storedLogo);
     }
   }, []);
+  
   const handleLogout = () => {
     logout();
     navigate('/');
   };
-  const isAdmin = user?.role === 'admin';
-  const navLinks = isAdmin ? [{
-    to: '/admin',
-    label: 'Dashboard',
-    icon: BarChart
-  }, {
-    to: '/admin/surveys',
-    label: 'Encuestas',
-    icon: ClipboardList
-  }, {
-    to: '/admin/results',
-    label: 'Resultados',
-    icon: BarChart
-  }, {
-    to: '/admin/users',
-    label: 'Usuarios',
-    icon: User
-  }] : [{
-    to: '/surveyor',
-    label: 'Mis Encuestas',
-    icon: ClipboardList
-  }];
-  return <nav className="sticky top-0 z-40 w-full backdrop-blur-lg bg-background/80 border-b">
+  
+  const isAdmin = user?.role === 'admin' || user?.role === 'admin-manager';
+  
+  // Define different nav links for admin and surveyor
+  const navLinks = isAdmin ? [
+    {
+      to: '/admin',
+      label: 'Dashboard',
+      icon: BarChart
+    },
+    {
+      to: '/admin/surveys',
+      label: 'Encuestas',
+      icon: ClipboardList
+    },
+    {
+      to: '/admin/results',
+      label: 'Resultados',
+      icon: BarChart
+    },
+    {
+      to: '/admin/users',
+      label: 'Usuarios',
+      icon: User
+    }
+  ] : [
+    {
+      to: '/surveyor',
+      label: 'Mis Encuestas',
+      icon: ClipboardList
+    }
+  ];
+
+  return (
+    <nav className={`sticky top-0 z-40 w-full backdrop-blur-lg bg-background/80 border-b ${isSurveyorView ? 'border-blue-500' : 'border-red-500'}`}>
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-4">
           <Link to={isAdmin ? '/admin' : '/surveyor'} className="flex items-center gap-2 font-bold text-xl">
             <img src="/lovable-uploads/08d8d744-0c91-48a2-a3af-c5f3ce5d78c5.png" alt="Encuestas VA Logo" className="h-10 w-10 object-contain" />
-            <span className={`text-lg ${isAdmin ? 'text-red-500' : 'text-blue-500'}`}>Encuestas VA</span>
+            <span className={`text-lg ${isSurveyorView ? 'text-blue-500' : 'text-red-500'}`}>
+              Encuestas VA {isSurveyorView ? '- Encuestador' : '- Administración'}
+            </span>
           </Link>
           
           <div className="hidden md:flex items-center gap-6 ml-6">
             {navLinks.map(link => {
-            const isActive = location.pathname === link.to;
-            const Icon = link.icon;
-            return <Link key={link.to} to={link.to} className={`flex items-center text-sm font-medium transition-colors
-                    ${isActive ? isAdmin ? 'text-admin font-semibold' : 'text-surveyor font-semibold' : 'text-foreground hover:text-primary'}`}>
-                  <Icon className={`w-4 h-4 mr-2 ${isActive ? isAdmin ? 'text-admin' : 'text-surveyor' : 'text-foreground'}`} />
+              const isActive = location.pathname === link.to;
+              const Icon = link.icon;
+              return (
+                <Link 
+                  key={link.to} 
+                  to={link.to} 
+                  className={`flex items-center text-sm font-medium transition-colors
+                    ${isActive ? 
+                      (isSurveyorView ? 'text-blue-600 font-semibold' : 'text-red-600 font-semibold') : 
+                      'text-foreground hover:text-primary'}`}
+                >
+                  <Icon 
+                    className={`w-4 h-4 mr-2 ${isActive ? 
+                      (isSurveyorView ? 'text-blue-600' : 'text-red-600') : 
+                      'text-foreground'}`} 
+                  />
                   {link.label}
-                </Link>;
-          })}
+                </Link>
+              );
+            })}
           </div>
         </div>
         
         <div className="flex items-center gap-4">
-          {user?.role === 'surveyor' && <div className="hidden md:flex items-center mr-2">
-              {isOnline ? <div className="flex items-center text-green-600 text-sm">
+          {isSurveyorView && (
+            <div className="hidden md:flex items-center mr-2">
+              {isOnline ? (
+                <div className="flex items-center text-green-600 text-sm">
                   <div className="w-2 h-2 rounded-full bg-green-600 mr-2"></div>
                   <span>En línea</span>
-                </div> : <div className="flex items-center text-yellow-600 text-sm">
+                </div>
+              ) : (
+                <div className="flex items-center text-yellow-600 text-sm">
                   <div className="w-2 h-2 rounded-full bg-yellow-600 mr-2"></div>
                   <span>Sin conexión</span>
-                </div>}
+                </div>
+              )}
               
-              {pendingCount > 0 && <div className="ml-4 text-sm text-foreground">
+              {pendingCount > 0 && (
+                <div className="ml-4 text-sm text-foreground">
                   <span>{pendingCount} {pendingCount === 1 ? 'encuesta pendiente' : 'encuestas pendientes'}</span>
-                </div>}
-            </div>}
+                </div>
+              )}
+            </div>
+          )}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -100,7 +142,7 @@ export function Navbar() {
               <DropdownMenuItem disabled className="flex flex-col items-start">
                 <p className="font-medium">{user?.name}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {user?.role === 'admin' ? 'Administrador' : 'Encuestador'}
+                  {user?.role === 'admin' || user?.role === 'admin-manager' ? 'Administrador' : 'Encuestador'}
                 </p>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -117,7 +159,9 @@ export function Navbar() {
         </div>
       </div>
       
-      {isMenuOpen && <div className="md:hidden">
+      {/* Mobile menu */}
+      {isMenuOpen && (
+        <div className="md:hidden">
           <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" />
           <div className="fixed inset-y-0 right-0 z-50 w-3/4 bg-white shadow-lg animate-slide-up">
             <div className="flex flex-col p-6 space-y-4 bg-gray-50">
@@ -129,29 +173,50 @@ export function Navbar() {
               </div>
               
               {navLinks.map(link => {
-            const isActive = location.pathname === link.to;
-            const Icon = link.icon;
-            return <Link key={link.to} to={link.to} onClick={() => setIsMenuOpen(false)} className={`flex items-center py-2 text-sm font-medium transition-colors
-                      ${isActive ? isAdmin ? 'text-admin font-semibold' : 'text-surveyor font-semibold' : 'text-foreground hover:text-primary'}`}>
-                    <Icon className={`w-4 h-4 mr-2 ${isActive ? isAdmin ? 'text-admin' : 'text-surveyor' : 'text-foreground'}`} />
+                const isActive = location.pathname === link.to;
+                const Icon = link.icon;
+                return (
+                  <Link 
+                    key={link.to} 
+                    to={link.to} 
+                    onClick={() => setIsMenuOpen(false)} 
+                    className={`flex items-center py-2 text-sm font-medium transition-colors
+                      ${isActive ? 
+                        (isSurveyorView ? 'text-blue-600 font-semibold' : 'text-red-600 font-semibold') : 
+                        'text-foreground hover:text-primary'}`}
+                  >
+                    <Icon 
+                      className={`w-4 h-4 mr-2 ${isActive ? 
+                        (isSurveyorView ? 'text-blue-600' : 'text-red-600') : 
+                        'text-foreground'}`} 
+                    />
                     {link.label}
-                  </Link>;
-          })}
+                  </Link>
+                );
+              })}
               
               <div className="mt-auto pt-6 border-t">
-                {user?.role === 'surveyor' && <div className="flex items-center mb-4">
-                    {isOnline ? <div className="flex items-center text-green-600 text-sm">
+                {isSurveyorView && (
+                  <div className="flex items-center mb-4">
+                    {isOnline ? (
+                      <div className="flex items-center text-green-600 text-sm">
                         <div className="w-2 h-2 rounded-full bg-green-600 mr-2"></div>
                         <span>En línea</span>
-                      </div> : <div className="flex items-center text-yellow-600 text-sm">
+                      </div>
+                    ) : (
+                      <div className="flex items-center text-yellow-600 text-sm">
                         <div className="w-2 h-2 rounded-full bg-yellow-600 mr-2"></div>
                         <span>Sin conexión</span>
-                      </div>}
+                      </div>
+                    )}
                     
-                    {pendingCount > 0 && <div className="ml-4 text-sm text-foreground">
+                    {pendingCount > 0 && (
+                      <div className="ml-4 text-sm text-foreground">
                         <span>{pendingCount} {pendingCount === 1 ? 'pendiente' : 'pendientes'}</span>
-                      </div>}
-                  </div>}
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -160,6 +225,8 @@ export function Navbar() {
               </div>
             </div>
           </div>
-        </div>}
-    </nav>;
+        </div>
+      )}
+    </nav>
+  );
 }

@@ -10,8 +10,9 @@ export default function Surveyor() {
   return (
     <AuthLayout requiresAuth={true} allowedRoles={['surveyor']}>
       <SurveyorLayout
-        title={`Bienvenido, ${user?.name}`}
-        description="Estas son las encuestas asignadas a ti"
+        title={`Bienvenido a Encuestas VA - Área de Encuestadores`}
+        description={`Hola, ${user?.name}. Estas son las encuestas asignadas a ti.`}
+        showSurveyorHeader={true}
       >
         <SurveyList />
       </SurveyorLayout>
