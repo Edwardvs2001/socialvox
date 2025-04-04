@@ -1,10 +1,7 @@
-
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { LoginForm } from '@/components/auth/LoginForm';
-
 export default function Login() {
-  return (
-    <AuthLayout requiresAuth={false}>
+  return <AuthLayout requiresAuth={false}>
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-900 via-blue-700 to-red-700 p-4 overflow-hidden relative">
         {/* Background decorative elements */}
         <div className="absolute w-96 h-96 bg-blue-500/20 rounded-full -top-20 -left-20 blur-3xl"></div>
@@ -25,11 +22,7 @@ export default function Login() {
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-t-2xl"></div>
             <div className="relative z-10">
               <div className="w-28 h-28 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/80 to-red-600/80 p-1 shadow-lg mb-4 rotate-scale">
-                <img 
-                  src="/lovable-uploads/08d8d744-0c91-48a2-a3af-c5f3ce5d78c5.png" 
-                  alt="Encuestas VA Logo" 
-                  className="w-full h-full object-contain p-2 animate-scale-in"
-                />
+                <img alt="Encuestas VA Logo" className="w-full h-full object-contain p-2 animate-scale-in" src="/lovable-uploads/17e0365a-f6b2-4412-9571-bffe1f366e9f.png" />
               </div>
               <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent drop-shadow-md">
                 Encuestas VA
@@ -46,6 +39,5 @@ export default function Login() {
         <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-gradient-to-tr from-blue-600/10 to-transparent rotate-45 rounded-3xl blur-xl"></div>
         <div className="absolute top-20 right-20 w-40 h-40 bg-gradient-to-bl from-red-600/10 to-transparent -rotate-12 rounded-3xl blur-xl"></div>
       </div>
-    </AuthLayout>
-  );
+    </AuthLayout>;
 }
