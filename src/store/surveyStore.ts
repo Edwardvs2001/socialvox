@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -289,7 +290,7 @@ export const useSurveyStore = create<SurveyState>()(
             isLoading: false,
           }));
           
-          return true;
+          // Remove the return true statement to match Promise<void> return type
         } catch (error) {
           console.error('Error deleting survey:', error);
           set({
