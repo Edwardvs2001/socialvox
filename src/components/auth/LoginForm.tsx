@@ -1,123 +1,215 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, LogIn, User, Users, Eye, EyeOff, Lock, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { useUserStore } from '@/store/userStore';
 
 export function LoginForm() {
-  const navigate = useNavigate();
-  const { login, isLoading, error, clearError, requiresPassword } = useAuthStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loginType, setLoginType] = useState<'admin' | 'surveyor' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const {
+    login,
+    isLoading,
+    error,
+    clearError,
+    checkSession,
+    logout,
+  } = useAuthStore();
+  const navigate = useNavigate();
   
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!username) {
-      toast.error('Por favor, ingrese su nombre de usuario');
-      return;
+  // Check session status on component mount
+  useEffect(() => {
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (isAuthenticated) {
+      const isSessionValid = checkSession();
+      if (!isSessionValid) {
+        logout();
+        toast.error('Su sesión ha expirado. Por favor inicie sesión nuevamente.');
+      }
     }
+  }, []);
+  
+  // Reset error when component unmounts
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
+  
+  // Reset error when login type changes
+  useEffect(() => {
+    clearError();
+  }, [loginType, clearError]);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
     
-    if (requiresPassword && !password) {
-      toast.error('Por favor, ingrese su contraseña');
+    // Only username is required
+    if (!username) {
+      toast.error('Por favor ingrese un nombre de usuario');
       return;
     }
     
     try {
-      await login(username, password);
-      navigate('/index');
+      // Password is completely optional
+      await login(username);
+      const user = useAuthStore.getState().user;
+      if (user?.role === 'surveyor') {
+        navigate('/surveyor');
+      } else if (user?.role === 'admin' || user?.role === 'admin-manager') {
+        navigate('/admin');
+      }
     } catch (err) {
-      // Error is handled by the store and displayed below
+      console.error('Login error:', err);
+      // Error is handled by the auth store
     }
   };
   
-  return (
-    <div className="bg-white shadow-lg rounded-b-2xl p-8 w-full max-w-md mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="username" className="text-foreground font-medium">
-            Nombre de Usuario
-          </Label>
-          <Input
-            id="username"
-            type="text"
-            placeholder="Ingrese su nombre de usuario"
-            value={username}
-            onChange={(e) => {
-              setUsername(e.target.value);
-              if (error) clearError();
-            }}
-            className="bg-background-foreground border border-input"
-            disabled={isLoading}
-            autoComplete="username"
-          />
-        </div>
-        
-        {requiresPassword && (
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-foreground font-medium">
-              Contraseña
-            </Label>
+  const handleLoginTypeSelect = (type: 'admin' | 'surveyor') => {
+    setLoginType(type);
+    clearError();
+    setUsername('');
+    setPassword('');
+  };
+  
+  const handleDirectAdminAccess = async () => {
+    clearError();
+    
+    try {
+      // Simplified admin login with no password
+      await login('admin');
+      const user = useAuthStore.getState().user;
+      if (user?.role === 'admin' || user?.role === 'admin-manager') {
+        navigate('/admin');
+      } else {
+        toast.error('Error al acceder: El usuario no tiene permisos de administrador');
+      }
+    } catch (err) {
+      console.error('Direct login error:', err);
+    }
+  };
+  
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+  
+  // Login type selection screen
+  if (loginType === null) {
+    return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-red-500/5"></div>
+        <CardHeader className="space-y-1 relative z-10">
+          <CardTitle className="text-2xl font-bold text-center drop-shadow-md text-zinc-950">
+            Seleccione su tipo de acceso
+          </CardTitle>
+          <CardDescription className="text-center font-medium text-zinc-900">
+            Escoja el tipo de usuario para continuar
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 relative z-10">
+          <div className="grid grid-cols-2 gap-4">
+            <Button onClick={() => handleLoginTypeSelect('admin')} variant="red" className="p-8 h-auto flex flex-col gap-4 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 hover:-translate-y-1 transition-all duration-300">
+              <div className="p-4 rounded-full bg-blue-600">
+                <Users className="h-10 w-10 text-white drop-shadow-md" />
+              </div>
+              <span className="font-medium text-white">Administrador</span>
+            </Button>
+            
+            <Button onClick={() => handleLoginTypeSelect('surveyor')} variant="blue" className="p-8 h-auto flex flex-col gap-4 bg-gradient-to-br from-blue-500/80 to-blue-600/80 border border-white/10 shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all duration-300">
+              <div className="p-4 rounded-full bg-red-600">
+                <User className="h-10 w-10 text-white drop-shadow-md" />
+              </div>
+              <span className="font-medium text-white">Encuestador</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>;
+  }
+  
+  // Admin login screen - simplified, no password needed
+  if (loginType === 'admin') {
+    return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-red-700/5"></div>
+        <CardHeader className="space-y-1 relative z-10">
+          <CardTitle className="text-2xl font-bold text-center drop-shadow-md text-blue-600">
+            Acceso de administrador
+          </CardTitle>
+          <CardDescription className="text-center font-medium text-gray-800">
+            Acceso directo simplificado
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6 relative z-10">
+          <div className="text-center text-sm bg-blue-50 p-3 rounded-md">
+            Acceso simplificado: Haga clic en el botón para ingresar como administrador
+          </div>
+          
+          {error && <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
+              <span>{error}</span>
+            </div>}
+          
+          <div className="grid grid-cols-1 gap-4">
+            <Button onClick={handleDirectAdminAccess} variant="red" className="p-6 h-auto flex flex-col gap-3 bg-gradient-to-br from-red-500/80 to-red-600/80 border border-white/10 shadow-lg hover:shadow-red-500/20 transition-all duration-300" disabled={isLoading}>
+              {isLoading ? <Loader2 className="h-8 w-8 animate-spin text-white" /> : <Users className="h-8 w-8 text-white drop-shadow-md" />}
+              <span className="font-medium text-white">Ingresar como Administrador</span>
+            </Button>
+          </div>
+          
+          <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-white hover:text-white bg-black">
+            Volver
+          </Button>
+        </CardContent>
+      </Card>;
+  }
+  
+  // Surveyor login screen - simplified, no password required
+  return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5"></div>
+      <CardHeader className="space-y-1 relative z-10">
+        <CardTitle className="font-bold text-center drop-shadow-md text-blue-600 text-2xl">
+          Acceso de encuestador
+        </CardTitle>
+        <CardDescription className="text-center text-white/90 font-medium">
+          Ingrese su nombre de usuario (no requiere contraseña)
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="relative z-10">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2 bg-gray-50">
+            <Label htmlFor="username" className="text-black font-medium rounded-sm bg-gray-50">Usuario</Label>
             <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Ingrese su contraseña"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (error) clearError();
-                }}
-                className="bg-background-foreground border border-input pr-10"
-                disabled={isLoading}
-                autoComplete="current-password"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
+                <User className="h-4 w-4" />
+              </div>
+              <Input id="username" type="text" placeholder="Ingrese su nombre de usuario" required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
             </div>
           </div>
-        )}
-        
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3 text-sm">
-            {error}
-          </div>
-        )}
-        
-        <Button
-          type="submit"
-          className="w-full bg-blue-700 hover:bg-blue-800"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Iniciando sesión...
-            </>
-          ) : (
-            'Iniciar Sesión'
-          )}
-        </Button>
-        
-        <div className="text-xs text-center text-muted-foreground pt-2">
-          {requiresPassword 
-            ? "El sistema requiere contraseñas para el inicio de sesión."
-            : "Ingrese su nombre de usuario para acceder."
-          }
-        </div>
-      </form>
-    </div>
-  );
+          
+          {error && <div className="p-3 rounded-md bg-red-900/50 border border-red-600/30 text-red-100 text-sm flex items-center font-medium">
+              <span>{error}</span>
+            </div>}
+          
+          <Button type="submit" className="w-full mt-6 bg-gradient-to-br from-blue-500 to-blue-600 border border-white/10 shadow-lg hover:shadow-blue-500/20 transition-all duration-300" variant="blue" disabled={isLoading}>
+            {isLoading ? <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Iniciando sesión...
+              </> : <>
+                <LogIn className="mr-2 h-4 w-4" />
+                Iniciar sesión
+              </>}
+          </Button>
+          
+          <Button type="button" variant="ghost" onClick={() => setLoginType(null)} className="w-full mt-2 text-zinc-50 bg-stone-950 hover:bg-stone-800">
+            Volver
+          </Button>
+        </form>
+      </CardContent>
+    </Card>;
 }

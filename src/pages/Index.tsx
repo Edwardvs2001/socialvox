@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -29,19 +30,21 @@ const Index = () => {
       
       let targetPath = '/';
       
-      // Only redirect to admin panel if user is admin
-      // Otherwise, redirect to surveyor panel
-      if (user.role === 'admin' || user.role === 'admin-manager') {
-        console.log('Redirigiendo a panel de administrador');
-        targetPath = '/admin';
-      } else if (user.role === 'surveyor') {
-        console.log('Redirigiendo a panel de encuestador');
-        targetPath = '/surveyor';
-      } else {
-        console.error('Rol no reconocido:', user.role);
-        toast.error('Error: Rol de usuario no reconocido');
-        logout();
-        targetPath = '/';
+      switch (user.role) {
+        case 'admin':
+        case 'admin-manager':
+          console.log('Redirigiendo a panel de administrador');
+          targetPath = '/admin';
+          break;
+        case 'surveyor':
+          console.log('Redirigiendo a panel de encuestador');
+          targetPath = '/surveyor';
+          break;
+        default:
+          console.error('Rol no reconocido:', user.role);
+          toast.error('Error: Rol de usuario no reconocido');
+          logout();
+          targetPath = '/';
       }
       
       // Navigate immediately without setTimeout to prevent race conditions

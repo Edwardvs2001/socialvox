@@ -11,7 +11,7 @@ import Admin from "./pages/Admin";
 import AdminSurveys from "./pages/AdminSurveys";
 import AdminSurveyEditor from "./pages/AdminSurveyEditor";
 import AdminUsers from "./pages/AdminUsers";
-import AdminResults from "./pages/AdminResultsList";
+import AdminResults from "./pages/AdminResults";
 import AdminResultsList from "./pages/AdminResultsList";
 import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
@@ -38,11 +38,11 @@ const App = () => (
           <Route path="/" element={<Login />} />
           <Route path="/index" element={<Index />} />
           
-          {/* Surveyor Routes - moved to /surveyor subdomain */}
+          {/* Surveyor Routes */}
           <Route path="/surveyor" element={<Surveyor />} />
           <Route path="/surveyor/survey/:id" element={<SurveyDetail />} />
           
-          {/* Admin Routes - now available at root level */}
+          {/* Admin Routes */}
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/surveys" element={<AdminSurveys />} />
           <Route path="/admin/surveys/new" element={<AdminSurveyEditor />} />

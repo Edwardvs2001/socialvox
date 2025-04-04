@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -273,14 +274,37 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
+          // Make an API call to the PHP backend with the correct headers
+          const response = await fetch(`/backend/api/surveys/delete.php?id=${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
           
+          const contentType = response.headers.get('content-type');
+          
+          // Check if the response is valid JSON
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Invalid response format from server');
+          }
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'Error deleting survey');
+          }
+          
+          // After successful deletion on the server, update the local state
           set(state => ({
             surveys: state.surveys.filter(survey => survey.id !== id),
             isLoading: false,
           }));
+          
+          // Remove the return true statement to match Promise<void> return type
         } catch (error) {
+          console.error('Error deleting survey:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al eliminar encuesta',
             isLoading: false,

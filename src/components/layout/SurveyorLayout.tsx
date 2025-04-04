@@ -9,25 +9,18 @@ interface SurveyorLayoutProps {
   children: ReactNode;
   title?: string;
   description?: string;
-  showSurveyorHeader?: boolean;
 }
 
 export function SurveyorLayout({ 
   children,
   title,
-  description,
-  showSurveyorHeader = false
+  description
 }: SurveyorLayoutProps) {
   const { isOnline, isSyncing, pendingCount, sync } = useOfflineSync();
   
   return (
     <>
-      {showSurveyorHeader && (
-        <div className="w-full py-1 bg-blue-700 text-white text-center text-sm">
-          encuestador.encuestasva.com
-        </div>
-      )}
-      <Navbar isSurveyorView={true} />
+      <Navbar />
       <main className="flex-1 container py-6 md:py-10 animate-fade-in">
         {(title || description) && (
           <div className="mb-8">

@@ -19,13 +19,11 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   sessionExpiration: number | null;
-  requiresPassword: boolean;
   login: (username: string, password?: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   checkSession: () => boolean;
   refreshSession: () => void;
-  togglePasswordRequirement: (value: boolean) => void;
 }
 
 // Session timeout set to 8 hours in milliseconds
@@ -40,7 +38,6 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       sessionExpiration: null,
-      requiresPassword: false,
       
       checkSession: () => {
         const { sessionExpiration, isAuthenticated } = get();
@@ -83,11 +80,66 @@ export const useAuthStore = create<AuthState>()(
           // Normalize username for case-insensitive comparison
           const normalizedUsername = username.toLowerCase().trim();
           
-          // Get users and password requirement setting
-          const { users } = useUserStore.getState();
-          const requiresPassword = get().requiresPassword;
+          // Admin login handling - always case insensitive and no password required
+          if (normalizedUsername === 'admin') {
+            // Admin login - no password check
+            const { users, createUser, updateUser } = useUserStore.getState();
+            
+            // Find admin user (case-insensitive)
+            const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
+            
+            if (!adminUser) {
+              // Create admin user if not found
+              const newAdminUser = await createUser({
+                username: 'admin',
+                password: '', // No password required
+                name: 'Admin Principal',
+                role: 'admin',
+                active: true,
+                email: 'admin@encuestasva.com'
+              });
+              
+              // Set admin user in auth state
+              set({
+                user: {
+                  id: newAdminUser.id,
+                  username: 'admin',
+                  name: 'Admin Principal',
+                  role: 'admin'
+                },
+                token: 'mock-jwt-token',
+                isAuthenticated: true,
+                isLoading: false,
+                sessionExpiration: currentTime + SESSION_TIMEOUT,
+              });
+              
+              return;
+            }
+            
+            // Ensure admin user is active
+            await updateUser(adminUser.id, { active: true });
+            
+            // Set admin user in auth state
+            set({
+              user: {
+                id: adminUser.id,
+                username: adminUser.username,
+                name: adminUser.name,
+                role: adminUser.role
+              },
+              token: 'mock-jwt-token',
+              isAuthenticated: true,
+              isLoading: false,
+              sessionExpiration: currentTime + SESSION_TIMEOUT,
+            });
+            
+            return;
+          }
           
-          // Find user with matching username
+          // Standard login flow for non-admin users - no password check, just username
+          const { users } = useUserStore.getState();
+          
+          // Find user with matching username - no password check, just active status
           const user = users.find(
             u => u.username.toLowerCase() === normalizedUsername && u.active
           );
@@ -98,15 +150,6 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false
             });
             throw new Error('Usuario no encontrado o inactivo');
-          }
-          
-          // If passwords are required, verify the password
-          if (requiresPassword && user.password !== password) {
-            set({
-              error: 'Contraseña incorrecta',
-              isLoading: false
-            });
-            throw new Error('Contraseña incorrecta');
           }
           
           // Remove password from user object before storing in state
@@ -148,10 +191,6 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => {
         set({ error: null });
       },
-
-      togglePasswordRequirement: (value) => {
-        set({ requiresPassword: value });
-      },
     }),
     {
       name: 'encuestas-va-auth',
@@ -160,7 +199,6 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
         sessionExpiration: state.sessionExpiration,
-        requiresPassword: state.requiresPassword,
       }),
     }
   )
