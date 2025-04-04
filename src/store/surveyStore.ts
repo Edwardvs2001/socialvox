@@ -274,14 +274,26 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Make an actual API call to the PHP backend
+          // Make an API call to the PHP backend with the correct headers
           const response = await fetch(`/backend/api/surveys/delete.php?id=${id}`, {
             method: 'DELETE',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
           });
           
+          const contentType = response.headers.get('content-type');
+          
+          // Check if the response is valid JSON
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Invalid response format from server');
+          }
+          
+          const data = await response.json();
+          
           if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Error deleting survey');
+            throw new Error(data.message || 'Error deleting survey');
           }
           
           // After successful deletion on the server, update the local state

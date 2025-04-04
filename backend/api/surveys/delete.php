@@ -5,6 +5,9 @@ include_once '../../config/cors.php';
 include_once '../../config/database.php';
 include_once '../../models/Survey.php';
 
+// Set content type to JSON
+header('Content-Type: application/json');
+
 // Instanciar base de datos y objeto Survey
 $database = new Database();
 $db = $database->getConnection();

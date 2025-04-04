@@ -178,6 +178,7 @@ export function SurveyManager() {
       setIsDeleting(false);
       setShowDeleteDialog(false);
       setSelectedSurvey(null);
+      
       setTimeout(() => {
         deleteOperationRef.current = false;
       }, 100);
@@ -224,6 +225,8 @@ export function SurveyManager() {
       toast.error('Error al asignar encuestadores');
     } finally {
       setIsAssigning(false);
+      setSelectedSurvey(null);
+      
       setTimeout(() => {
         assignOperationRef.current = false;
       }, 100);
@@ -248,6 +251,8 @@ export function SurveyManager() {
       toast.error('Error al asignar encuesta a carpeta');
     } finally {
       setIsAssigningFolder(false);
+      setSelectedSurvey(null);
+      
       setTimeout(() => {
         folderAssignOperationRef.current = false;
       }, 100);
