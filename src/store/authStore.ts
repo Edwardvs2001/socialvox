@@ -19,7 +19,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   sessionExpiration: number | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password?: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   checkSession: () => boolean;
@@ -80,9 +80,9 @@ export const useAuthStore = create<AuthState>()(
           // Normalize username for case-insensitive comparison
           const normalizedUsername = username.toLowerCase().trim();
           
-          // Admin login handling - always case insensitive
+          // Admin login handling - always case insensitive and no password required
           if (normalizedUsername === 'admin') {
-            // Admin login - simplified with no password check
+            // Admin login - no password check
             const { users, createUser, updateUser } = useUserStore.getState();
             
             // Find admin user (case-insensitive)
@@ -92,7 +92,7 @@ export const useAuthStore = create<AuthState>()(
               // Create admin user if not found
               const newAdminUser = await createUser({
                 username: 'admin',
-                password: 'admin', // Simplified admin password
+                password: '', // No password required
                 name: 'Admin Principal',
                 role: 'admin',
                 active: true,
@@ -136,7 +136,7 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
           
-          // Standard login flow for non-admin users - simplified
+          // Standard login flow for non-admin users - no password check, just username
           const { users } = useUserStore.getState();
           
           // Find user with matching username - no password check, just active status

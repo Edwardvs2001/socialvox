@@ -53,15 +53,15 @@ export function LoginForm() {
     e.preventDefault();
     clearError();
     
-    // For simplified login, we'll only require username
+    // Only username is required
     if (!username) {
       toast.error('Por favor ingrese un nombre de usuario');
       return;
     }
     
     try {
-      // Password is optional now
-      await login(username, password || username);
+      // Password is completely optional
+      await login(username);
       const user = useAuthStore.getState().user;
       if (user?.role === 'surveyor') {
         navigate('/surveyor');
@@ -85,8 +85,8 @@ export function LoginForm() {
     clearError();
     
     try {
-      // Simplified admin login with default credentials
-      await login('admin', 'admin');
+      // Simplified admin login with no password
+      await login('admin');
       const user = useAuthStore.getState().user;
       if (user?.role === 'admin' || user?.role === 'admin-manager') {
         navigate('/admin');
@@ -169,7 +169,7 @@ export function LoginForm() {
       </Card>;
   }
   
-  // Surveyor login screen - simplified
+  // Surveyor login screen - simplified, no password required
   return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5"></div>
       <CardHeader className="space-y-1 relative z-10">
@@ -177,7 +177,7 @@ export function LoginForm() {
           Acceso de encuestador
         </CardTitle>
         <CardDescription className="text-center text-white/90 font-medium">
-          Ingrese su nombre de usuario (contraseña opcional)
+          Ingrese su nombre de usuario (no requiere contraseña)
         </CardDescription>
       </CardHeader>
       <CardContent className="relative z-10">
@@ -189,18 +189,6 @@ export function LoginForm() {
                 <User className="h-4 w-4" />
               </div>
               <Input id="username" type="text" placeholder="Ingrese su nombre de usuario" required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className="input-focus-ring pl-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-black font-medium bg-gray-50">Contraseña (Opcional)</Label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70">
-                <Lock className="h-4 w-4" />
-              </div>
-              <Input id="password" type={showPassword ? "text" : "password"} placeholder="Opcional" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="input-focus-ring pl-10 pr-10 border-white/20 text-white placeholder:text-white/60 bg-gray-500" />
-              <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 text-white/70 hover:text-white" onClick={togglePasswordVisibility}>
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
             </div>
           </div>
           
