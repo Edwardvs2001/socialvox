@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSurveyStore, Survey } from '@/store/surveyStore';
@@ -169,16 +170,16 @@ export function SurveyManager() {
     
     try {
       await deleteSurvey(selectedSurvey.id);
+      // Directly update the local state after successful deletion
       setLocalSurveys(prev => prev.filter(s => s.id !== selectedSurvey.id));
       toast.success('Encuesta eliminada correctamente');
     } catch (error) {
       console.error('Error deleting survey:', error);
-      toast.error('Error al eliminar la encuesta: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+      toast.error('Error al eliminar la encuesta');
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
       setSelectedSurvey(null);
-      
       setTimeout(() => {
         deleteOperationRef.current = false;
       }, 100);
@@ -215,6 +216,7 @@ export function SurveyManager() {
     
     try {
       await assignSurvey(selectedSurvey.id, selectedSurveyors);
+      // Update the local state after successful assignment
       setLocalSurveys(prev => 
         prev.map(s => s.id === selectedSurvey.id ? {...s, assignedTo: selectedSurveyors} : s)
       );
@@ -225,8 +227,6 @@ export function SurveyManager() {
       toast.error('Error al asignar encuestadores');
     } finally {
       setIsAssigning(false);
-      setSelectedSurvey(null);
-      
       setTimeout(() => {
         assignOperationRef.current = false;
       }, 100);
@@ -241,6 +241,7 @@ export function SurveyManager() {
     
     try {
       await assignSurveyToFolder(selectedSurvey.id, selectedFolderId);
+      // Update the local state after successful folder assignment
       setLocalSurveys(prev => 
         prev.map(s => s.id === selectedSurvey.id ? {...s, folderId: selectedFolderId} : s)
       );
@@ -251,8 +252,6 @@ export function SurveyManager() {
       toast.error('Error al asignar encuesta a carpeta');
     } finally {
       setIsAssigningFolder(false);
-      setSelectedSurvey(null);
-      
       setTimeout(() => {
         folderAssignOperationRef.current = false;
       }, 100);
