@@ -283,17 +283,20 @@ export const useSurveyStore = create<SurveyState>()(
             }
           });
           
-          const contentType = response.headers.get('content-type');
+          // Check if the response is valid before parsing as JSON
+          const text = await response.text();
+          let data;
           
-          // Check if the response is valid JSON
-          if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Invalid response format from server');
+          try {
+            // Attempt to parse the response as JSON
+            data = JSON.parse(text);
+          } catch (parseError) {
+            console.error('Error parsing response:', text);
+            throw new Error('Respuesta inválida del servidor');
           }
           
-          const data = await response.json();
-          
           if (!response.ok) {
-            throw new Error(data.message || 'Error deleting survey');
+            throw new Error(data.message || 'Error al eliminar encuesta');
           }
           
           // After successful deletion on the server, update the local state
@@ -302,7 +305,6 @@ export const useSurveyStore = create<SurveyState>()(
             isLoading: false,
           }));
           
-          // Remove the return true statement to match Promise<void> return type
         } catch (error) {
           console.error('Error deleting survey:', error);
           set({

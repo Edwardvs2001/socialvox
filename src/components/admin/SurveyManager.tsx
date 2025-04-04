@@ -181,9 +181,9 @@ export function SurveyManager() {
       
       setTimeout(() => {
         deleteOperationRef.current = false;
-      }, 100);
+      }, 200);
     }
-  }, [selectedSurvey, deleteSurvey]);
+  }, [selectedSurvey, deleteSurvey, toast]);
   
   const handleOpenAssignDialog = useCallback((survey: Survey) => {
     setSelectedSurvey(survey);
