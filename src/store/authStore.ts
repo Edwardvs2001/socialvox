@@ -83,41 +83,58 @@ export const useAuthStore = create<AuthState>()(
           // Admin login handling - always case insensitive and no password required
           if (normalizedUsername === 'admin') {
             // Admin login - no password check
-            const { users, createUser, updateUser } = useUserStore.getState();
+            const { users } = useUserStore.getState();
             
             // Find admin user (case-insensitive)
             const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
             
             if (!adminUser) {
-              // Create admin user if not found
-              const newAdminUser = await createUser({
-                username: 'admin',
-                password: '', // No password required
-                name: 'Admin Principal',
-                role: 'admin',
-                active: true,
-                email: 'admin@encuestasva.com'
-              });
-              
-              // Set admin user in auth state
-              set({
-                user: {
-                  id: newAdminUser.id,
+              // Si no existe el usuario admin, lo creamos
+              try {
+                const { createUser } = useUserStore.getState();
+                const newAdminUser = await createUser({
                   username: 'admin',
+                  password: '', // No password required
                   name: 'Admin Principal',
-                  role: 'admin'
-                },
-                token: 'mock-jwt-token',
-                isAuthenticated: true,
-                isLoading: false,
-                sessionExpiration: currentTime + SESSION_TIMEOUT,
-              });
-              
-              return;
+                  role: 'admin',
+                  active: true,
+                  email: 'admin@encuestasva.com'
+                });
+                
+                // Set admin user in auth state
+                set({
+                  user: {
+                    id: newAdminUser.id,
+                    username: 'admin',
+                    name: 'Admin Principal',
+                    role: 'admin'
+                  },
+                  token: 'mock-jwt-token',
+                  isAuthenticated: true,
+                  isLoading: false,
+                  sessionExpiration: currentTime + SESSION_TIMEOUT,
+                });
+                
+                return;
+              } catch (error) {
+                // Si hay error al crear el usuario admin (probablemente porque ya existe en otra parte)
+                console.error('Error al crear usuario admin:', error);
+                set({ 
+                  error: 'Error al crear usuario administrador',
+                  isLoading: false
+                });
+                throw error;
+              }
             }
             
             // Ensure admin user is active
-            await updateUser(adminUser.id, { active: true });
+            try {
+              const { updateUser } = useUserStore.getState();
+              await updateUser(adminUser.id, { active: true });
+            } catch (error) {
+              console.error('Error al actualizar estado del usuario admin:', error);
+              // No lanzamos error aquí, continuamos con el login
+            }
             
             // Set admin user in auth state
             set({
