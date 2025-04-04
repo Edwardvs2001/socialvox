@@ -170,7 +170,6 @@ export function SurveyManager() {
     try {
       await deleteSurvey(selectedSurvey.id);
       setLocalSurveys(prev => prev.filter(s => s.id !== selectedSurvey.id));
-      toast.success('Encuesta eliminada correctamente');
     } catch (error) {
       console.error('Error deleting survey:', error);
       toast.error('Error al eliminar la encuesta: ' + (error instanceof Error ? error.message : 'Error desconocido'));
@@ -183,7 +182,7 @@ export function SurveyManager() {
         deleteOperationRef.current = false;
       }, 200);
     }
-  }, [selectedSurvey, deleteSurvey, toast]);
+  }, [selectedSurvey, deleteSurvey]);
   
   const handleOpenAssignDialog = useCallback((survey: Survey) => {
     setSelectedSurvey(survey);
