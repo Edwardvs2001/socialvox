@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -25,7 +24,6 @@ export function LoginForm() {
   } = useAuthStore();
   const navigate = useNavigate();
   
-  // Check session status on component mount
   useEffect(() => {
     const isAuthenticated = useAuthStore.getState().isAuthenticated;
     if (isAuthenticated) {
@@ -37,14 +35,12 @@ export function LoginForm() {
     }
   }, []);
   
-  // Reset error when component unmounts
   useEffect(() => {
     return () => {
       clearError();
     };
   }, [clearError]);
   
-  // Reset error when login type changes
   useEffect(() => {
     clearError();
   }, [loginType, clearError]);
@@ -53,7 +49,6 @@ export function LoginForm() {
     e.preventDefault();
     clearError();
     
-    // Validate username and password
     if (!username) {
       toast.error('Por favor ingrese un nombre de usuario');
       return;
@@ -65,8 +60,12 @@ export function LoginForm() {
     }
     
     try {
+      console.log(`Intentando iniciar sesión con: ${username}`);
+      
       await login(username, password);
       const user = useAuthStore.getState().user;
+      console.log("Login successful, user:", user);
+      
       if (user?.role === 'surveyor') {
         navigate('/surveyor');
       } else if (user?.role === 'admin' || user?.role === 'admin-manager') {
@@ -89,7 +88,6 @@ export function LoginForm() {
     setShowPassword(!showPassword);
   };
   
-  // Login type selection screen
   if (loginType === null) {
     return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-red-500/5"></div>
@@ -121,7 +119,6 @@ export function LoginForm() {
       </Card>;
   }
   
-  // Admin login screen
   if (loginType === 'admin') {
     return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-red-700/5"></div>
@@ -202,7 +199,6 @@ export function LoginForm() {
       </Card>;
   }
   
-  // Surveyor login screen
   return <Card className="w-full max-w-md mx-auto shadow-[0_15px_35px_rgba(0,0,0,0.3)] animate-fade-in login-card relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5"></div>
       <CardHeader className="space-y-1 relative z-10">

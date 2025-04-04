@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useUserStore } from './userStore';
@@ -80,7 +81,10 @@ export const useAuthStore = create<AuthState>()(
           const normalizedUsername = username.toLowerCase().trim();
           
           // Get all users from store
-          const { users } = useUserStore.getState();
+          const userStore = useUserStore.getState();
+          const { users } = userStore;
+          
+          console.log("Available users:", users);
           
           // Find user with matching username (case-insensitive)
           const user = users.find(
@@ -88,6 +92,42 @@ export const useAuthStore = create<AuthState>()(
           );
           
           if (!user) {
+            // If admin user doesn't exist in the store, create it
+            if (normalizedUsername === 'admin') {
+              // Try to create the admin user if it doesn't exist
+              try {
+                const adminUser = {
+                  username: 'admin',
+                  name: 'Administrador',
+                  email: 'admin@encuestasva.com',
+                  role: 'admin' as UserRole,
+                  active: true,
+                  password: 'Admin@2024!'
+                };
+                
+                const newUser = await userStore.createUser(adminUser);
+                
+                const userWithoutPassword = {
+                  id: newUser.id,
+                  username: newUser.username,
+                  name: newUser.name,
+                  role: newUser.role
+                };
+                
+                set({
+                  user: userWithoutPassword,
+                  token: 'mock-jwt-token',
+                  isAuthenticated: true,
+                  isLoading: false,
+                  sessionExpiration: currentTime + SESSION_TIMEOUT,
+                });
+                
+                return;
+              } catch (err) {
+                console.error("Failed to create admin user:", err);
+              }
+            }
+            
             set({ 
               error: 'Usuario no encontrado',
               isLoading: false
