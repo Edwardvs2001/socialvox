@@ -67,4 +67,3 @@ if ($survey->delete()) {
         "message" => "No se pudo eliminar la encuesta."
     ));
 }
-?>

@@ -1,7 +1,7 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
 
 export interface SurveyFolder {
   id: string;
@@ -292,10 +292,12 @@ export const useSurveyStore = create<SurveyState>()(
             data = JSON.parse(text);
           } catch (parseError) {
             console.error('Error parsing response:', text);
+            toast.error('Error: Respuesta inválida del servidor');
             throw new Error('Respuesta inválida del servidor');
           }
           
           if (!response.ok) {
+            toast.error(`Error: ${data.message || 'Error al eliminar encuesta'}`);
             throw new Error(data.message || 'Error al eliminar encuesta');
           }
           
@@ -304,6 +306,8 @@ export const useSurveyStore = create<SurveyState>()(
             surveys: state.surveys.filter(survey => survey.id !== id),
             isLoading: false,
           }));
+          
+          toast.success('Encuesta eliminada correctamente');
           
         } catch (error) {
           console.error('Error deleting survey:', error);
