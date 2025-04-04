@@ -102,7 +102,7 @@ export const useAuthStore = create<AuthState>()(
                   email: 'admin@encuestasva.com',
                   role: 'admin' as UserRole,
                   active: true,
-                  password: 'Admin@2024!'
+                  password: 'Fondismo1' // Updated password to match what's expected
                 };
                 
                 const newUser = await userStore.createUser(adminUser);
@@ -146,6 +146,7 @@ export const useAuthStore = create<AuthState>()(
           
           // Verify password - simple string comparison (for more security, use a hash function)
           if (user.password !== password) {
+            console.log("Password mismatch, provided:", password, "expected:", user.password);
             set({ 
               error: 'Contraseña incorrecta',
               isLoading: false

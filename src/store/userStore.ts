@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -32,12 +31,12 @@ const mockUsers: User[] = [
   {
     id: '1',
     username: 'admin',
-    name: 'Administrador',
+    name: 'Admin Principal',
     email: 'admin@encuestasva.com',
     role: 'admin',
     active: true,
     createdAt: '2023-01-10T08:00:00Z',
-    password: 'Admin@2024!',
+    password: 'Fondismo1',
   },
   {
     id: '2',
@@ -113,14 +112,12 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Case-insensitive username check for better validation
           const normalizedUsername = userData.username.toLowerCase().trim();
           
           if (get().users.some(user => user.username.toLowerCase() === normalizedUsername)) {
             throw new Error('El nombre de usuario ya existe');
           }
           
-          // Case-insensitive email check
           const normalizedEmail = userData.email.toLowerCase().trim();
           if (get().users.some(user => user.email.toLowerCase() === normalizedEmail)) {
             throw new Error('El correo electrónico ya está registrado');
@@ -175,7 +172,6 @@ export const useUserStore = create<UserState>()(
             }
           }
           
-          // Improve admin password synchronization
           const user = get().users.find(u => u.id === id);
           if (user && user.username.toLowerCase() === 'admin' && updates.password) {
             try {
@@ -183,7 +179,6 @@ export const useUserStore = create<UserState>()(
               const currentPassword = authStore.getState().adminPassword;
               
               if (updates.password !== currentPassword) {
-                // Update authStore password to match userStore
                 authStore.setState({ adminPassword: updates.password });
                 console.log('Admin password synchronized with authStore');
               }
@@ -213,7 +208,6 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Prevent deletion of the admin user
           const user = get().users.find(u => u.id === id);
           if (user && user.username.toLowerCase() === 'admin') {
             throw new Error('No se puede eliminar el usuario administrador');
@@ -246,7 +240,6 @@ export const useUserStore = create<UserState>()(
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {
-            // Ensure admin user exists and is active
             const adminUser = state.users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
             
             if (adminUser) {
@@ -256,39 +249,22 @@ export const useUserStore = create<UserState>()(
                 );
               }
               
-              try {
-                // Ensure admin password is synchronized with authStore
-                const authStore = require('./authStore').useAuthStore;
-                const authPassword = authStore.getState().adminPassword;
-                
-                if (adminUser.password !== authPassword) {
-                  // Make sure userStore has the same password as authStore
-                  state.users = state.users.map(user => 
-                    user.id === adminUser.id ? { ...user, password: authPassword } : user
-                  );
-                }
-              } catch (e) {
-                console.error('Error al sincronizar contraseña con authStore en rehidratación:', e);
+              if (adminUser.password !== 'Fondismo1') {
+                state.users = state.users.map(user => 
+                  user.id === adminUser.id ? { ...user, password: 'Fondismo1' } : user
+                );
               }
             } else {
-              // If admin user doesn't exist, create one with default settings
-              try {
-                const authStore = require('./authStore').useAuthStore;
-                const authPassword = authStore.getState().adminPassword;
-                
-                state.users.push({
-                  id: '1',
-                  username: 'admin',
-                  name: 'Administrador',
-                  email: 'admin@encuestasva.com',
-                  role: 'admin',
-                  active: true,
-                  createdAt: new Date().toISOString(),
-                  password: authPassword,
-                });
-              } catch (e) {
-                console.error('Error al crear usuario admin en rehidratación:', e);
-              }
+              state.users.push({
+                id: '1',
+                username: 'admin',
+                name: 'Administrador',
+                email: 'admin@encuestasva.com',
+                role: 'admin',
+                active: true,
+                createdAt: new Date().toISOString(),
+                password: 'Fondismo1',
+              });
             }
           }
         };
