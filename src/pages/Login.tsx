@@ -18,13 +18,13 @@ export default function Login() {
             <div className="relative z-10">
               <div className="w-28 h-28 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/80 to-red-600/80 p-1 shadow-lg mb-4 rotate-scale">
                 <img 
-                  src="/lovable-uploads/08d8d744-0c91-48a2-a3af-c5f3ce5d78c5.png" 
-                  alt="Encuestas VA Logo" 
+                  src="/lovable-uploads/d499dc04-307c-40f6-bede-03ef45e212ea.png" 
+                  alt="SocialVox Logo" 
                   className="w-full h-full object-contain p-2 animate-scale-in"
                 />
               </div>
               <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent drop-shadow-md">
-                Encuestas VA
+                SocialVox
               </h1>
               <div className="w-40 h-1 bg-gradient-to-r from-blue-400 to-red-400 rounded-full mt-2 shadow-sm"></div>
             </div>

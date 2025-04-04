@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -56,8 +57,8 @@ export function Navbar() {
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-4">
           <Link to={isAdmin ? '/admin' : '/surveyor'} className="flex items-center gap-2 font-bold text-xl">
-            <img src="/lovable-uploads/08d8d744-0c91-48a2-a3af-c5f3ce5d78c5.png" alt="Encuestas VA Logo" className="h-10 w-10 object-contain" />
-            <span className={`text-lg ${isAdmin ? 'text-red-500' : 'text-blue-500'}`}>Encuestas VA</span>
+            <img src="/lovable-uploads/d499dc04-307c-40f6-bede-03ef45e212ea.png" alt="SocialVox Logo" className="h-10 w-10 object-contain" />
+            <span className={`text-lg ${isAdmin ? 'text-red-500' : 'text-blue-500'}`}>SocialVox</span>
           </Link>
           
           <div className="hidden md:flex items-center gap-6 ml-6">

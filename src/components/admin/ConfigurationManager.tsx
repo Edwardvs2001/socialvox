@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -71,9 +72,9 @@ const timezoneFormSchema = z.object({
 
 const initialConfig = {
   general: {
-    appName: "Encuestas VA",
+    appName: "SocialVox",
     logoUrl: "",
-    companyName: "Encuestas VA Inc.",
+    companyName: "SocialVox Inc.",
     enableDebugMode: false,
   },
   email: {
