@@ -9,7 +9,12 @@ export default function Login() {
         <div className="absolute w-72 h-72 bg-yellow-500/10 rounded-full top-1/4 right-1/4 blur-2xl animate-pulse-subtle"></div>
         
         {/* Info banner about simplified login */}
-        
+        <div className="w-full max-w-md mx-auto mb-6 bg-white/10 backdrop-blur-md p-4 rounded-lg border border-white/20 text-white text-center shadow-lg">
+          <h2 className="font-bold text-lg">Acceso Simplificado</h2>
+          <p className="text-sm opacity-90">
+            Se ha removido la seguridad de login para facilitar el acceso.
+          </p>
+        </div>
         
         {/* Login container with 3D effect */}
         <div className="w-full max-w-md mx-auto relative z-10 perspective-1000">
@@ -19,7 +24,9 @@ export default function Login() {
               <div className="w-28 h-28 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/80 to-red-600/80 p-1 shadow-lg mb-4 rotate-scale">
                 <img alt="Encuestas VA Logo" className="w-full h-full object-contain p-2 animate-scale-in" src="/lovable-uploads/17e0365a-f6b2-4412-9571-bffe1f366e9f.png" />
               </div>
-              <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent drop-shadow-md">socialvox</h1>
+              <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent drop-shadow-md">
+                Encuestas VA
+              </h1>
               <div className="w-40 h-1 bg-gradient-to-r from-blue-400 to-red-400 rounded-full mt-2 shadow-sm"></div>
             </div>
           </div>
