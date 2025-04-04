@@ -98,14 +98,20 @@ class Survey {
     
     // Eliminar una encuesta
     public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(1, $this->id);
-        
-        if($stmt->execute()) {
-            return true;
+        try {
+            $query = "DELETE FROM " . $this->table_name . " WHERE id = ?";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(1, $this->id);
+            
+            if($stmt->execute()) {
+                return true;
+            }
+            return false;
+        } catch(PDOException $exception) {
+            // Registrar el error pero no devolverlo directamente (por seguridad)
+            error_log("Error en delete(): " . $exception->getMessage());
+            return false;
         }
-        return false;
     }
 }
 ?>
