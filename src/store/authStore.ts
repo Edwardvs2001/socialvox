@@ -89,7 +89,46 @@ export const useAuthStore = create<AuthState>()(
             const adminUser = users.find(u => u.username.toLowerCase() === 'admin');
             
             if (!adminUser) {
-              // Si no existe el usuario admin, lo creamos
+              // Buscar cualquier usuario con correo admin@encuestasva.com antes de crear uno nuevo
+              const emailExists = users.find(u => u.email.toLowerCase() === 'admin@encuestasva.com');
+              
+              // Si existe un usuario con ese correo, usarlo como admin en vez de crear uno nuevo
+              if (emailExists) {
+                // Actualizar el usuario existente para que sea admin
+                try {
+                  const { updateUser } = useUserStore.getState();
+                  await updateUser(emailExists.id, { 
+                    username: 'admin',
+                    role: 'admin',
+                    active: true 
+                  });
+                  
+                  // Set admin user in auth state
+                  set({
+                    user: {
+                      id: emailExists.id,
+                      username: 'admin',
+                      name: emailExists.name,
+                      role: 'admin'
+                    },
+                    token: 'mock-jwt-token',
+                    isAuthenticated: true,
+                    isLoading: false,
+                    sessionExpiration: currentTime + SESSION_TIMEOUT,
+                  });
+                  
+                  return;
+                } catch (error) {
+                  console.error('Error al actualizar usuario admin:', error);
+                  set({ 
+                    error: 'Error al configurar el usuario administrador',
+                    isLoading: false
+                  });
+                  throw error;
+                }
+              }
+              
+              // Si no existe el usuario con ese correo, lo creamos con un correo diferente
               try {
                 const { createUser } = useUserStore.getState();
                 const newAdminUser = await createUser({
@@ -98,7 +137,7 @@ export const useAuthStore = create<AuthState>()(
                   name: 'Admin Principal',
                   role: 'admin',
                   active: true,
-                  email: 'admin@encuestasva.com'
+                  email: `admin_${Date.now()}@encuestasva.com` // Email único para evitar colisiones
                 });
                 
                 // Set admin user in auth state
@@ -117,7 +156,6 @@ export const useAuthStore = create<AuthState>()(
                 
                 return;
               } catch (error) {
-                // Si hay error al crear el usuario admin (probablemente porque ya existe en otra parte)
                 console.error('Error al crear usuario admin:', error);
                 set({ 
                   error: 'Error al crear usuario administrador',
