@@ -11,18 +11,43 @@ $db = $database->getConnection();
 
 $survey = new Survey($db);
 
+// Handle both DELETE and GET/POST methods
+$method = $_SERVER['REQUEST_METHOD'];
+
 // Obtener ID de la encuesta a eliminar
-$data = json_decode(file_get_contents("php://input"));
-
-// Verificar que se proporcionó un ID
-if (!isset($data->id) && !isset($_GET['id'])) {
-    http_response_code(400);
-    echo json_encode(array("message" => "Se requiere un ID de encuesta para eliminar."));
-    exit();
+if ($method === 'DELETE') {
+    // For DELETE requests, get ID from URL parameter
+    if (isset($_GET['id'])) {
+        $survey->id = $_GET['id'];
+    } else {
+        // Also check input stream for DELETE with body
+        $data = json_decode(file_get_contents("php://input"));
+        if (isset($data->id)) {
+            $survey->id = $data->id;
+        } else {
+            http_response_code(400);
+            echo json_encode(array(
+                "status" => "error",
+                "message" => "Se requiere un ID de encuesta para eliminar."
+            ));
+            exit();
+        }
+    }
+} else {
+    // For other methods (POST/GET), check both URL and body
+    $data = json_decode(file_get_contents("php://input"));
+    
+    if (!isset($data->id) && !isset($_GET['id'])) {
+        http_response_code(400);
+        echo json_encode(array(
+            "status" => "error",
+            "message" => "Se requiere un ID de encuesta para eliminar."
+        ));
+        exit();
+    }
+    
+    $survey->id = isset($data->id) ? $data->id : $_GET['id'];
 }
-
-// Asignar ID al objeto
-$survey->id = isset($data->id) ? $data->id : $_GET['id'];
 
 // Eliminar la encuesta
 if ($survey->delete()) {

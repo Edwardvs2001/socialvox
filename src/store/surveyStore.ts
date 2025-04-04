@@ -273,14 +273,25 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
+          // Make an actual API call to the PHP backend
+          const response = await fetch(`/backend/api/surveys/delete.php?id=${id}`, {
+            method: 'DELETE',
+          });
           
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error deleting survey');
+          }
+          
+          // After successful deletion on the server, update the local state
           set(state => ({
             surveys: state.surveys.filter(survey => survey.id !== id),
             isLoading: false,
           }));
+          
+          return true;
         } catch (error) {
+          console.error('Error deleting survey:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al eliminar encuesta',
             isLoading: false,
