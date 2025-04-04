@@ -1,4 +1,3 @@
-
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +18,16 @@ import {
 } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
+const getAgeGroup = (age: number): string => {
+  if (age < 18) return "Menor de 18";
+  if (age < 25) return "18-24";
+  if (age < 35) return "25-34";
+  if (age < 45) return "35-44";
+  if (age < 55) return "45-54";
+  if (age < 65) return "55-64";
+  return "65 o mayor";
+};
+
 export function SurveyResults({ surveyId }: { surveyId: string }) {
   const { surveys, getSurveyById, getSurveyResponses } = useSurveyStore();
   const survey = getSurveyById(surveyId);
@@ -27,32 +36,27 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
-  // Compute statistics and data
   const statsData = useMemo(() => {
     if (!survey) return { totalResponses: 0 };
     
     const totalResponses = responses.length;
     const hasAudioCount = responses.filter(r => r.audioRecording).length;
     
-    // Calculate demographic statistics
     const ageGroups: Record<string, number> = {};
     const genderGroups: Record<string, number> = {};
     const locationGroups: Record<string, number> = {};
     
     responses.forEach(response => {
       if (response.respondentInfo) {
-        // Age data
         if (response.respondentInfo.age !== undefined) {
           const ageGroup = getAgeGroup(response.respondentInfo.age);
           ageGroups[ageGroup] = (ageGroups[ageGroup] || 0) + 1;
         }
         
-        // Gender data
         if (response.respondentInfo.gender) {
           genderGroups[response.respondentInfo.gender] = (genderGroups[response.respondentInfo.gender] || 0) + 1;
         }
         
-        // Location data
         if (response.respondentInfo.location) {
           locationGroups[response.respondentInfo.location] = (locationGroups[response.respondentInfo.location] || 0) + 1;
         }
@@ -83,24 +87,11 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
     };
   }, [survey, responses]);
   
-  // Helper function to categorize ages into groups
-  const getAgeGroup = (age: number): string => {
-    if (age < 18) return "Menor de 18";
-    if (age < 25) return "18-24";
-    if (age < 35) return "25-34";
-    if (age < 45) return "35-44";
-    if (age < 55) return "45-54";
-    if (age < 65) return "55-64";
-    return "65 o mayor";
-  };
-  
-  // Generate charts data for each question
   const questionsData = useMemo(() => {
     if (!survey) return [];
     
     return survey.questions.map(question => {
       if (question.type === 'multiple-choice') {
-        // For multiple choice, count occurrences of each option
         const optionCounts = question.options.reduce((acc, option) => {
           acc[option] = 0;
           return acc;
@@ -124,7 +115,6 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
           }))
         };
       } else if (question.type === 'free-text') {
-        // For free-text, collect all answers
         const textAnswers = responses
           .map(response => {
             const answer = response.answers.find(a => a.questionId === question.id);
@@ -368,11 +358,9 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
           })}
         </TabsContent>
         
-        {/* Demographic data tab */}
         {hasDemographics && (
           <TabsContent value="demographics" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Age Groups Card */}
               {statsData.demographics.ageGroups.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -427,7 +415,6 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
                 </Card>
               )}
               
-              {/* Gender Distribution Card */}
               {statsData.demographics.genderGroups.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -480,7 +467,6 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
                 </Card>
               )}
               
-              {/* Location Distribution Card */}
               {statsData.demographics.locationGroups.length > 0 && (
                 <Card className="lg:col-span-2">
                   <CardHeader>
@@ -545,7 +531,6 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
                 </Card>
               )}
               
-              {/* Card for when no demographic data is available */}
               {statsData.demographics.ageGroups.length === 0 && 
                statsData.demographics.genderGroups.length === 0 && 
                statsData.demographics.locationGroups.length === 0 && (
@@ -569,7 +554,6 @@ export function SurveyResults({ surveyId }: { surveyId: string }) {
           </TabsContent>
         )}
         
-        {/* New tab for Questions and Answers */}
         <TabsContent value="questions" className="space-y-4">
           <Card>
             <CardHeader>
