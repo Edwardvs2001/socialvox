@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
@@ -27,32 +27,45 @@ export default function AdminResults() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getSurveyById, getSurveyResponses } = useSurveyStore();
-  const survey = id ? getSurveyById(id) : null;
-  const responses = id ? getSurveyResponses(id) : [];
+  const [survey, setSurvey] = useState(id ? getSurveyById(id) : null);
+  const [responses, setResponses] = useState(id ? getSurveyResponses(id) : []);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
 
+  // Initialize data
   useEffect(() => {
-    // Simulate loading state for better UX
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (id) {
+      const surveyData = getSurveyById(id);
+      const responsesData = getSurveyResponses(id);
+      
+      setSurvey(surveyData);
+      setResponses(responsesData);
+      
+      // Simulate loading state for better UX
+      const timer = setTimeout(() => setLoading(false), 300);
+      return () => clearTimeout(timer);
+    } else {
+      setLoading(false);
+    }
+  }, [id, getSurveyById, getSurveyResponses]);
   
   // Redirect if survey doesn't exist
   useEffect(() => {
     if (!id) {
+      console.error('No survey ID provided');
       toast.error('ID de encuesta no proporcionado');
       navigate('/admin/results');
       return;
     }
     
     if (!loading && !survey) {
+      console.error('Survey not found with ID:', id);
       toast.error('Encuesta no encontrada');
       navigate('/admin/results');
     }
   }, [survey, navigate, loading, id]);
 
-  if (loading || !survey) {
+  if (loading) {
     return (
       <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
         <AdminLayout
@@ -65,6 +78,10 @@ export default function AdminResults() {
         </AdminLayout>
       </AuthLayout>
     );
+  }
+  
+  if (!survey) {
+    return null; // This will be caught by the useEffect and redirect
   }
   
   // Format date to be more readable
@@ -85,7 +102,7 @@ export default function AdminResults() {
         title={`Resultados: ${survey.title}`}
         description="Visualización detallada de los resultados de la encuesta"
         backButton={{
-          label: "Volver a Encuestas",
+          label: "Volver a Resultados",
           to: "/admin/results"
         }}
       >
@@ -145,7 +162,7 @@ export default function AdminResults() {
           <Separator />
 
           {/* Survey Results Component */}
-          {survey && <SurveyResults surveyId={id} />}
+          {id && <SurveyResults surveyId={id} />}
         </div>
       </AdminLayout>
     </AuthLayout>

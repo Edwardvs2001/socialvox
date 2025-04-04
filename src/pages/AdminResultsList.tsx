@@ -6,7 +6,7 @@ import { useSurveyStore } from '@/store/surveyStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/utils/api';
@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 export default function AdminResultsList() {
   const { surveys, getSurveyResponses } = useSurveyStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
   
   // Filter surveys based on search query
   const filteredSurveys = surveys.filter(survey => 
@@ -22,10 +23,15 @@ export default function AdminResultsList() {
     survey.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const handleViewResults = (surveyId: string, responseCount: number) => {
+  const handleViewResults = (surveyId: string, responseCount: number, event: React.MouseEvent) => {
     if (responseCount === 0) {
+      // Prevent navigation if there are no responses
+      event.preventDefault();
       toast.info('Esta encuesta no tiene respuestas todavía');
+      return;
     }
+    
+    // Let the Link component handle navigation otherwise
   };
   
   return (
@@ -71,9 +77,11 @@ export default function AdminResultsList() {
                       <Button 
                         asChild 
                         className="bg-admin hover:bg-admin/90"
-                        onClick={() => handleViewResults(survey.id, responseCount)}
                       >
-                        <Link to={`/admin/results/${survey.id}`}>
+                        <Link 
+                          to={`/admin/results/${survey.id}`}
+                          onClick={(e) => handleViewResults(survey.id, responseCount, e)}
+                        >
                           <BarChart3 className="mr-2 h-4 w-4" />
                           Ver Resultados
                         </Link>
