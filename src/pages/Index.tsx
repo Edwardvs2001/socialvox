@@ -12,7 +12,7 @@ const Index = () => {
   
   // Using useCallback to prevent unnecessary re-renders
   const handleRedirect = useCallback(() => {
-    // Use ref to prevent multiple redirects including during the function execution
+    // Use ref to prevent multiple redirects
     if (redirectingRef.current) return;
     redirectingRef.current = true;
     
@@ -47,10 +47,8 @@ const Index = () => {
           targetPath = '/';
       }
       
-      // Use setTimeout to ensure state updates are processed before navigation
-      setTimeout(() => {
-        navigate(targetPath);
-      }, 100);
+      // Navigate immediately without setTimeout to prevent race conditions
+      navigate(targetPath);
       
     } else {
       if (isAuthenticated && !isSessionValid) {
@@ -60,10 +58,8 @@ const Index = () => {
       }
       console.log('Usuario no autenticado o sesión expirada, redirigiendo a login');
       
-      // Use setTimeout to ensure state updates are processed before navigation
-      setTimeout(() => {
-        navigate('/');
-      }, 100);
+      // Navigate immediately without setTimeout
+      navigate('/');
     }
   }, [navigate, isAuthenticated, user, checkSession, logout, refreshSession]);
 

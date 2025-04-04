@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { Search, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/utils/api';
+import { toast } from 'sonner';
 
 export default function AdminResultsList() {
   const { surveys, getSurveyResponses } = useSurveyStore();
@@ -20,6 +21,12 @@ export default function AdminResultsList() {
     survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     survey.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  const handleViewResults = (surveyId: string, responseCount: number) => {
+    if (responseCount === 0) {
+      toast.info('Esta encuesta no tiene respuestas todavía');
+    }
+  };
   
   return (
     <AuthLayout requiresAuth={true} allowedRoles={['admin', 'admin-manager']}>
@@ -61,7 +68,11 @@ export default function AdminResultsList() {
                       <span className="text-sm text-muted-foreground">
                         Creada: {formatDate(survey.createdAt)}
                       </span>
-                      <Button asChild className="bg-admin hover:bg-admin/90">
+                      <Button 
+                        asChild 
+                        className="bg-admin hover:bg-admin/90"
+                        onClick={() => handleViewResults(survey.id, responseCount)}
+                      >
                         <Link to={`/admin/results/${survey.id}`}>
                           <BarChart3 className="mr-2 h-4 w-4" />
                           Ver Resultados

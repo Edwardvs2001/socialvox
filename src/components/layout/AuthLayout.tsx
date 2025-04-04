@@ -50,9 +50,7 @@ export function AuthLayout({
       }
       
       // Only refresh session when authenticated and have valid session
-      setTimeout(() => {
-        refreshSession();
-      }, 100);
+      refreshSession();
       
       if (allowedRoles.length > 0 && user) {
         // Check if user has admin-manager role, which should have access to admin pages
@@ -79,9 +77,7 @@ export function AuthLayout({
       if (isAuthenticated && isSessionValid) {
         console.log('Already authenticated, redirecting to dashboard');
         
-        setTimeout(() => {
-          refreshSession();
-        }, 100);
+        refreshSession();
         
         // Already logged in, redirect to appropriate dashboard
         if (user?.role === 'surveyor') {

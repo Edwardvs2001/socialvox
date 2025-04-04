@@ -21,6 +21,7 @@ import {
   ClipboardList,
   CheckCircle2
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AdminResults() {
   const { id } = useParams();
@@ -39,10 +40,17 @@ export default function AdminResults() {
   
   // Redirect if survey doesn't exist
   useEffect(() => {
-    if (!survey && !loading) {
-      navigate('/admin/surveys');
+    if (!id) {
+      toast.error('ID de encuesta no proporcionado');
+      navigate('/admin/results');
+      return;
     }
-  }, [survey, navigate, loading]);
+    
+    if (!loading && !survey) {
+      toast.error('Encuesta no encontrada');
+      navigate('/admin/results');
+    }
+  }, [survey, navigate, loading, id]);
 
   if (loading || !survey) {
     return (
@@ -78,7 +86,7 @@ export default function AdminResults() {
         description="Visualización detallada de los resultados de la encuesta"
         backButton={{
           label: "Volver a Encuestas",
-          to: "/admin/surveys"
+          to: "/admin/results"
         }}
       >
         <div className="space-y-6">
@@ -137,7 +145,7 @@ export default function AdminResults() {
           <Separator />
 
           {/* Survey Results Component */}
-          {survey && <SurveyResults surveyId={id!} />}
+          {survey && <SurveyResults surveyId={id} />}
         </div>
       </AdminLayout>
     </AuthLayout>
