@@ -1,7 +1,9 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface SurveyFolder {
   id: string;
@@ -187,12 +189,41 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // In a real app, this would be an API call
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Fetch surveys from Supabase
+          const { data: surveyData, error: surveyError } = await supabase
+            .from('surveys')
+            .select('*');
+            
+          if (surveyError) {
+            throw surveyError;
+          }
           
-          // We're using the mock data directly
-          set({ isLoading: false });
+          // Fetch folders from Supabase
+          const { data: folderData, error: folderError } = await supabase
+            .from('survey_folders')
+            .select('*');
+            
+          if (folderError) {
+            throw folderError;
+          }
+          
+          // Fetch responses from Supabase
+          const { data: responseData, error: responseError } = await supabase
+            .from('survey_responses')
+            .select('*');
+            
+          if (responseError) {
+            throw responseError;
+          }
+          
+          set({ 
+            surveys: surveyData?.length ? surveyData as Survey[] : mockSurveys,
+            folders: folderData?.length ? folderData as SurveyFolder[] : mockFolders,
+            responses: responseData?.length ? responseData as SurveyResponse[] : [],
+            isLoading: false 
+          });
         } catch (error) {
+          console.error('Error fetching surveys:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al cargar encuestas',
             isLoading: false,
@@ -208,9 +239,6 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
           // Ensure there's an assigned array even if not provided
           const assignedTo = surveyData.assignedTo || [];
           
@@ -233,13 +261,24 @@ export const useSurveyStore = create<SurveyState>()(
             folderId: surveyData.folderId || null
           };
           
+          // Insert into Supabase
+          const { error } = await supabase
+            .from('surveys')
+            .insert(newSurvey);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
+          
           set(state => ({
             surveys: [...state.surveys, newSurvey],
             isLoading: false,
           }));
           
+          toast.success('Encuesta creada exitosamente');
           return newSurvey;
         } catch (error) {
+          console.error('Error creating survey:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al crear encuesta',
             isLoading: false,
@@ -252,8 +291,15 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
+          // Update in Supabase
+          const { error } = await supabase
+            .from('surveys')
+            .update(updates)
+            .eq('id', id);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
           
           set(state => ({
             surveys: state.surveys.map(survey => 
@@ -261,7 +307,10 @@ export const useSurveyStore = create<SurveyState>()(
             ),
             isLoading: false,
           }));
+          
+          toast.success('Encuesta actualizada exitosamente');
         } catch (error) {
+          console.error('Error updating survey:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al actualizar encuesta',
             isLoading: false,
@@ -274,21 +323,23 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Since the backend API isn't working correctly, we'll implement a workaround
-          // by just updating the local state directly
-
+          // Delete from Supabase
+          const { error } = await supabase
+            .from('surveys')
+            .delete()
+            .eq('id', id);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
+          
           // Remove the survey from local state
           set(state => ({
             surveys: state.surveys.filter(survey => survey.id !== id),
             isLoading: false,
           }));
           
-          // Show success message
           toast.success('Encuesta eliminada correctamente');
-          
-          // In a production environment, this should be replaced with a working API call
-          // Once the backend issue is fixed, the original code can be restored
-          
         } catch (error) {
           console.error('Error deleting survey:', error);
           set({
@@ -303,9 +354,6 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
           const newResponse: SurveyResponse = {
             ...responseData,
             id: uuidv4(),
@@ -313,11 +361,29 @@ export const useSurveyStore = create<SurveyState>()(
             syncedToServer: navigator.onLine,
           };
           
+          // Try to insert into Supabase if online
+          if (navigator.onLine) {
+            const { error } = await supabase
+              .from('survey_responses')
+              .insert(newResponse);
+              
+            if (error) {
+              console.error('Error saving response to Supabase:', error);
+              newResponse.syncedToServer = false;
+            }
+          } else {
+            // Mark for sync later if offline
+            newResponse.syncedToServer = false;
+          }
+          
           set(state => ({
             responses: [...state.responses, newResponse],
             isLoading: false,
           }));
+          
+          toast.success('Respuesta guardada exitosamente');
         } catch (error) {
+          console.error('Error submitting response:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al enviar respuestas',
             isLoading: false,
@@ -350,8 +416,17 @@ export const useSurveyStore = create<SurveyState>()(
             return;
           }
           
-          // Simulate API call to sync responses
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          // Sync each response
+          for (const response of unsyncedResponses) {
+            const { error } = await supabase
+              .from('survey_responses')
+              .insert(response);
+              
+            if (error) {
+              console.error(`Error syncing response ${response.id}:`, error);
+              // Continue with other responses even if one fails
+            }
+          }
           
           // Mark responses as synced
           set(state => ({
@@ -360,7 +435,10 @@ export const useSurveyStore = create<SurveyState>()(
             ),
             isLoading: false,
           }));
+          
+          toast.success(`${unsyncedResponses.length} respuestas sincronizadas exitosamente`);
         } catch (error) {
+          console.error('Error syncing responses:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al sincronizar respuestas',
             isLoading: false,
@@ -372,7 +450,15 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          await new Promise(resolve => setTimeout(resolve, 700));
+          // Update in Supabase
+          const { error } = await supabase
+            .from('surveys')
+            .update({ assignedTo: surveyorIds })
+            .eq('id', surveyId);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
           
           set(state => ({
             surveys: state.surveys.map(survey =>
@@ -380,7 +466,10 @@ export const useSurveyStore = create<SurveyState>()(
             ),
             isLoading: false,
           }));
+          
+          toast.success('Encuesta asignada exitosamente');
         } catch (error) {
+          console.error('Error assigning survey:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al asignar encuesta',
             isLoading: false,
@@ -393,22 +482,30 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
           const newFolder: SurveyFolder = {
             ...folderData,
             id: uuidv4(),
             createdAt: new Date().toISOString(),
           };
           
+          // Insert into Supabase
+          const { error } = await supabase
+            .from('survey_folders')
+            .insert(newFolder);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
+          
           set(state => ({
             folders: [...state.folders, newFolder],
             isLoading: false,
           }));
           
+          toast.success('Carpeta creada exitosamente');
           return newFolder;
         } catch (error) {
+          console.error('Error creating folder:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al crear carpeta',
             isLoading: false,
@@ -421,8 +518,15 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
+          // Update in Supabase
+          const { error } = await supabase
+            .from('survey_folders')
+            .update(updates)
+            .eq('id', id);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
           
           set(state => ({
             folders: state.folders.map(folder => 
@@ -430,7 +534,10 @@ export const useSurveyStore = create<SurveyState>()(
             ),
             isLoading: false,
           }));
+          
+          toast.success('Carpeta actualizada exitosamente');
         } catch (error) {
+          console.error('Error updating folder:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al actualizar carpeta',
             isLoading: false,
@@ -443,9 +550,6 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
           // Get all subfolders recursively
           const allSubfolderIds = new Set<string>();
           
@@ -460,7 +564,29 @@ export const useSurveyStore = create<SurveyState>()(
           getAllSubfolderIds(id);
           const foldersToDelete = [id, ...Array.from(allSubfolderIds)];
           
-          // When deleting a folder, remove folder assignment from associated surveys
+          // Delete from Supabase
+          for (const folderId of foldersToDelete) {
+            const { error } = await supabase
+              .from('survey_folders')
+              .delete()
+              .eq('id', folderId);
+              
+            if (error) {
+              console.error(`Error deleting folder ${folderId}:`, error);
+            }
+          }
+          
+          // Update surveys that reference the deleted folders
+          const surveysToUpdate = get().surveys.filter(s => foldersToDelete.includes(s.folderId || ''));
+          
+          for (const survey of surveysToUpdate) {
+            await supabase
+              .from('surveys')
+              .update({ folderId: null })
+              .eq('id', survey.id);
+          }
+          
+          // Update local state
           set(state => ({
             folders: state.folders.filter(folder => !foldersToDelete.includes(folder.id)),
             surveys: state.surveys.map(survey => 
@@ -468,7 +594,10 @@ export const useSurveyStore = create<SurveyState>()(
             ),
             isLoading: false,
           }));
+          
+          toast.success('Carpeta eliminada exitosamente');
         } catch (error) {
+          console.error('Error deleting folder:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al eliminar carpeta',
             isLoading: false,
@@ -489,8 +618,15 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
+          // Update in Supabase
+          const { error } = await supabase
+            .from('surveys')
+            .update({ folderId })
+            .eq('id', surveyId);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
           
           set(state => ({
             surveys: state.surveys.map(survey => 
@@ -498,7 +634,10 @@ export const useSurveyStore = create<SurveyState>()(
             ),
             isLoading: false,
           }));
+          
+          toast.success('Encuesta asignada a carpeta exitosamente');
         } catch (error) {
+          console.error('Error assigning survey to folder:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al asignar encuesta a carpeta',
             isLoading: false,
@@ -511,12 +650,22 @@ export const useSurveyStore = create<SurveyState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
           // When assigning a folder to surveyors, assign all surveys in that folder to those surveyors
           const folderSurveys = get().surveys.filter(survey => survey.folderId === folderId);
           
+          // Update each survey in Supabase
+          for (const survey of folderSurveys) {
+            const { error } = await supabase
+              .from('surveys')
+              .update({ assignedTo: surveyorIds })
+              .eq('id', survey.id);
+              
+            if (error) {
+              console.error(`Error assigning survey ${survey.id} to surveyors:`, error);
+            }
+          }
+          
+          // Update local state
           const updatedSurveys = get().surveys.map(survey => {
             if (survey.folderId === folderId) {
               return { ...survey, assignedTo: surveyorIds };
@@ -528,7 +677,10 @@ export const useSurveyStore = create<SurveyState>()(
             surveys: updatedSurveys,
             isLoading: false,
           }));
+          
+          toast.success('Carpeta asignada a encuestadores exitosamente');
         } catch (error) {
+          console.error('Error assigning folder to surveyors:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al asignar carpeta a encuestadores',
             isLoading: false,

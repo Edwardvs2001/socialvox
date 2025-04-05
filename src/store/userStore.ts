@@ -1,7 +1,10 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { UserRole } from './authStore';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface User {
   id: string;
@@ -61,7 +64,18 @@ export const useUserStore = create<UserState>()(
         set({ isLoading: true, error: null });
         
         try {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Get users from Supabase
+          const { data, error } = await supabase
+            .from('users')
+            .select('*');
+            
+          if (error) {
+            throw new Error(error.message);
+          }
+          
+          if (data && data.length > 0) {
+            set({ users: data as User[] });
+          }
           
           const users = get().users;
           const adminUser = users.find(u => u.username.toLowerCase() === 'admin' && u.role === 'admin');
@@ -81,11 +95,18 @@ export const useUserStore = create<UserState>()(
                   user.id === adminUser.id ? { ...user, ...updates } : user
                 )
               }));
+              
+              // Update in Supabase
+              await supabase
+                .from('users')
+                .update(updates)
+                .eq('id', adminUser.id);
             }
           }
           
           set({ isLoading: false });
         } catch (error) {
+          console.error('Error fetching users:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al cargar usuarios',
             isLoading: false,
@@ -103,6 +124,18 @@ export const useUserStore = create<UserState>()(
               user.id === adminUser.id ? { ...user, active: true } : user
             )
           }));
+          
+          // Update in Supabase
+          supabase
+            .from('users')
+            .update({ active: true })
+            .eq('id', adminUser.id)
+            .then(() => {
+              console.log('Admin user activated in Supabase');
+            })
+            .catch(error => {
+              console.error('Error activating admin user:', error);
+            });
         }
         
         return get().users.find(user => user.id === id);
@@ -123,21 +156,30 @@ export const useUserStore = create<UserState>()(
             throw new Error('El correo electrónico ya está registrado');
           }
           
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
           const newUser: User = {
             ...userData,
             id: uuidv4(),
             createdAt: new Date().toISOString(),
           };
           
+          // Insert into Supabase
+          const { error } = await supabase
+            .from('users')
+            .insert(newUser);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
+          
           set(state => ({
             users: [...state.users, newUser],
             isLoading: false,
           }));
           
+          toast.success('Usuario creado exitosamente');
           return newUser;
         } catch (error) {
+          console.error('Error creating user:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al crear usuario',
             isLoading: false,
@@ -187,7 +229,15 @@ export const useUserStore = create<UserState>()(
             }
           }
           
-          await new Promise(resolve => setTimeout(resolve, 800));
+          // Update in Supabase
+          const { error } = await supabase
+            .from('users')
+            .update(updates)
+            .eq('id', id);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
           
           set(state => ({
             users: state.users.map(user => 
@@ -195,7 +245,10 @@ export const useUserStore = create<UserState>()(
             ),
             isLoading: false,
           }));
+          
+          toast.success('Usuario actualizado exitosamente');
         } catch (error) {
+          console.error('Error updating user:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al actualizar usuario',
             isLoading: false,
@@ -213,13 +266,24 @@ export const useUserStore = create<UserState>()(
             throw new Error('No se puede eliminar el usuario administrador');
           }
           
-          await new Promise(resolve => setTimeout(resolve, 800));
+          // Delete from Supabase
+          const { error } = await supabase
+            .from('users')
+            .delete()
+            .eq('id', id);
+            
+          if (error) {
+            throw new Error(error.message);
+          }
           
           set(state => ({
             users: state.users.filter(user => user.id !== id),
             isLoading: false,
           }));
+          
+          toast.success('Usuario eliminado exitosamente');
         } catch (error) {
+          console.error('Error deleting user:', error);
           set({
             error: error instanceof Error ? error.message : 'Error al eliminar usuario',
             isLoading: false,

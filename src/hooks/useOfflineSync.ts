@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSurveyStore } from '@/store/surveyStore';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -26,6 +27,8 @@ export function useOfflineSync() {
       if (isMountedRef.current) {
         setIsOnline(true);
         toast.success('Conexión reestablecida');
+        // Try to sync data automatically when coming back online
+        attemptSync();
       }
     };
     
@@ -120,7 +123,24 @@ export function useOfflineSync() {
     }
     
     try {
+      // Get all unsynced responses
+      const unsyncedResponses = responses.filter(r => !r.syncedToServer);
+      
+      // Sync each response with Supabase
+      for (const response of unsyncedResponses) {
+        const { error } = await supabase
+          .from('survey_responses')
+          .insert(response);
+          
+        if (error) {
+          console.error(`Error syncing response ${response.id}:`, error);
+          // Continue with other responses even if one fails
+        }
+      }
+      
+      // Update local state through the store
       await syncResponses();
+      
       if (isMountedRef.current) {
         setLastSyncTime(new Date());
         toast.success(`Sincronización completa: ${pendingCount} ${pendingCount === 1 ? 'encuesta' : 'encuestas'} sincronizada${pendingCount === 1 ? '' : 's'}`);
@@ -146,7 +166,7 @@ export function useOfflineSync() {
         syncTimeoutRef.current = null;
       }, 500);
     }
-  }, [isOnline, pendingCount, isAuthenticated, checkSession, syncResponses]);
+  }, [isOnline, pendingCount, isAuthenticated, checkSession, syncResponses, responses]);
   
   return {
     isOnline,
